@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "datasource",
+  "name": "simple grpc datasource",
+  "id": "simple-grpc-datasource",
+  "metrics": true,
+  "backend": true,
+  "executable": "gpx_my-plugin",
+  "alerting": true,
+  "queryOptions": {
+    "cacheTimeout": true,
+    "maxDataPoints": true,
+    "minInterval": true
+  },
+  "info": {
+    "description": "simple grpc datasource plugin",
+    "author": {
+      "name": "Ron van der Wijngaard",
+      "url": "https://github.com/innius/grafana-simple-grpc-datasource"
+    },
+    "keywords": [
+      "grpc"
+    ],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "License",
+        "url": "https://github.com/innius/grafana-simple-grpc-datasource/blob/main/LICENSE"
+      }
+    ],
+    "screenshots": [
+      {
+        "name": "Datasource Configuration",
+        "path": "img/screenshots/image-2.png"
+      },
+      {
+        "name": "Query Editor",
+        "path": "img/screenshots/image-1.png"
+      }
+    ],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=7.0.0",
+    "plugins": []
+  }
+}

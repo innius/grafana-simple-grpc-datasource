@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+option go_package = "bitbucket.org/innius/grafana-simple-grpc-datasource";
+
+package grafana;
+
+// The GrafanaQueryAPI definition.
+service GrafanaQueryAPI {
+    // Returns a list of all available dimensions
+    rpc ListDimensionKeys (ListDimensionKeysRequest) returns (ListDimensionKeysResponse) {
+    }
+
+    // Returns a list of all dimension values for a certain dimension
+    rpc ListDimensionValues (ListDimensionValuesRequest) returns (ListDimensionValuesResponse) {
+    }
+
+    // Returns all metrics from the system
+    rpc ListMetrics (ListMetricsRequest) returns (ListMetricsResponse) {
+    }
+
+    // Gets a metric's current value
+    rpc GetMetricValue (GetMetricValueRequest) returns (GetMetricValueResponse) {
+    }
+
+    // Gets the history of a metric's values
+    rpc GetMetricHistory (GetMetricHistoryRequest) returns (GetMetricHistoryResponse) {
+    }
+}
+
+message ListMetricsRequest {
+    repeated Dimension dimensions = 1;
+    string filter = 2;
+}
+message ListMetricsResponse {
+    message Metric {
+        string name = 1;
+        string description = 2;
+    }
+    repeated Metric Metrics = 1;
+}
+
+message GetMetricValueRequest {
+    repeated Dimension dimensions = 3;
+    string Metric = 4;
+}
+
+message GetMetricValueResponse {
+    // The timestamp date, in seconds, in the Unix epoch format.
+    int64 timestamp = 1;
+
+    // The current metric value.
+    MetricValue value = 2;
+}
+
+message GetMetricHistoryRequest {
+    repeated Dimension dimensions = 3;
+    string Metric = 4;
+    int64 startDate = 5;
+    int64 endDate = 6;
+    int64 maxItems = 7;
+    TimeOrdering timeOrdering = 8;
+    string startingToken = 9;
+}
+
+message MetricValue {
+    double doubleValue = 1;
+}
+
+message MetricHistoryValue {
+    // The timestamp date, in seconds, in the Unix epoch format.
+    int64 timestamp = 1;
+    // Contains asset property value information
+    MetricValue value = 2;
+}
+
+message GetMetricHistoryResponse {
+    // The asset property's value history.
+    repeated MetricHistoryValue values = 1;
+
+    // The token for the next set of results, or null if there are no additional results.
+    string nextToken = 2;
+}
+
+enum TimeOrdering {
+    ASCENDING = 0;
+    DESCENDING = 1;
+}
+
+message ListDimensionKeysRequest {
+    string filter = 1;
+}
+
+message ListDimensionKeysResponse {
+    message Result {
+        string key = 1;
+        string description = 2;
+    }
+    repeated Result results = 1;
+}
+
+message ListDimensionValuesRequest {
+    string dimension_key = 1;
+    string filter = 2;
+}
+
+message ListDimensionValuesResponse {
+    message Result {
+        string value = 1;
+        string description = 2;
+    }
+    repeated Result results = 1;
+}
+
+message TimeRange {
+    int64 fromEpochMS = 1;
+    int64 toEpochMS = 2;
+}
+
+message Dimension {
+    string key = 1;
+    string value = 2;
+}
+
+message QueryRequest {
+    string refId = 1;
+    int64 maxDataPoints = 2;
+    int64 intervalMS = 3;
+    TimeRange timeRange = 4;
+    // The offset for the result set
+    int64 startKey = 5;
+    repeated Dimension dimensions = 6;
+}
+
+// The response message containing the greetings
+message QueryResponse {
+    string refId = 1;
+    int64 nextKey = 2;
+    message Value {
+        int64 timestamp = 1;
+        float value = 2;
+    }
+    repeated Value values = 3;
+}
