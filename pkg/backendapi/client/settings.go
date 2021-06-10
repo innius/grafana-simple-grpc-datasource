@@ -21,5 +21,16 @@ func (s *BackendAPIDatasourceSettings) Load(config backend.DataSourceInstanceSet
 	}
 	s.ID = config.UID
 	s.APIKey = config.DecryptedSecureJSONData["apiKey"]
+
+	return validate(s)
+}
+
+func validate(s *BackendAPIDatasourceSettings) error {
+	if s.Endpoint == "" {
+		return fmt.Errorf("endpoint is a required configuration setting")
+	}
+	if s.ApiKeyAuthenticationEnabled && s.APIKey == "" {
+		return fmt.Errorf("API Key is required when API Key authentication is enabled")
+	}
 	return nil
 }

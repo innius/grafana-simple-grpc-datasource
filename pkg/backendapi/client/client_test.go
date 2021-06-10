@@ -1,5 +1,12 @@
 package client
 
+import (
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"testing"
+)
+
 //
 //type mockClient struct {
 //	pb.GrafanaQueryAPIClient
@@ -72,3 +79,28 @@ package client
 //		assert.Equal(t, apiKey,res[0])
 //	}
 //}
+
+func TestErrorHandling(t *testing.T) {
+	t.Run("nil input leads to nil output", func(t *testing.T) {
+		assert.Nil(t, handleError(nil))
+	})
+
+	t.Run("errors are always returned as an error, regardless or status code", func(t *testing.T) {
+		// gRPC codes package unfortunately doesn't expose an exhaustive list of all status codes
+		// so this test will require future updates if the gRPC team adds more status codes
+		codeCount := 16
+		t.Run("existing errors", func(t *testing.T) {
+			for i := range make([]int, codeCount+1) {
+				if i == 0 {
+					// errors with status code 0 (OK) are not allowed
+					continue
+				}
+				assert.Error(t, handleError(status.Errorf(codes.Code(i), "unit testing error with status code %v", i)))
+			}
+		})
+		t.Run("even non-existing codes", func(t *testing.T) {
+			code := codeCount+1
+			assert.Error(t, handleError(status.Errorf(codes.Code(code), "unit testing error with status code %v", code)))
+		})
+	})
+}
