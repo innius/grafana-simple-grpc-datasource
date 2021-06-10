@@ -1,5 +1,5 @@
 import React, { ChangeEvent, PureComponent } from 'react';
-import { LegacyForms } from '@grafana/ui';
+import { LegacyForms, Alert } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { MyDataSourceOptions, MySecureJsonData } from './types';
 
@@ -52,6 +52,14 @@ export class ConfigEditor extends PureComponent<Props> {
     onOptionsChange({ ...options, jsonData });
   };
 
+  invalidEndpoint = (e: string|undefined): boolean => {
+    if (!e) {
+      return true
+    }
+    const spl = e.split(":")
+    return spl.length !== 2 || spl[0].length === 0 || spl[1].length === 0;
+  }
+
   render() {
     const { options } = this.props;
     const { jsonData, secureJsonFields } = options;
@@ -72,6 +80,11 @@ export class ConfigEditor extends PureComponent<Props> {
                 placeholder="endpoint of the grpc server"
                 tooltip="Specify a complete HTTP URL (for example grpc.example.com:443)"
               />
+            </div>
+            <div className="width-26">
+              {this.invalidEndpoint(jsonData.endpoint) && (
+                  <Alert title="valid endpoint with port is required" severity="warning" />
+              )}
             </div>
           </div>
           <h3 className="page-heading">Auth</h3>
