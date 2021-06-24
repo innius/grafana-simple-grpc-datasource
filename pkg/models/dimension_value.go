@@ -6,8 +6,8 @@ import (
 )
 
 type DimensionValueQuery struct {
-	DimensionKey string `json:"dimension_key"`
-	Filter string `json:"filter"`
+	DimensionKey string `json:"dimensionKey"`
+	Filter       string `json:"filter"`
 }
 
 func UnmarshalToDimensionValueQuery(dq *backend.DataQuery) (*DimensionValueQuery, error) {
