@@ -1,4 +1,5 @@
 import {
+  DataFrame,
   DataFrameView,
   DataQueryRequest,
   DataQueryResponse,
@@ -17,9 +18,13 @@ import {
   MyDataSourceOptions,
   MyQuery,
   QueryType,
+  Metadata,
+  NextQuery,
 } from './types';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { getRequestLooper, MultiRequestTracker } from './requestLooper';
+import { appendMatchingFrames } from './appendFrames';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -27,7 +32,55 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
-    return super.query(request);
+    return getRequestLooper(request, {
+      // Check for a "nextToken" in the response
+      getNextQueries: (rsp: DataQueryResponse) => {
+        if (rsp.data?.length) {
+          const next: NextQuery[] = [];
+          for (const frame of rsp.data as DataFrame[]) {
+            const meta = frame.meta?.custom as Metadata;
+            if (meta && meta.nextToken) {
+              const query = request.targets.find(t => t.refId === frame.refId);
+              if (query) {
+                next.push({
+                  ...query,
+                  nextToken: meta.nextToken,
+                });
+              }
+            }
+          }
+          if (next.length) {
+            return next;
+          }
+        }
+        return undefined;
+      },
+
+      /**
+       * The original request
+       */
+      query: (request: DataQueryRequest<MyQuery>) => {
+        return super.query(request);
+      },
+
+      /**
+       * Process the results
+       */
+      process: (t: MultiRequestTracker, data: DataFrame[], isLast: boolean) => {
+        if (t.data) {
+          // append rows to fields with the same structure
+          t.data = appendMatchingFrames(t.data, data);
+        } else {
+          t.data = data; // hang on to the results from the last query
+        }
+        return t.data;
+      },
+
+      /**
+       * Callback that gets executed when unsubscribed
+       */
+      onCancel: (tracker: MultiRequestTracker) => {},
+    });
   }
 
   filterQuery(query: MyQuery): boolean {

@@ -22,8 +22,7 @@ type Dimension struct {
 type MetricBaseQuery struct {
 	Dimensions []Dimension `json:"dimensions"`
 	MetricId   string      `json:"metricId,omitempty"`
-	//NextToken           string `json:"nextToken,omitempty"`
-	//MaxPageAggregations int    `json:"maxPageAggregations,omitempty"`
+	NextToken  string      `json:"nextToken,omitempty"`
 
 	Interval      time.Duration     `json:"-"`
 	TimeRange     backend.TimeRange `json:"-"`
