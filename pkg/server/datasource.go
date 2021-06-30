@@ -9,6 +9,7 @@ import (
 type Datasource interface {
 	HandleGetMetricValueQuery(ctx context.Context, query *models.MetricValueQuery) (data.Frames, error)
 	HandleGetMetricHistoryQuery(ctx context.Context, query *models.MetricHistoryQuery) (data.Frames, error)
+	HandleGetMetricAggregateQuery(ctx context.Context, query *models.MetricAggregateQuery) (data.Frames, error)
 	HandleListDimensionsQuery(ctx context.Context, query *models.DimensionKeysQuery) (data.Frames, error)
 	HandleListDimensionValuesQuery(ctx context.Context, query *models.DimensionValueQuery) (data.Frames, error)
 	HandleListMetricsQuery(ctx context.Context, query *models.MetricsQuery) (data.Frames, error)

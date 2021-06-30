@@ -54,7 +54,7 @@ func getQueryHandlers(s *Server) *datasource.QueryTypeMux {
 
 	mux.HandleFunc(models.QueryMetricValue, s.HandleGetMetricValueQuery)
 	mux.HandleFunc(models.QueryMetricHistory, s.HandleGetMetricHistoryQuery)
-
+	mux.HandleFunc(models.QueryMetricAggregate, s.HandleGetMetricAggregate)
 	mux.HandleFunc(models.QueryDimensions, s.HandleListDimensionKeysQuery)
 	mux.HandleFunc(models.QueryDimensionValues, s.HandleListDimensionValuesQuery)
 	mux.HandleFunc(models.QueryMetrics, s.HandleListMetricsQuery)

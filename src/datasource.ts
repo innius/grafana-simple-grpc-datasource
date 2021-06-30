@@ -34,10 +34,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     if (!query.queryType) {
       return false;
     }
-    if (isMetricQuery(query.queryType) && !query.metricId) {
-      return false;
-    }
-    return true;
+    return !(isMetricQuery(query.queryType) && !query.metricId);
   }
 
   getQueryDisplayText(query: MyQuery): string {

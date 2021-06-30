@@ -25,6 +25,10 @@ service GrafanaQueryAPI {
     // Gets the history of a metric's values
     rpc GetMetricHistory (GetMetricHistoryRequest) returns (GetMetricHistoryResponse) {
     }
+
+    // Gets the history of a metric's aggregated value
+    rpc GetMetricAggregate(GetMetricAggregateRequest) returns (GetMetricAggregateResponse) {
+    }
 }
 
 message ListMetricsRequest {
@@ -62,6 +66,25 @@ message GetMetricHistoryRequest {
     string startingToken = 9;
 }
 
+message GetMetricAggregateRequest {
+    repeated Dimension dimensions = 1;
+    string Metric = 2;
+    AggregateType aggregateType = 3;
+    int64 startDate = 4;
+    int64 endDate = 5;
+    int64 maxItems = 6;
+    TimeOrdering timeOrdering = 7;
+    string startingToken = 8;
+}
+
+message GetMetricAggregateResponse {
+    // The asset property's value history.
+    repeated MetricHistoryValue values = 1;
+
+    // The token for the next set of results, or null if there are no additional results.
+    string nextToken = 2;
+}
+
 message MetricValue {
     double doubleValue = 1;
 }
@@ -84,6 +107,12 @@ message GetMetricHistoryResponse {
 enum TimeOrdering {
     ASCENDING = 0;
     DESCENDING = 1;
+}
+
+enum AggregateType {
+    AVERAGE = 0;
+    MAX = 1;
+    MIN = 2;
 }
 
 message ListDimensionKeysRequest {

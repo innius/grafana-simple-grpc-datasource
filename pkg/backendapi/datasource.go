@@ -46,6 +46,15 @@ func (ds *Datasource) HandleGetMetricHistoryQuery(ctx context.Context, query *mo
 	return res.Frames()
 }
 
+func (ds *Datasource) HandleGetMetricAggregateQuery(ctx context.Context, query *models.MetricAggregateQuery) (data.Frames, error) {
+	//TODO: remove pointer dereference
+	res, err := api.GetMetricAggregate(ctx, ds.client, *query)
+	if err != nil {
+		return nil, err
+	}
+	return res.Frames()
+}
+
 func (ds *Datasource) HandleListDimensionsQuery(ctx context.Context, query *models.DimensionKeysQuery) (data.Frames, error) {
 	//TODO: remove pointer dereference
 	res, err := api.ListDimensionKeys(ctx, ds.client, *query)

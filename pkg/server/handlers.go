@@ -60,6 +60,27 @@ func (s *Server) handleGetMetricHistoryQuery(ctx context.Context, req *backend.Q
 	}
 }
 
+func (s *Server) HandleGetMetricAggregate(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+	return processQueries(ctx, req, s.handleGetMetricAggregateQuery), nil
+}
+
+func (s *Server) handleGetMetricAggregateQuery(ctx context.Context, req *backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+	query, err := models.UnmarshalToMetricAggregateQuery(&q)
+	if err != nil {
+		return DataResponseErrorUnmarshal(err)
+	}
+
+	frames, err := s.Datasource.HandleGetMetricAggregateQuery(ctx, query)
+	if err != nil {
+		return DataResponseErrorRequestFailed(err)
+	}
+
+	return backend.DataResponse{
+		Frames: frames,
+		Error:  nil,
+	}
+}
+
 func (s *Server) HandleListDimensionKeysQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	return processQueries(ctx, req, s.handleListDimensionKeysQuery), nil
 }

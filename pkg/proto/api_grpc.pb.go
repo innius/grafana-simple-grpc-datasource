@@ -28,6 +28,8 @@ type GrafanaQueryAPIClient interface {
 	GetMetricValue(ctx context.Context, in *GetMetricValueRequest, opts ...grpc.CallOption) (*GetMetricValueResponse, error)
 	// Gets the history of a metric's values
 	GetMetricHistory(ctx context.Context, in *GetMetricHistoryRequest, opts ...grpc.CallOption) (*GetMetricHistoryResponse, error)
+	// Gets the history of a metric's aggregated value
+	GetMetricAggregate(ctx context.Context, in *GetMetricAggregateRequest, opts ...grpc.CallOption) (*GetMetricAggregateResponse, error)
 }
 
 type grafanaQueryAPIClient struct {
@@ -83,6 +85,15 @@ func (c *grafanaQueryAPIClient) GetMetricHistory(ctx context.Context, in *GetMet
 	return out, nil
 }
 
+func (c *grafanaQueryAPIClient) GetMetricAggregate(ctx context.Context, in *GetMetricAggregateRequest, opts ...grpc.CallOption) (*GetMetricAggregateResponse, error) {
+	out := new(GetMetricAggregateResponse)
+	err := c.cc.Invoke(ctx, "/grafana.GrafanaQueryAPI/GetMetricAggregate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GrafanaQueryAPIServer is the server API for GrafanaQueryAPI service.
 // All implementations must embed UnimplementedGrafanaQueryAPIServer
 // for forward compatibility
@@ -97,6 +108,8 @@ type GrafanaQueryAPIServer interface {
 	GetMetricValue(context.Context, *GetMetricValueRequest) (*GetMetricValueResponse, error)
 	// Gets the history of a metric's values
 	GetMetricHistory(context.Context, *GetMetricHistoryRequest) (*GetMetricHistoryResponse, error)
+	// Gets the history of a metric's aggregated value
+	GetMetricAggregate(context.Context, *GetMetricAggregateRequest) (*GetMetricAggregateResponse, error)
 	mustEmbedUnimplementedGrafanaQueryAPIServer()
 }
 
@@ -118,6 +131,9 @@ func (UnimplementedGrafanaQueryAPIServer) GetMetricValue(context.Context, *GetMe
 }
 func (UnimplementedGrafanaQueryAPIServer) GetMetricHistory(context.Context, *GetMetricHistoryRequest) (*GetMetricHistoryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMetricHistory not implemented")
+}
+func (UnimplementedGrafanaQueryAPIServer) GetMetricAggregate(context.Context, *GetMetricAggregateRequest) (*GetMetricAggregateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMetricAggregate not implemented")
 }
 func (UnimplementedGrafanaQueryAPIServer) mustEmbedUnimplementedGrafanaQueryAPIServer() {}
 
@@ -222,6 +238,24 @@ func _GrafanaQueryAPI_GetMetricHistory_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GrafanaQueryAPI_GetMetricAggregate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMetricAggregateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrafanaQueryAPIServer).GetMetricAggregate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grafana.GrafanaQueryAPI/GetMetricAggregate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrafanaQueryAPIServer).GetMetricAggregate(ctx, req.(*GetMetricAggregateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GrafanaQueryAPI_ServiceDesc is the grpc.ServiceDesc for GrafanaQueryAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -248,6 +282,10 @@ var GrafanaQueryAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMetricHistory",
 			Handler:    _GrafanaQueryAPI_GetMetricHistory_Handler,
+		},
+		{
+			MethodName: "GetMetricAggregate",
+			Handler:    _GrafanaQueryAPI_GetMetricAggregate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

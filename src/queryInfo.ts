@@ -1,6 +1,13 @@
 import { SelectableValue } from '@grafana/data';
 
-import { GetMetricHistoryQuery, GetMetricValueQuery, MyQuery, QueryType } from './types';
+import {
+  AggregateType,
+  GetMetricAggregateQuery,
+  GetMetricHistoryQuery,
+  GetMetricValueQuery,
+  MyQuery,
+  QueryType,
+} from './types';
 
 export interface QueryTypeInfo extends SelectableValue<QueryType> {
   value: QueryType; // not optional
@@ -19,6 +26,14 @@ export const queryTypeInfos: QueryTypeInfo[] = [
     value: QueryType.GetMetricValue,
     description: `Gets a metrics current value.`,
     defaultQuery: {} as GetMetricValueQuery,
+  },
+  {
+    label: 'Get metric aggregate',
+    value: QueryType.GetMetricAggregate,
+    description: `Gets a metrics aggregate value.`,
+    defaultQuery: {
+      aggregateType: AggregateType.AVERAGE,
+    } as GetMetricAggregateQuery,
   },
 ];
 

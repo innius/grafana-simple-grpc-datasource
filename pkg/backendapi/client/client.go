@@ -31,7 +31,7 @@ func NewClient(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) 
 	} else {
 		log.DefaultLogger.Info("dial without credentials", "endpoint", settings.Endpoint)
 		options = append(options, grpc.WithUnaryInterceptor(GRPCDebugLogger()),
-			grpc.WithInsecure(),)
+			grpc.WithInsecure())
 	}
 
 	conn, err := grpc.Dial(settings.Endpoint, options...)
@@ -61,6 +61,10 @@ func (b *backendAPIClient) GetMetricValue(ctx context.Context, in *pb.GetMetricV
 
 func (b *backendAPIClient) GetMetricHistory(ctx context.Context, in *pb.GetMetricHistoryRequest, opts ...grpc.CallOption) (*pb.GetMetricHistoryResponse, error) {
 	return b.backendAPI.GetMetricHistory(ctx, in, opts...)
+}
+
+func (b *backendAPIClient) GetMetricAggregate(ctx context.Context, in *pb.GetMetricAggregateRequest, opts ...grpc.CallOption) (*pb.GetMetricAggregateResponse, error) {
+	return b.backendAPI.GetMetricAggregate(ctx, in, opts...)
 }
 
 func (b *backendAPIClient) Dispose() {
