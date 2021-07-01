@@ -2,6 +2,7 @@ package framer
 
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 
@@ -24,6 +25,12 @@ func (p MetricAggregate) Frames() (data.Frames, error) {
 	for i, v := range p.Values {
 		timeField.Set(i, getTime(v.Timestamp))
 		valueField.Set(i, v.Value.DoubleValue)
+	}
+
+	frame.Meta = &data.FrameMeta{
+		Custom: models.Metadata{
+			NextToken: p.NextToken,
+		},
 	}
 
 	return data.Frames{frame}, nil

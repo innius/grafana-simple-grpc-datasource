@@ -11,11 +11,8 @@ export enum QueryType {
 
 export enum AggregateType {
   AVERAGE = 'AVERAGE',
-  // COUNT = 'COUNT',
   MAXIMUM = 'MAXIMUM',
   MINIMUM = 'MINIMUM',
-  // SUM = 'SUM',
-  // STANDARD_DEVIATION = 'STANDARD_DEVIATION',
 }
 
 export function isMetricQuery(queryType: QueryType): boolean {
@@ -32,6 +29,18 @@ export interface MyQuery extends DataQuery {
   metricName?: string;
   metricId?: string;
   aggregateType?: AggregateType;
+}
+
+export interface NextQuery extends MyQuery {
+  /**
+   * The next token should never be saved in the JSON model, however some queries
+   * will require multiple pages in order to fulfil the requests
+   */
+  nextToken?: string;
+}
+
+export interface Metadata {
+  nextToken?: string;
 }
 
 export interface Dimension {
