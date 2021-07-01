@@ -36,7 +36,8 @@ func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query
 	}
 	return &framer.MetricHistory{
 		GetMetricHistoryResponse: pb.GetMetricHistoryResponse{
-			Values: resp.Values,
+			Values:    resp.Values,
+			NextToken: resp.NextToken,
 		},
 		MetricID: query.MetricId,
 	}, nil
