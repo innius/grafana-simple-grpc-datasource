@@ -18,8 +18,8 @@ func (p MetricHistory) Frames() (data.Frames, error) {
 	length := len(p.Values)
 
 	timeField := fields.TimeField(length)
-	valueField := fields.MetricField(p.MetricID, length)
-	log.DefaultLogger.Debug("MetricValue", "metric", p.MetricID)
+	valueField := fields.MetricField("Value", length)
+	log.DefaultLogger.Debug("MetricHistory", "value", p.MetricID)
 
 	frame := data.NewFrame(p.MetricID, timeField, valueField)
 
