@@ -43,7 +43,7 @@ A measure can have zero or many dimensions that collectively uniquely identify i
 ## Getting started
 1. start a sample grpc server locally:
 ```
-docker run -p 50051:50041 innius/sample-grpc-server
+docker run -p 50051:50051 innius/sample-grpc-server
 ```
    
 2. install the innius-simple-grpc-datasource
