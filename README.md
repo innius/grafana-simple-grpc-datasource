@@ -64,6 +64,7 @@ This datasource plugin expects a backend to implement `GrafanaQueryAPI` interfac
 | ListMetrics | Returns a list of all metrics for a combination of dimensions. |
 | GetMetricValue | Returns the last known value of a metric. |
 | GetMetricHistory | Returns historical values of a metric |
+| GetMetricAggregate | Returns aggregated metric values |
 
 A sample implementation can be found [here](https://bitbucket.org/innius/sample-grpc-server/src/master/).
 
