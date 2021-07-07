@@ -43,7 +43,7 @@ A measure can have zero or many dimensions that collectively uniquely identify i
 ## Getting started
 1. start a sample grpc server locally:
 ```
-docker run -p 50051:50041 innius/sample-grpc-server
+docker run -p 50051:50051 innius/sample-grpc-server
 ```
    
 2. install the innius-simple-grpc-datasource
@@ -70,11 +70,10 @@ A sample implementation can be found [here](https://bitbucket.org/innius/sample-
 Please note gRPC is programming language agnostic which makes it possible to implement a backend in the language of your choice. Checkout the gRPC [documentation](https://grpc.io/docs/languages/) of your language.
 
 ## Roadmap
-- [ ] add pagination to historical value query 
-- [ ] add more caching 
-- [ ] add more authentication schemes (certificates, basic authentication etc. )
-- [ ] add more tests 
-- [ ] better lookups for dimensions and metrics in frontend 
-- [ ] support annotations 
-- [ ] support for aggregations
-- [ ] support streaming queries 
+
+- add more caching 
+- add more authentication schemes (certificates, basic authentication etc. )
+- add more tests 
+- better lookups for dimensions and metrics in frontend 
+- support annotations
+- support streaming queries 

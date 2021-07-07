@@ -17,3 +17,7 @@ func TimeField(length int) *data.Field {
 func MetricField(metric string, length int) *data.Field {
 	return NewFieldWithName(metric, data.FieldTypeFloat64, length)
 }
+
+func AggregationField(length int, name string) *data.Field {
+	return NewFieldWithName(name, data.FieldTypeFloat64, length)
+}

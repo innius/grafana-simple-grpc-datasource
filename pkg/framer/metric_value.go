@@ -21,7 +21,7 @@ func (p MetricValue) Frames() (data.Frames, error) {
 
 	timeField := fields.TimeField(length)
 	log.DefaultLogger.Debug("MetricValue", "metric", p.MetricID)
-	valueField := fields.MetricField(p.MetricID, length)
+	valueField := fields.MetricField("value", length)
 
 	frame := data.NewFrame(p.MetricID, timeField, valueField)
 
