@@ -15,11 +15,11 @@ import {
   ListDimensionsQuery,
   ListDimensionValuesQuery,
   ListMetricsQuery,
+  Metadata,
   MyDataSourceOptions,
   MyQuery,
-  QueryType,
-  Metadata,
   NextQuery,
+  QueryType,
 } from './types';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -84,6 +84,9 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   filterQuery(query: MyQuery): boolean {
+    if (query.hide) {
+      return false;
+    }
     if (!query.queryType) {
       return false;
     }
