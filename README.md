@@ -70,11 +70,10 @@ A sample implementation can be found [here](https://bitbucket.org/innius/sample-
 Please note gRPC is programming language agnostic which makes it possible to implement a backend in the language of your choice. Checkout the gRPC [documentation](https://grpc.io/docs/languages/) of your language.
 
 ## Roadmap
-- [ ] add pagination to historical value query 
-- [ ] add more caching 
-- [ ] add more authentication schemes (certificates, basic authentication etc. )
-- [ ] add more tests 
-- [ ] better lookups for dimensions and metrics in frontend 
-- [ ] support annotations 
-- [ ] support for aggregations
-- [ ] support streaming queries 
+
+- add more caching 
+- add more authentication schemes (certificates, basic authentication etc. )
+- add more tests 
+- better lookups for dimensions and metrics in frontend 
+- support annotations
+- support streaming queries 
