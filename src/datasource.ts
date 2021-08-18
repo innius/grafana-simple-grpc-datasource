@@ -61,14 +61,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
        */
       query: (request: DataQueryRequest<MyQuery>) => {
         return super.query(request);
-        // let res = super.query(request);
-        // res.pipe(map(x => {
-        //   if (x.error) {
-        //     throw new Error('testing errors');
-        //   })
-        //   )
-        // }
-        // return res;
       },
 
       /**
