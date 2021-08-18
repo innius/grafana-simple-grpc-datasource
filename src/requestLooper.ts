@@ -51,12 +51,21 @@ export function getRequestLooper<T extends DataQuery = DataQuery>(
       next: (rsp: DataQueryResponse) => {
         tracker.fetchEndTime = Date.now();
         loadingState = rsp.state;
-        if (loadingState !== LoadingState.Error) {
+        if (loadingState === LoadingState.Error) {
+          const msg = 'Error on query ' + rsp.error?.refId + (rsp.error?.status ? ' with status ' + rsp.error?.status : '')
+          console.log(msg)
+          rsp.error?.message ? console.log('error message: ' + rsp.error?.message) : false;
+          rsp.error?.status ? console.log('error status: ' + rsp.error.status) : false;
+          rsp.error?.statusText ? console.log('error status text: ' + rsp.error.statusText) : false;
+          rsp.error?.type ? console.log('error type: ' + rsp.error.type) : false;
+          rsp.error?.data ? console.log('error data: ' + rsp.error.data) : false;
+          subscriber.next({ ...rsp, error: new Error(msg), state: loadingState, key: req.requestId });
+        } else {
           nextQueries = options.getNextQueries(rsp);
           loadingState = nextQueries ? LoadingState.Streaming : LoadingState.Done;
+          const data = options.process(tracker, rsp.data, !!!nextQueries);
+          subscriber.next({ ...rsp, data, state: loadingState, key: req.requestId });
         }
-        const data = options.process(tracker, rsp.data, !!!nextQueries);
-        subscriber.next({ ...rsp, data, state: loadingState, key: req.requestId });
       },
       error: (err: any) => {
         subscriber.error(err);
