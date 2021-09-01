@@ -37,11 +37,12 @@ func (ds *Datasource) HandleGetMetricValueQuery(ctx context.Context, query *mode
 	return res.Frames()
 }
 
+
 func (ds *Datasource) HandleGetMetricHistoryQuery(ctx context.Context, query *models.MetricHistoryQuery) (data.Frames, error) {
 	//TODO: remove pointer dereference
 	res, err := api.GetMetricHistory(ctx, ds.client, *query)
 	if err != nil {
-		return nil, err
+		return backendErrorResponse(err)
 	}
 	return res.Frames()
 }
@@ -50,7 +51,7 @@ func (ds *Datasource) HandleGetMetricAggregateQuery(ctx context.Context, query *
 	//TODO: remove pointer dereference
 	res, err := api.GetMetricAggregate(ctx, ds.client, *query)
 	if err != nil {
-		return nil, err
+		return backendErrorResponse(err)
 	}
 	return res.Frames()
 }
@@ -59,7 +60,7 @@ func (ds *Datasource) HandleListDimensionsQuery(ctx context.Context, query *mode
 	//TODO: remove pointer dereference
 	res, err := api.ListDimensionKeys(ctx, ds.client, *query)
 	if err != nil {
-		return nil, err
+		return backendErrorResponse(err)
 	}
 	return res.Frames()
 }
@@ -68,7 +69,7 @@ func (ds *Datasource) HandleListDimensionValuesQuery(ctx context.Context, query 
 	//TODO: remove pointer dereference
 	res, err := api.ListDimensionValues(ctx, ds.client, *query)
 	if err != nil {
-		return nil, err
+		return backendErrorResponse(err)
 	}
 	return res.Frames()
 }
@@ -77,7 +78,7 @@ func (ds *Datasource) HandleListMetricsQuery(ctx context.Context, query *models.
 	//TODO: remove pointer dereference
 	res, err := api.ListMetrics(ctx, ds.client, *query)
 	if err != nil {
-		return nil, err
+		return backendErrorResponse(err)
 	}
 	return res.Frames()
 }
