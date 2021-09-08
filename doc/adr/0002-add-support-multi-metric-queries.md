@@ -197,6 +197,8 @@ Create a new version of the API without altering the current: create a copy of t
 
 Current API can be deprecated in favor of the new version. Backend implementations can migrate to the latest version.
 
+This option supports the changes proposed in option 1. 
+
 Grpc backend implementations support multiple versions of the same API. 
 
 **Pros:**
