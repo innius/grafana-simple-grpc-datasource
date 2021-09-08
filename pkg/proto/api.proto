@@ -6,6 +6,7 @@ package grafana;
 
 // The GrafanaQueryAPI definition.
 service GrafanaQueryAPI {
+    option deprecated = true;
     // Returns a list of all available dimensions
     rpc ListDimensionKeys (ListDimensionKeysRequest) returns (ListDimensionKeysResponse) {
     }

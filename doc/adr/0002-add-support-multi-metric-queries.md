@@ -10,10 +10,17 @@ Accepted
 
 One of the most popular grafana features are [templates and variables](https://grafana.com/docs/grafana/latest/variables/). Variables allow you to create more interactive and dynamic reports. The initial version of this plugin supports variables but is limited to only one selected variable. 
 Removing this limitation improves the usability of this plugin significantly: 
-* it becomes possible to select multiple metrics for one variable.
+* it becomes possible to select multiple metrics per panel query.
 * performance improvement because multiple queries can be combined in one network call. 
 
-Making such a change means a breaking change for both the request and the responses of all queries.
+Making such a change means a breaking change for both the request and the responses of all queries. This document describes various options for implementing such a change.
+
+## Decision Drivers 
+
+* Migration; a lock-step deployment in which all dependencies have to be updated at the same time is unacceptable. It should be possible to roll out the change in a gradual manner. 
+* Ease of use; the api should be intuitive to use.
+
+## Options 
 
 ### Option 1: break the API 
 
@@ -21,7 +28,7 @@ Making such a change means a breaking change for both the request and the respon
 * Change the definition of a response value to include the metric identification 
 * Change the response from an array of values into an array of metric values
 
-For example: GetMetricHistory 
+#### For example: GetMetricHistory 
 
 ```protobuf
   // Gets the history of a metric's values
@@ -97,13 +104,7 @@ message GetMetricAggregateResponse {
 
 **Cons:**
 * Breaking change -> impacts plugin and backend api's
-* Do not allow gradual migration model 
-
-#### Impact Analysis 
-
-* datasource backend plugin request / responses  
-* sample grpc server 
-* backend implementations of this api 
+* Do not allow gradual migration model
 
 
 ### Option 2: keep interface intact and support comma separated strings 
