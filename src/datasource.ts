@@ -26,6 +26,7 @@ import { map } from 'rxjs/operators';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
 
+
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
@@ -125,9 +126,11 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
    */
   applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars): MyQuery {
     const templateSrv = getTemplateSrv();
+    const metric = templateSrv.replace(query.metricId || '', scopedVars,"csv")
     return {
       ...query,
-      metricId: templateSrv.replace(query.metricId || '', scopedVars),
+      metricId: metric,
+      metrics: metric.split(",")
     };
   }
 

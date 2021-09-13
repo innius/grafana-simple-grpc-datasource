@@ -1,7 +1,7 @@
 package client
 
 import (
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"context"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"google.golang.org/grpc"
@@ -14,8 +14,8 @@ type BackendAPIClient interface {
 }
 
 type backendAPIClient struct {
-	backendAPI pb.GrafanaQueryAPIClient
-	conn       *grpc.ClientConn
+	backendAPI   pb.GrafanaQueryAPIClient
+	conn         *grpc.ClientConn
 }
 
 func NewClient(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) {

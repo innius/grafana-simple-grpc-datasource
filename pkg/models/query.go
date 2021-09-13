@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"time"
 )
@@ -19,9 +20,13 @@ type Dimension struct {
 	Value string `json:"value"`
 }
 
+func (d Dimension) String() string {
+	return fmt.Sprintf("%s=%s", d.Key, d.Value)
+}
+
 type MetricBaseQuery struct {
 	Dimensions []Dimension `json:"dimensions"`
-	MetricId   string      `json:"metricId,omitempty"`
+	Metrics    []string    `json:"metrics,omitempty"`
 	NextToken  string      `json:"nextToken,omitempty"`
 
 	Interval      time.Duration     `json:"-"`

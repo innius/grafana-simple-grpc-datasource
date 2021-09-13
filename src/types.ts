@@ -28,6 +28,8 @@ export interface MyQuery extends DataQuery {
   dimensions?: Dimensions;
   metricName?: string;
   metricId?: string;
+  // expanded metrics
+  metrics?: string[];
   aggregateType?: AggregateType;
 }
 
@@ -72,6 +74,7 @@ export interface MySecureJsonData {
 
 export interface GetMetricValueQuery extends MyQuery {
   queryType: QueryType.GetMetricValue;
+  metrics: string[];
 }
 
 export interface GetMetricHistoryQuery extends MyQuery {

@@ -6,7 +6,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_INSTALL_PLUGINS=https://github.com/innius/grafana-simple-grpc-datasource/releases/download/v1.0.2/innius-grpc-datasource-1.0.2.zip;innius-grpc-plugin
+      - GF_INSTALL_PLUGINS=https://github.com/innius/grafana-simple-grpc-datasource/releases/download/v1.0.3/innius-grpc-datasource-1.0.3.zip;innius-grpc-plugin
     networks:
       - local
     restart: always

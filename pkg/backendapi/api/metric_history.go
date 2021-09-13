@@ -19,7 +19,7 @@ func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRe
 	}
 	return &pb.GetMetricHistoryRequest{
 		Dimensions:    dimensions,
-		Metric:        query.MetricId,
+		Metric:        query.Metrics[0], //TODO: fix me
 		StartDate:     query.TimeRange.From.Unix(),
 		EndDate:       query.TimeRange.To.Unix(),
 		StartingToken: query.NextToken,
@@ -27,18 +27,19 @@ func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRe
 }
 
 func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query models.MetricHistoryQuery) (*framer.MetricHistory, error) {
-	clientReq := historyQueryToInput(query)
-
-	resp, err := client.GetMetricHistory(ctx, clientReq)
-
-	if err != nil {
-		return nil, err
-	}
+	//clientReq := historyQueryToInput(query)
+	//
+	//resp, err := client.GetMetricHistory(ctx, clientReq)
+	//
+	//if err != nil {
+	//	return nil, err
+	//}
 	return &framer.MetricHistory{
 		GetMetricHistoryResponse: pb.GetMetricHistoryResponse{
-			Values:    resp.Values,
-			NextToken: resp.NextToken,
+		//	Values:    resp.Values,
+		//	NextToken: resp.NextToken,
 		},
-		MetricID: query.MetricId,
+		//MetricID: query.MetricId,
 	}, nil
+
 }
