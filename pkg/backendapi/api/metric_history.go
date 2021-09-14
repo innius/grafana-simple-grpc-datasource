@@ -6,7 +6,7 @@ import (
 	"context"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 )
 
 func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRequest {
@@ -17,9 +17,16 @@ func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRe
 			Value: d.Value,
 		})
 	}
+
+	metrics := make([]*pb.Metric, len(query.Metrics))
+	for i := range query.Metrics {
+		metrics[i] = &pb.Metric{
+			Id: query.Metrics[i],
+		}
+	}
 	return &pb.GetMetricHistoryRequest{
 		Dimensions:    dimensions,
-		Metric:        query.Metrics[0], //TODO: fix me
+		Metrics:       metrics,
 		StartDate:     query.TimeRange.From.Unix(),
 		EndDate:       query.TimeRange.To.Unix(),
 		StartingToken: query.NextToken,
@@ -27,19 +34,18 @@ func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRe
 }
 
 func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query models.MetricHistoryQuery) (*framer.MetricHistory, error) {
-	//clientReq := historyQueryToInput(query)
-	//
-	//resp, err := client.GetMetricHistory(ctx, clientReq)
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
+	clientReq := historyQueryToInput(query)
+
+	resp, err := client.GetMetricHistory(ctx, clientReq)
+
+	if err != nil {
+		return nil, err
+	}
 	return &framer.MetricHistory{
-		GetMetricHistoryResponse: pb.GetMetricHistoryResponse{
-		//	Values:    resp.Values,
-		//	NextToken: resp.NextToken,
+		GetMetricHistoryResponse: &pb.GetMetricHistoryResponse{
+			Result:    resp.Result,
+			NextToken: resp.NextToken,
 		},
-		//MetricID: query.MetricId,
 	}, nil
 
 }

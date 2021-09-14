@@ -3,36 +3,57 @@ package framer
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
+	"fmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
 type MetricHistory struct {
-	pb.GetMetricHistoryResponse
-	MetricID string
+	*pb.GetMetricHistoryResponse
 }
 
 func (p MetricHistory) Frames() (data.Frames, error) {
-	length := len(p.Values)
+	frames := data.Frames{}
 
-	timeField := fields.TimeField(length)
-	valueField := fields.MetricField("Value", length)
-	log.DefaultLogger.Debug("MetricHistory", "value", p.MetricID)
+	for _, v := range p.Result {
+		length := len(v.Values)
 
-	frame := data.NewFrame(p.MetricID, timeField, valueField)
+		timeField := fields.TimeField(length)
+		valueField := fields.MetricField("Value", length)
 
-	frame.Meta = &data.FrameMeta{
+		log.DefaultLogger.Debug("MetricValue", "metric", v.Metric.GetId())
+
+		datapoints := v.GetValues()
+		log.DefaultLogger.Debug(fmt.Sprintf("Datapoints; %d", len(datapoints)))
+		for i := range datapoints {
+			dp := datapoints[i]
+			timeField.Set(i, getTime(dp.GetTimestamp()))
+			if dp.Value != nil {
+				if dp.Value != nil {
+					valueField.Set(i, dp.Value.DoubleValue)
+				}
+			}
+		}
+
+		frame := data.NewFrame(v.Metric.GetId(), timeField, valueField)
+		frames = append(frames, frame)
+	}
+
+	meta := &data.FrameMeta{
 		Custom: models.Metadata{
 			NextToken: p.NextToken,
 		},
 	}
-	for i, v := range p.Values {
-		timeField.Set(i, getTime(v.Timestamp))
-		//TODO shouldn't we distinguish between nil and 0 ?
-		valueField.Set(i, v.Value.DoubleValue)
+	// Needs a frame for the metadata... even if just error
+	if len(frames) < 1 {
+		frames = append(frames, data.NewFrame(""))
 	}
-
-	return data.Frames{frame}, nil
+	frame := frames[0]
+	if frame.Meta == nil {
+		frame.Meta = &data.FrameMeta{}
+	}
+	frame.Meta = meta
+	return frames, nil
 }

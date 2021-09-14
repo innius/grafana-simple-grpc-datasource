@@ -12,26 +12,33 @@ import (
 )
 
 func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggregateRequest, error) {
-	//var dimensions []*pb.Dimension
-	//for _, d := range query.Dimensions {
-	//	dimensions = append(dimensions, &pb.Dimension{
-	//		Key:   d.Key,
-	//		Value: d.Value,
-	//	})
-	//}
-	//aggType, err := parseAggregateType(query.AggregateType)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return &pb.GetMetricAggregateRequest{
-	//	Dimensions:    dimensions,
-	//	Metric:        query.MetricId,
-	//	StartDate:     query.TimeRange.From.Unix(),
-	//	EndDate:       query.TimeRange.To.Unix(),
-	//	AggregateType: aggType,
-	//	StartingToken: query.NextToken,
-	//}, nil
-	panic("Implement Me")
+	var dimensions []*pb.Dimension
+	for _, d := range query.Dimensions {
+		dimensions = append(dimensions, &pb.Dimension{
+			Key:   d.Key,
+			Value: d.Value,
+		})
+	}
+	metrics := make([]*pb.Metric, len(query.Metrics))
+	for i := range query.Metrics {
+		metrics[i] = &pb.Metric{
+			Id: query.Metrics[i],
+		}
+	}
+
+	aggType, err := parseAggregateType(query.AggregateType)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetMetricAggregateRequest{
+		Dimensions:    dimensions,
+		Metrics:       metrics,
+		StartDate:     query.TimeRange.From.Unix(),
+		EndDate:       query.TimeRange.To.Unix(),
+		AggregateType: aggType,
+		StartingToken: query.NextToken,
+	}, nil
+
 }
 
 func parseAggregateType(s string) (pb.AggregateType, error) {
@@ -49,23 +56,22 @@ func parseAggregateType(s string) (pb.AggregateType, error) {
 }
 
 func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, query models.MetricAggregateQuery) (*framer.MetricAggregate, error) {
-	panic("Implement me")
-	//clientReq, err := aggregateQueryToInput(query)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//resp, err := client.GetMetricAggregate(ctx, clientReq)
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return &framer.MetricAggregate{
-	//	GetMetricAggregateResponse: pb.GetMetricAggregateResponse{
-	//		Values:    resp.Values,
-	//		NextToken: resp.NextToken,
-	//	},
-	//	MetricID:        query.MetricId,
-	//	AggregationType: clientReq.AggregateType,
-	//}, nil
+
+	clientReq, err := aggregateQueryToInput(query)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.GetMetricAggregate(ctx, clientReq)
+
+	if err != nil {
+		return nil, err
+	}
+	return &framer.MetricAggregate{
+		GetMetricAggregateResponse: &pb.GetMetricAggregateResponse{
+			Result:    resp.Result,
+			NextToken: resp.NextToken,
+		},
+		AggregationType: clientReq.AggregateType,
+	}, nil
 }

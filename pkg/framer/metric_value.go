@@ -19,10 +19,11 @@ func (p MetricValue) Frames() (data.Frames, error) {
 		timeField := fields.TimeField(1)
 		log.DefaultLogger.Debug("MetricValue", "metric", v.Metric.GetId())
 		valueField := fields.MetricField("Value", 1)
-		//TODO: be a bit more defensive here
 		if v.Datapoint != nil {
 			timeField.Set(0, getTime(v.Datapoint.GetTimestamp()))
-			valueField.Set(0, v.Datapoint.Value.DoubleValue)
+			if v.Datapoint.Value != nil {
+				valueField.Set(0, v.Datapoint.Value.DoubleValue)
+			}
 		}
 		frame := data.NewFrame(v.Metric.GetId(), timeField, valueField)
 
