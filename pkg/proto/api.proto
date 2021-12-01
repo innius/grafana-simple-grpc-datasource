@@ -75,6 +75,7 @@ message GetMetricAggregateRequest {
     int64 maxItems = 6;
     TimeOrdering timeOrdering = 7;
     string startingToken = 8;
+    int64 intervalMs = 9; 
 }
 
 message GetMetricAggregateResponse {

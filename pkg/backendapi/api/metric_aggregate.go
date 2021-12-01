@@ -24,6 +24,8 @@ func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggr
 		return nil, err
 	}
 	return &pb.GetMetricAggregateRequest{
+		IntervalMs:    query.Interval.Milliseconds(),
+		MaxItems:      query.MaxDataPoints,
 		Dimensions:    dimensions,
 		Metric:        query.MetricId,
 		StartDate:     query.TimeRange.From.Unix(),
