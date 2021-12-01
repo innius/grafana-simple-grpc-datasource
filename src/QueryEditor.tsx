@@ -14,9 +14,10 @@ type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 export const aggReg = new Registry(() => [
   { id: AggregateType.AVERAGE, name: 'Average' },
-  // { id: AggregateType.COUNT, name: 'Count', isValid: AnyTypeOK },
+  { id: AggregateType.COUNT, name: 'Count' },
   { id: AggregateType.MAXIMUM, name: 'Max' },
   { id: AggregateType.MINIMUM, name: 'Min' },
+
   // { id: AggregateType.SUM, name: 'Sum', isValid: OnlyNumbers },
   // { id: AggregateType.STANDARD_DEVIATION, name: 'Stddev', description: 'Standard Deviation', isValid: OnlyNumbers },
 ]);

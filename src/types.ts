@@ -11,8 +11,9 @@ export enum QueryType {
 
 export enum AggregateType {
   AVERAGE = 'AVERAGE',
-  MAXIMUM = 'MAXIMUM',
-  MINIMUM = 'MINIMUM',
+  MAXIMUM = 'MAX',
+  MINIMUM = 'MIN',
+  COUNT = 'COUNT',
 }
 
 export function isMetricQuery(queryType: QueryType): boolean {
