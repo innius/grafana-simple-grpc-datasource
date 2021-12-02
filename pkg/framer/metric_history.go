@@ -4,8 +4,8 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	set "github.com/deckarep/golang-set"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
-
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
@@ -17,21 +17,47 @@ type MetricHistory struct {
 func (p MetricHistory) Frames() (data.Frames, error) {
 	length := len(p.Values)
 
-	timeField := fields.TimeField(length)
-	valueField := fields.MetricField("Value", length)
 	log.DefaultLogger.Debug("MetricHistory", "value", p.MetricID)
 
-	frame := data.NewFrame(p.MetricID, timeField, valueField)
+	set := set.NewSet()
+
+	for _, value := range p.Values[0].Values {
+		set.Add(value.Id)
+	}
+
+	timeField := fields.TimeField(length)
+
+	result := make(map[string]*data.Field)
+
+	for _, value := range set.ToSlice() {
+		newField := fields.MetricField(value.(string), len(p.Values))
+		result[value.(string)] = newField
+	}
+
+	for index, metricHistoryValue := range p.Values {
+		timeField.Set(index, getTime(metricHistoryValue.Timestamp))
+		for _, value := range metricHistoryValue.Values {
+			result[value.Id].Set(index, value.DoubleValue)
+		}
+	}
+
+	fields := []*data.Field{
+		timeField,
+	}
+
+	for _, field := range result {
+		fields = append(fields, field)
+	}
+
+	frame := &data.Frame{
+		Name:   p.MetricID,
+		Fields: fields,
+	}
 
 	frame.Meta = &data.FrameMeta{
 		Custom: models.Metadata{
 			NextToken: p.NextToken,
 		},
-	}
-	for i, v := range p.Values {
-		timeField.Set(i, getTime(v.Timestamp))
-		//TODO shouldn't we distinguish between nil and 0 ?
-		valueField.Set(i, v.Value.DoubleValue)
 	}
 
 	return data.Frames{frame}, nil

@@ -1,8 +1,9 @@
 package api
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"context"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
 
@@ -35,7 +36,7 @@ func GetMetricValue(ctx context.Context, client client.BackendAPIClient, query m
 	return &framer.MetricValue{
 		GetMetricValueResponse: pb.GetMetricValueResponse{
 			Timestamp: resp.Timestamp,
-			Value:     resp.Value,
+			Values:    resp.Values,
 		},
 		MetricID: query.MetricId,
 	}, nil

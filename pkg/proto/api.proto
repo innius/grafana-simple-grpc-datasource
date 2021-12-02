@@ -53,7 +53,7 @@ message GetMetricValueResponse {
     int64 timestamp = 1;
 
     // The current metric value.
-    MetricValue value = 2;
+    repeated MetricValue values = 2;
 }
 
 message GetMetricHistoryRequest {
@@ -88,13 +88,14 @@ message GetMetricAggregateResponse {
 
 message MetricValue {
     double doubleValue = 1;
+    string id = 2;
 }
 
 message MetricHistoryValue {
     // The timestamp date, in seconds, in the Unix epoch format.
     int64 timestamp = 1;
     // Contains asset property value information
-    MetricValue value = 2;
+    repeated MetricValue values = 2;
 }
 
 message GetMetricHistoryResponse {

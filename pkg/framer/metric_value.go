@@ -15,20 +15,28 @@ type MetricValue struct {
 
 func (p MetricValue) Frames() (data.Frames, error) {
 	length := 0
-	if p.Value != nil {
+	if p.Values != nil {
 		length = 1
 	}
 
 	timeField := fields.TimeField(length)
+	timeField.Set(0, getTime(p.Timestamp))
+
 	log.DefaultLogger.Debug("MetricValue", "metric", p.MetricID)
-	valueField := fields.MetricField("value", length)
 
-	frame := data.NewFrame(p.MetricID, timeField, valueField)
+	result := []*data.Field{
+		timeField,
+	}
 
-	if p.Value != nil {
-		timeField.Set(0, getTime(p.Timestamp))
-		//TODO shouldn't we distinguish between nil and 0 ?
-		valueField.Set(0, p.Value.DoubleValue)
+	for _, metricValue := range p.Values {
+		newField := fields.MetricField(metricValue.Id, 1)
+		newField.Set(0, metricValue.DoubleValue)
+		result = append(result, newField)
+	}
+
+	frame := &data.Frame{
+		Name:   p.MetricID,
+		Fields: result,
 	}
 
 	return data.Frames{frame}, nil

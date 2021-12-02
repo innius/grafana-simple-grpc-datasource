@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	set "github.com/deckarep/golang-set"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
@@ -17,15 +18,42 @@ type MetricAggregate struct {
 func (p MetricAggregate) Frames() (data.Frames, error) {
 	length := len(p.Values)
 
-	timeField := fields.TimeField(length)
-	aggrField := fields.AggregationField(length, aggrTypeAlias(p.AggregationType))
-	log.DefaultLogger.Debug("MetricAggregate", "value", p.MetricID)
-	for i, v := range p.Values {
-		timeField.Set(i, getTime(v.Timestamp))
-		aggrField.Set(i, v.Value.DoubleValue)
+	log.DefaultLogger.Debug("MetricHistory", "value", p.MetricID)
+
+	set := set.NewSet()
+
+	for _, value := range p.Values[0].Values {
+		set.Add(value.Id)
 	}
 
-	frame := data.NewFrame(p.MetricID, timeField, aggrField)
+	timeField := fields.TimeField(length)
+
+	result := make(map[string]*data.Field)
+
+	for _, value := range set.ToSlice() {
+		newField := fields.AggregationField(len(p.Values), aggrTypeAlias(p.AggregationType)+"_"+value.(string))
+		result[value.(string)] = newField
+	}
+
+	for index, metricHistoryValue := range p.Values {
+		timeField.Set(index, getTime(metricHistoryValue.Timestamp))
+		for _, value := range metricHistoryValue.Values {
+			result[value.Id].Set(index, value.DoubleValue)
+		}
+	}
+
+	fields := []*data.Field{
+		timeField,
+	}
+
+	for _, field := range result {
+		fields = append(fields, field)
+	}
+
+	frame := &data.Frame{
+		Name:   p.MetricID,
+		Fields: fields,
+	}
 
 	frame.Meta = &data.FrameMeta{
 		Custom: models.Metadata{
