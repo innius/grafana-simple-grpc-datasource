@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+* improved metric selection 
+* support Count aggregation type
+* add grafana `intervalMS` and `MaxItems` attributes to query definition 
+
 ## 1.0.3
 
 Hide technical grpc errors from user interface; backend plugin logs error details and returns user-friendly message for the user.
