@@ -4,16 +4,16 @@ import "context"
 
 const apiKeyHeader = "api-key"
 
-type apikeyAuthentication struct {
-	apiKey string
+type ApiKeyAuthenticator struct {
+	ApiKey string
 }
 
-func (t apikeyAuthentication) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
+func (t ApiKeyAuthenticator) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
 	return map[string]string{
-		apiKeyHeader: t.apiKey,
+		apiKeyHeader: t.ApiKey,
 	}, nil
 }
 
-func (apikeyAuthentication) RequireTransportSecurity() bool {
+func (ApiKeyAuthenticator) RequireTransportSecurity() bool {
 	return true
 }

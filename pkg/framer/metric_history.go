@@ -3,7 +3,7 @@ package framer
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -31,7 +31,8 @@ func (p MetricHistory) Frames() (data.Frames, error) {
 	for i, v := range p.Values {
 		timeField.Set(i, getTime(v.Timestamp))
 		//TODO shouldn't we distinguish between nil and 0 ?
-		valueField.Set(i, v.Value.DoubleValue)
+		panic("TODO")
+		//valueField.Set(i, v.Value.DoubleValue)
 	}
 
 	return data.Frames{frame}, nil

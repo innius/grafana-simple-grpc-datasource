@@ -1,30 +1,31 @@
 package client
 
 import (
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
-	"context"
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client/factory"
+	v2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
-type BackendAPIClient interface {
-	pb.GrafanaQueryAPIClient
-	Dispose()
+type backendClient struct {
+	conn *grpc.ClientConn
+	v2.GrafanaQueryAPIClient
 }
 
-type backendAPIClient struct {
-	backendAPI pb.GrafanaQueryAPIClient
-	conn       *grpc.ClientConn
+func (b *backendClient) Dispose() {
+	if err := b.conn.Close(); err != nil {
+		log.DefaultLogger.Error("could not close connection on dispose", "error", err.Error())
+	}
 }
 
-func NewClient(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) {
+func New(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) {
 	options := []grpc.DialOption{}
 	if settings.ApiKeyAuthenticationEnabled {
 		log.DefaultLogger.Info("dial with api-key authentication", "endpoint", settings.Endpoint)
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)),
-			grpc.WithPerRPCCredentials(apikeyAuthentication{
-				apiKey: settings.APIKey,
+			grpc.WithPerRPCCredentials(ApiKeyAuthenticator{
+				ApiKey: settings.APIKey,
 			}),
 			grpc.WithUnaryInterceptor(GRPCDebugLogger()),
 		)
@@ -40,35 +41,12 @@ func NewClient(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) 
 		return nil, err
 	}
 
-	return &backendAPIClient{conn: conn, backendAPI: pb.NewGrafanaQueryAPIClient(conn)}, nil
-}
-
-func (b *backendAPIClient) ListDimensionKeys(ctx context.Context, in *pb.ListDimensionKeysRequest, opts ...grpc.CallOption) (*pb.ListDimensionKeysResponse, error) {
-	return b.backendAPI.ListDimensionKeys(ctx, in, opts...)
-}
-
-func (b *backendAPIClient) ListDimensionValues(ctx context.Context, in *pb.ListDimensionValuesRequest, opts ...grpc.CallOption) (*pb.ListDimensionValuesResponse, error) {
-	return b.backendAPI.ListDimensionValues(ctx, in, opts...)
-}
-
-func (b *backendAPIClient) ListMetrics(ctx context.Context, in *pb.ListMetricsRequest, opts ...grpc.CallOption) (*pb.ListMetricsResponse, error) {
-	return b.backendAPI.ListMetrics(ctx, in, opts...)
-}
-
-func (b *backendAPIClient) GetMetricValue(ctx context.Context, in *pb.GetMetricValueRequest, opts ...grpc.CallOption) (*pb.GetMetricValueResponse, error) {
-	return b.backendAPI.GetMetricValue(ctx, in, opts...)
-}
-
-func (b *backendAPIClient) GetMetricHistory(ctx context.Context, in *pb.GetMetricHistoryRequest, opts ...grpc.CallOption) (*pb.GetMetricHistoryResponse, error) {
-	return b.backendAPI.GetMetricHistory(ctx, in, opts...)
-}
-
-func (b *backendAPIClient) GetMetricAggregate(ctx context.Context, in *pb.GetMetricAggregateRequest, opts ...grpc.CallOption) (*pb.GetMetricAggregateResponse, error) {
-	return b.backendAPI.GetMetricAggregate(ctx, in, opts...)
-}
-
-func (b *backendAPIClient) Dispose() {
-	if err := b.conn.Close(); err != nil {
-		log.DefaultLogger.Error("could not close connection on dispose", "error", err.Error())
+	c, err := factory.NewClient(conn)
+	if err != nil {
+		return nil, err
 	}
+	return &backendClient{
+		conn:                  conn,
+		GrafanaQueryAPIClient: c,
+	}, nil
 }

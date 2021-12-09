@@ -3,7 +3,7 @@ package framer
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
@@ -22,7 +22,8 @@ func (p MetricAggregate) Frames() (data.Frames, error) {
 	log.DefaultLogger.Debug("MetricAggregate", "value", p.MetricID)
 	for i, v := range p.Values {
 		timeField.Set(i, getTime(v.Timestamp))
-		aggrField.Set(i, v.Value.DoubleValue)
+		//TODO
+		//aggrField.Set(i, v.Value.DoubleValue)
 	}
 
 	frame := data.NewFrame(p.MetricID, timeField, aggrField)

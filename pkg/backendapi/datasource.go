@@ -7,10 +7,12 @@ import (
 	"context"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
+	"google.golang.org/grpc"
 )
 
 type Datasource struct {
 	client client.BackendAPIClient
+	conn   *grpc.ClientConn
 }
 
 func NewDatasource(settings backend.DataSourceInstanceSettings) (*Datasource, error) {
@@ -19,7 +21,7 @@ func NewDatasource(settings backend.DataSourceInstanceSettings) (*Datasource, er
 	if err != nil {
 		return nil, err
 	}
-	cl, err := client.NewClient(cfg)
+	cl, err := client.New(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +38,6 @@ func (ds *Datasource) HandleGetMetricValueQuery(ctx context.Context, query *mode
 	}
 	return res.Frames()
 }
-
 
 func (ds *Datasource) HandleGetMetricHistoryQuery(ctx context.Context, query *models.MetricHistoryQuery) (data.Frames, error) {
 	//TODO: remove pointer dereference
