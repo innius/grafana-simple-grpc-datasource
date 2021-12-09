@@ -10,16 +10,13 @@ import DimensionSettings from './QueryDimensions';
 
 const { Select, AsyncSelect } = LegacyForms;
 
-type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
+export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 export const aggReg = new Registry(() => [
   { id: AggregateType.AVERAGE, name: 'Average' },
   { id: AggregateType.COUNT, name: 'Count' },
   { id: AggregateType.MAXIMUM, name: 'Max' },
   { id: AggregateType.MINIMUM, name: 'Min' },
-
-  // { id: AggregateType.SUM, name: 'Sum', isValid: OnlyNumbers },
-  // { id: AggregateType.STANDARD_DEVIATION, name: 'Stddev', description: 'Standard Deviation', isValid: OnlyNumbers },
 ]);
 
 export class QueryEditor extends PureComponent<Props> {
@@ -48,6 +45,7 @@ export class QueryEditor extends PureComponent<Props> {
   loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
     const { datasource } = this.props;
     const { dimensions } = this.props.query;
+
     return datasource.listMetrics(dimensions || [], value);
   };
 
@@ -56,6 +54,8 @@ export class QueryEditor extends PureComponent<Props> {
     const queryTooltip = '';
     const currentQueryType = queryTypeInfos.find(v => v.value === query.queryType);
     const select = aggReg.selectOptions([query.aggregateType || '']);
+    const key = this.props.query.dimensions?.map(x => x.key + x.value).join();
+
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
     return (
       <div className="gf-form-group">
@@ -78,12 +78,15 @@ export class QueryEditor extends PureComponent<Props> {
                 Metric
               </InlineFormLabel>
               <AsyncSelect
+                key={key}
                 width={12}
-                defaultOptions={false}
+                defaultOptions={true}
                 value={{ label: query.metricName, value: query.metricId }}
                 loadOptions={this.loadMetrics}
                 noOptionsMessage={() => 'type to search for metrics'}
                 onChange={this.onMetricChange}
+                isSearchable={true}
+                isClearable={true}
               />
             </div>
 
