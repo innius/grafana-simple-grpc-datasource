@@ -43,6 +43,8 @@ func parseAggregateType(s string) (pb.AggregateType, error) {
 		return pb.AggregateType_MAX, nil
 	case strings.ToLower(pb.AggregateType_MIN.String()):
 		return pb.AggregateType_MIN, nil
+	case strings.ToLower(pb.AggregateType_COUNT.String()):
+		return pb.AggregateType_COUNT, nil
 	default:
 		var t pb.AggregateType
 		return t, fmt.Errorf("aggregate type %s is not supported by backend plugin", s)
