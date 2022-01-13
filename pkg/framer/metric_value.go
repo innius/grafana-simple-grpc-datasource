@@ -2,6 +2,7 @@ package framer
 
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 
@@ -10,7 +11,7 @@ import (
 
 type MetricValue struct {
 	pb.GetMetricValueResponse
-	MetricID string
+	models.MetricValueQuery
 }
 
 func (p MetricValue) Frames() (data.Frames, error) {
@@ -20,14 +21,17 @@ func (p MetricValue) Frames() (data.Frames, error) {
 	}
 
 	timeField := fields.TimeField(length)
-	log.DefaultLogger.Debug("MetricValue", "metric", p.MetricID)
+	log.DefaultLogger.Debug("MetricValue", "metric", p.MetricId)
 	valueField := fields.MetricField("value", length)
-
-	frame := data.NewFrame(p.MetricID, timeField, valueField)
+	if p.DisplayName != "" {
+		valueField.Config = &data.FieldConfig{
+			DisplayNameFromDS: p.FormatDisplayName(),
+		}
+	}
+	frame := data.NewFrame(p.MetricId, timeField, valueField)
 
 	if p.Value != nil {
 		timeField.Set(0, getTime(p.Timestamp))
-		//TODO shouldn't we distinguish between nil and 0 ?
 		valueField.Set(0, p.Value.DoubleValue)
 	}
 

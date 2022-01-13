@@ -1,14 +1,14 @@
 import defaults from 'lodash/defaults';
 
-import React, { PureComponent } from 'react';
-import { InlineField, InlineFormLabel, LegacyForms } from '@grafana/ui';
+import React, {ChangeEvent, PureComponent} from 'react';
+import { InlineFormLabel, LegacyForms } from '@grafana/ui';
 import { QueryEditorProps, Registry, SelectableValue } from '@grafana/data';
 import { DataSource } from './datasource';
 import { AggregateType, defaultQuery, MyDataSourceOptions, MyQuery, QueryType } from './types';
 import { changeQueryType, QueryTypeInfo, queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './QueryDimensions';
 
-const { Select, AsyncSelect } = LegacyForms;
+const { Select, AsyncSelect,FormField } = LegacyForms;
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
@@ -42,6 +42,12 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
+  onDisplayNameChange = (item : ChangeEvent<HTMLInputElement>) => {
+    const { onChange, query, onRunQuery } = this.props;
+    onChange({ ...query, displayName: item && item.target.value });
+    onRunQuery();
+  }
+
   loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
     const { datasource } = this.props;
     const { dimensions } = this.props.query;
@@ -51,17 +57,18 @@ export class QueryEditor extends PureComponent<Props> {
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const queryTooltip = '';
     const currentQueryType = queryTypeInfos.find(v => v.value === query.queryType);
     const select = aggReg.selectOptions([query.aggregateType || '']);
     const key = this.props.query.dimensions?.map(x => x.key + x.value).join();
+    // fields which can be used in display name expression
+    const displayNameFields = query.dimensions?.map(x => x.key).concat(['metric', 'aggregate']).map(x => '{{' + x + '}}').join()
 
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
     return (
       <div className="gf-form-group">
         <>
           <div className="gf-form">
-            <InlineField label="Query type" labelWidth={14} grow={true} tooltip={queryTooltip}>
+            <InlineFormLabel width={8}>Query Type</InlineFormLabel>
               <Select
                 options={queryTypeInfos}
                 value={currentQueryType}
@@ -69,12 +76,11 @@ export class QueryEditor extends PureComponent<Props> {
                 placeholder="Select query type"
                 menuPlacement="bottom"
               />
-            </InlineField>
           </div>
           <DimensionSettings {...this.props} />
           <>
             <div className={'gf-form'}>
-              <InlineFormLabel width={5} tooltip={'start typing to query for metrics'}>
+              <InlineFormLabel width={8} tooltip={'start typing to query for metrics'}>
                 Metric
               </InlineFormLabel>
               <AsyncSelect
@@ -89,18 +95,29 @@ export class QueryEditor extends PureComponent<Props> {
                 isClearable={true}
               />
             </div>
-
             <div
               className={'gf-form'}
               hidden={currentQueryType ? currentQueryType.value !== QueryType.GetMetricAggregate : true}
             >
-              <InlineFormLabel width={5}>Aggregate</InlineFormLabel>
+              <InlineFormLabel width={8}>Aggregate</InlineFormLabel>
               <Select
                 value={select.current} //TODO: improve this
                 options={select.options as any}
                 onChange={this.onAggregateChange}
               />
             </div>
+          </>
+          <>
+
+            <FormField
+                width={5}
+                labelWidth={8}
+                value={query.displayName}
+                onChange={this.onDisplayNameChange}
+                label="Display Name"
+                type="text"
+                tooltip={`use ${displayNameFields} for dynamic expressions`}
+            />
           </>
         </>
       </div>
