@@ -49,6 +49,8 @@ func aggrTypeAlias(at pb.AggregateType) string {
 		return "min"
 	case pb.AggregateType_MAX:
 		return "max"
+	case pb.AggregateType_COUNT:
+		return "count"
 	}
 	return ""
 }
