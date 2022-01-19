@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+* feature: add `COUNT` aggregate type to list of possible aggregations
+* feature: support display name expression (also known as aliasing)
+* bugfix: exclude variables from metricFind query
+
 ## 1.0.4
 
 * improved metric selection 
