@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
@@ -24,4 +25,18 @@ func UnmarshalToMetricAggregateQuery(dq *backend.DataQuery) (*MetricAggregateQue
 	query.QueryType = dq.QueryType
 
 	return query, nil
+}
+
+func (q MetricAggregateQuery) FormatDisplayName() string {
+	if q.MetricBaseQuery.DisplayName == "" {
+		return ""
+	}
+	ctx := newContext(q.MetricBaseQuery)
+	ctx["aggregate"] = strings.ToLower(q.AggregateType)
+
+	s, err := parseDisplayNameExpr(ctx, q.MetricBaseQuery.DisplayName)
+	if err != nil {
+		return ""
+	}
+	return s
 }

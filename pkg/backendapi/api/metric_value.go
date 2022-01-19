@@ -36,6 +36,6 @@ func GetMetricValue(ctx context.Context, client client.BackendAPIClient, query m
 			Timestamp: resp.Timestamp,
 			Values:     resp.Values,
 		},
-		MetricID: query.MetricId,
+		MetricValueQuery: query,
 	}, nil
 }

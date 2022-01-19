@@ -114,6 +114,7 @@ enum AggregateType {
     AVERAGE = 0;
     MAX = 1;
     MIN = 2;
+    COUNT=3;
 }
 
 message ListDimensionKeysRequest {

@@ -79,15 +79,21 @@ message GetMetricAggregateRequest {
 }
 
 message GetMetricAggregateResponse {
-    // The asset property's value history.
-    repeated MetricHistoryValue values = 1;
+    message GetMetricAggregateResponse2 {
+        // The asset property's value history.
+        repeated MetricHistoryValue values = 1;
 
-    // The token for the next set of results, or null if there are no additional results.
-    string nextToken = 2;
+        // The token for the next set of results, or null if there are no additional results.
+        string nextToken = 2;
+    }
+
+    repeated GetMetricAggregateResponse2 metricValues = 1;
 }
 
 message MetricValue {
     double doubleValue = 1;
+
+    string id = 2;
 }
 
 message MetricHistoryValue {
@@ -114,6 +120,7 @@ enum AggregateType {
     AVERAGE = 0;
     MAX = 1;
     MIN = 2;
+    COUNT=3;
 }
 
 message ListDimensionKeysRequest {

@@ -1,5 +1,9 @@
 # Grafana Simple gRPC Datasource Plugin
 
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/innius/grafana-simple-grpc-datasource?logo=github)
+[![Marketplace](https://img.shields.io/badge/dynamic/json?logo=grafana&color=F47A20&label=marketplace&prefix=v&query=version&url=https%3A%2F%2Fgrafana.com%2Fapi%2Fplugins%2Finnius-grpc-datasource)](https://grafana.com/grafana/plugins/innius-grpc-datasource)
+[![Downloads](https://img.shields.io/badge/dynamic/json?logo=grafana&color=F47A20&label=downloads&query=downloads&url=https%3A%2F%2Fgrafana.com%2Fapi%2Fplugins%2Finnius-grpc-datasource)](https://grafana.com/grafana/plugins/innius-grpc-datasource)
+
 ## What is this plugin?
 
 This back-end Grafana datasource plugin provides a user-friendly grafana experience with only a handful simple and generic parameters to configure.
@@ -37,6 +41,7 @@ A measure can have zero or many dimensions that collectively uniquely identify i
 | type | description |
 | --- | --- |
 | Get Metric History | gets historical timeseries values of a metric for the selected period |
+| Get Metric Aggregate | gets aggregated timeseries for the selected metric  
 | Get Metric Value | gets the current value or last known value of a specified metric.  
 
 
@@ -72,9 +77,7 @@ Please note gRPC is programming language agnostic which makes it possible to imp
 
 ## Roadmap
 
-- add more caching 
 - add more authentication schemes (certificates, basic authentication etc. )
-- add more tests 
-- better lookups for dimensions and metrics in frontend 
+- add more tests
 - support annotations
 - support streaming queries 

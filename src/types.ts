@@ -30,6 +30,7 @@ export interface MyQuery extends DataQuery {
   metricName?: string;
   metricId?: string;
   aggregateType?: AggregateType;
+  displayName?: string;
 }
 
 export interface NextQuery extends MyQuery {

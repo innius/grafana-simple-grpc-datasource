@@ -3,10 +3,9 @@ package api
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"context"
-
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 )
 
 func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRequest {
@@ -39,6 +38,6 @@ func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query
 			Values:    resp.Values,
 			NextToken: resp.NextToken,
 		},
-		MetricID: query.MetricId,
+		MetricHistoryQuery: query,
 	}, nil
 }

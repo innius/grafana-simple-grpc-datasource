@@ -3,13 +3,12 @@ import { css } from 'emotion';
 import uniqueId from 'lodash/uniqueId';
 
 import { Button, Icon, InlineFormLabel, LegacyForms, stylesFactory } from '@grafana/ui';
-import { Dimension, Dimensions, MyDataSourceOptions, MyQuery } from './types';
-import { QueryEditorProps, SelectableValue } from '@grafana/data';
-import { DataSource } from './datasource';
+import { Dimension, Dimensions } from './types';
+import { SelectableValue } from '@grafana/data';
+
+import { Props } from './QueryEditor';
 
 const { AsyncSelect } = LegacyForms;
-
-type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 export interface State {
   dimensions: Dimensions;

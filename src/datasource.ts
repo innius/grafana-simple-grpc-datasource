@@ -116,8 +116,9 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
         key: v[0],
         value: v[1],
       }));
-    const res = await this.listMetrics(dimensions, '');
-    return res.map(x => ({ text: x.value || '' }));
+    return await this.runListMetricsQuery(dimensions, '')
+      .pipe(map(x => x.map(x => ({ text: x.value || '' }))))
+      .toPromise();
   }
 
   /**
@@ -176,24 +177,26 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       .toPromise();
   }
 
-  async listMetrics(dimensions: Dimensions, filter: string): Promise<Array<SelectableValue<string>>> {
+  runListMetricsQuery(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
     const query: ListMetricsQuery = {
       refId: 'listMetrics',
       queryType: QueryType.ListMetrics,
       dimensions: dimensions,
       filter: filter,
     };
-    const remoteMetrics = await this.runQuery(query)
-      .pipe(
-        map(res => {
-          if (res.data.length) {
-            const metrics = new DataFrameView<SelectableValue<string>>(res.data[0]);
-            return metrics.toArray();
-          }
-          throw 'no metrics found';
-        })
-      )
-      .toPromise();
+    return this.runQuery(query).pipe(
+      map(res => {
+        if (res.data.length) {
+          const metrics = new DataFrameView<SelectableValue<string>>(res.data[0]);
+          return metrics.toArray();
+        }
+        throw 'no metrics found';
+      })
+    );
+  }
+
+  async listMetrics(dimensions: Dimensions, filter: string): Promise<Array<SelectableValue<string>>> {
+    const remoteMetrics = await this.runListMetricsQuery(dimensions, filter).toPromise();
 
     const variables = getTemplateSrv()
       .getVariables()

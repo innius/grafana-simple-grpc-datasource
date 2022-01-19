@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/json"
-
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
