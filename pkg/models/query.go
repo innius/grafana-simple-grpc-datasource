@@ -39,14 +39,14 @@ func (q MetricBaseQuery) FormatDisplayName() string {
 		return q.MetricId
 	}
 
-	s, err := parseDisplayNameExpr(nexContext(q), q.DisplayName)
+	s, err := parseDisplayNameExpr(newContext(q), q.DisplayName)
 	if err != nil {
 		return s
 	}
 	return s
 }
 
-func nexContext(q MetricBaseQuery) map[string]string {
+func newContext(q MetricBaseQuery) map[string]string {
 	ctx := map[string]string{
 		"metric": q.MetricId,
 	}

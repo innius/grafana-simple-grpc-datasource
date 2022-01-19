@@ -31,7 +31,7 @@ func (q MetricAggregateQuery) FormatDisplayName() string {
 	if q.MetricBaseQuery.DisplayName == "" {
 		return ""
 	}
-	ctx := nexContext(q.MetricBaseQuery)
+	ctx := newContext(q.MetricBaseQuery)
 	ctx["aggregate"] = strings.ToLower(q.AggregateType)
 
 	s, err := parseDisplayNameExpr(ctx, q.MetricBaseQuery.DisplayName)
