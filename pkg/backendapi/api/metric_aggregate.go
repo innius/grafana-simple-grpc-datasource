@@ -67,7 +67,7 @@ func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, que
 			Values:    resp.Values,
 			NextToken: resp.NextToken,
 		},
-		MetricID:        query.MetricId,
-		AggregationType: clientReq.AggregateType,
+		MetricAggregateQuery: query,
+		AggregationType:      clientReq.AggregateType,
 	}, nil
 }

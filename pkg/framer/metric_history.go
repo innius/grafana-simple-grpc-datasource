@@ -11,7 +11,7 @@ import (
 
 type MetricHistory struct {
 	pb.GetMetricHistoryResponse
-	MetricID string
+	models.MetricHistoryQuery
 }
 
 func (p MetricHistory) Frames() (data.Frames, error) {
@@ -19,9 +19,14 @@ func (p MetricHistory) Frames() (data.Frames, error) {
 
 	timeField := fields.TimeField(length)
 	valueField := fields.MetricField("Value", length)
-	log.DefaultLogger.Debug("MetricHistory", "value", p.MetricID)
+	if p.DisplayName != "" {
+		valueField.Config = &data.FieldConfig{
+			DisplayNameFromDS: p.FormatDisplayName(),
+		}
+	}
+	log.DefaultLogger.Debug("MetricHistory", "value", p.MetricId)
 
-	frame := data.NewFrame(p.MetricID, timeField, valueField)
+	frame := data.NewFrame(p.MetricId, timeField, valueField)
 
 	frame.Meta = &data.FrameMeta{
 		Custom: models.Metadata{
@@ -30,7 +35,6 @@ func (p MetricHistory) Frames() (data.Frames, error) {
 	}
 	for i, v := range p.Values {
 		timeField.Set(i, getTime(v.Timestamp))
-		//TODO shouldn't we distinguish between nil and 0 ?
 		valueField.Set(i, v.Value.DoubleValue)
 	}
 

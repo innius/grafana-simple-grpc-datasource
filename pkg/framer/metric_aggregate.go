@@ -9,23 +9,29 @@ import (
 )
 
 type MetricAggregate struct {
+	models.MetricAggregateQuery
 	pb.GetMetricAggregateResponse
-	MetricID        string
 	AggregationType pb.AggregateType
 }
 
 func (p MetricAggregate) Frames() (data.Frames, error) {
 	length := len(p.Values)
-
 	timeField := fields.TimeField(length)
-	aggrField := fields.AggregationField(length, aggrTypeAlias(p.AggregationType))
-	log.DefaultLogger.Debug("MetricAggregate", "value", p.MetricID)
-	for i, v := range p.Values {
-		timeField.Set(i, getTime(v.Timestamp))
-		aggrField.Set(i, v.Value.DoubleValue)
+	valueField := fields.AggregationField(length, aggrTypeAlias(p.AggregationType))
+
+	if p.DisplayName != "" {
+		valueField.Config = &data.FieldConfig{
+			DisplayNameFromDS: p.FormatDisplayName(),
+		}
 	}
 
-	frame := data.NewFrame(p.MetricID, timeField, aggrField)
+	log.DefaultLogger.Debug("MetricAggregate", "value", p.MetricId)
+	for i, v := range p.Values {
+		timeField.Set(i, getTime(v.Timestamp))
+		valueField.Set(i, v.Value.DoubleValue)
+	}
+
+	frame := data.NewFrame(p.MetricId, timeField, valueField)
 
 	frame.Meta = &data.FrameMeta{
 		Custom: models.Metadata{
