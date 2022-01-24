@@ -24,11 +24,15 @@ export function isMetricQuery(queryType: QueryType): boolean {
   );
 }
 
+export interface Metric {
+  metricName?: string;
+  metricId?: string;
+}
+
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
   dimensions?: Dimensions;
-  metricName?: string;
-  metricId?: string;
+  metrics?: Metric[];
   aggregateType?: AggregateType;
   displayName?: string;
 }

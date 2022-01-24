@@ -24,3 +24,14 @@ func UnmarshalToMetricValueQuery(dq *backend.DataQuery) (*MetricValueQuery, erro
 
 	return query, nil
 }
+
+func (q MetricValueQuery) FormatDisplayName(metricID, value string) string {
+	ctx := newContext(q.MetricBaseQuery, metricID)
+	ctx["value"] = value
+
+	s, err := parseDisplayNameExpr(ctx, q.DisplayName)
+	if err != nil {
+		return s
+	}
+	return s
+}

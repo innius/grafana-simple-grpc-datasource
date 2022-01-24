@@ -13,36 +13,33 @@ type MetricHistory struct {
 	models.MetricHistoryQuery
 }
 
-func (p MetricHistory) Frames() (data.Frames, error) {
-	length := len(p.Values)
-	//if p.DisplayName != "" {
-	//	valueField.Config = &data.FieldConfig{
-	//		DisplayNameFromDS: p.FormatDisplayName(),
-	//	}
-	//}
-
+func (p MetricHistory) seriesToFields(metricID string, series []*pb.GetMetricHistoryResponse_Data_TimeSeries) []*data.Field {
 	set := set.NewSet()
 
-	for _, value := range p.Values[0].Values {
-		set.Add(value.Id)
+	for _, s := range series[0].Values {
+		set.Add(s.Id)
 	}
 
-	timeField := fields.TimeField(length)
+	timeField := fields.TimeField(len(series))
 
 	result := make(map[string]*data.Field)
 
 	for _, value := range set.ToSlice() {
-		newField := fields.MetricField(value.(string), len(p.Values))
+		newField := fields.MetricField(value.(string), len(series))
+		if p.DisplayName != "" {
+			newField.Config = &data.FieldConfig{
+				DisplayNameFromDS: p.FormatDisplayName(metricID, value.(string)),
+			}
+		}
 		result[value.(string)] = newField
 	}
 
-	for index, metricHistoryValue := range p.Values {
+	for index, metricHistoryValue := range series {
 		timeField.Set(index, getTime(metricHistoryValue.Timestamp))
 		for _, value := range metricHistoryValue.Values {
 			result[value.Id].Set(index, value.DoubleValue)
 		}
 	}
-
 	fields := []*data.Field{
 		timeField,
 	}
@@ -51,16 +48,35 @@ func (p MetricHistory) Frames() (data.Frames, error) {
 		fields = append(fields, field)
 	}
 
-	frame := &data.Frame{
-		Name:   p.MetricId,
-		Fields: fields,
+	return fields
+}
+
+func (p MetricHistory) Frames() (data.Frames, error) {
+	if p.Data == nil {
+		return data.Frames{}, nil
 	}
 
-	frame.Meta = &data.FrameMeta{
-		Custom: models.Metadata{
-			NextToken: p.NextToken,
-		},
+	var frames data.Frames
+
+	for i := range p.Data {
+		res := p.Data[i]
+		metric, series := res.Metric, res.Series
+		frame := &data.Frame{
+			Name:   metric.Id,
+			Fields: p.seriesToFields(metric.Id, series),
+		}
+		frames = append(frames, frame)
 	}
 
-	return data.Frames{frame}, nil
+	// add metadata -> add next token to the first frame (this is how other datasource plugins are doing this)
+	if len(frames) > 0 {
+		frame := frames[0]
+		frame.Meta = &data.FrameMeta{
+			Custom: models.Metadata{
+				NextToken: p.NextToken,
+			},
+		}
+	}
+
+	return frames, nil
 }

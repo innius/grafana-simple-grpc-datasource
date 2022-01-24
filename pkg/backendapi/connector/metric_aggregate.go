@@ -1,4 +1,4 @@
-package api
+package connector
 
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
@@ -23,11 +23,16 @@ func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggr
 	if err != nil {
 		return nil, err
 	}
+
+	metrics := make([]string, len(query.Metrics))
+	for i := range query.Metrics {
+		metrics[i] = query.Metrics[i].MetricId
+	}
 	return &pb.GetMetricAggregateRequest{
 		IntervalMs:    query.Interval.Milliseconds(),
 		MaxItems:      query.MaxDataPoints,
 		Dimensions:    dimensions,
-		Metric:        query.MetricId,
+		Metric:        metrics,
 		StartDate:     query.TimeRange.From.Unix(),
 		EndDate:       query.TimeRange.To.Unix(),
 		AggregateType: aggType,
@@ -64,8 +69,7 @@ func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, que
 	}
 	return &framer.MetricAggregate{
 		GetMetricAggregateResponse: pb.GetMetricAggregateResponse{
-			Values:    resp.Values,
-			NextToken: resp.NextToken,
+			Data: resp.Data,
 		},
 		MetricAggregateQuery: query,
 		AggregationType:      clientReq.AggregateType,

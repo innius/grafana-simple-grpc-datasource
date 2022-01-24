@@ -22,9 +22,13 @@ type Dimension struct {
 	Value string `json:"value"`
 }
 
+type Metric struct {
+	MetricId string `json:"metricId"`
+}
+
 type MetricBaseQuery struct {
 	Dimensions  []Dimension `json:"dimensions"`
-	MetricId    string      `json:"metricId,omitempty"`
+	Metrics     []Metric    `json:"metrics,omitempty"`
 	NextToken   string      `json:"nextToken,omitempty"`
 	DisplayName string      `json:"displayName,omitempty"`
 
@@ -34,21 +38,9 @@ type MetricBaseQuery struct {
 	QueryType     string            `json:"-"`
 }
 
-func (q MetricBaseQuery) FormatDisplayName() string {
-	if q.DisplayName == "" {
-		return q.MetricId
-	}
-
-	s, err := parseDisplayNameExpr(newContext(q), q.DisplayName)
-	if err != nil {
-		return s
-	}
-	return s
-}
-
-func newContext(q MetricBaseQuery) map[string]string {
+func newContext(q MetricBaseQuery, metricID string) map[string]string {
 	ctx := map[string]string{
-		"metric": q.MetricId,
+		"metric": metricID,
 	}
 	for _, v := range q.Dimensions {
 		ctx[v.Key] = v.Value

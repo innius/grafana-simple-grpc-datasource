@@ -43,22 +43,87 @@ message ListMetricsResponse {
     repeated Metric Metrics = 1;
 }
 
+
 message GetMetricValueRequest {
-    repeated Dimension dimensions = 3;
-    string Metric = 4;
+    repeated Dimension dimensions = 1;
+
+    repeated string metric = 2;
 }
 
-message GetMetricValueResponse {
-    // The timestamp date, in seconds, in the Unix epoch format.
-    int64 timestamp = 1;
 
-    // The current metric value.
-    repeated MetricValue values = 2;
+message GetMetricValueResponse {
+    message Data {
+        // The metric of the value
+        Metric metric = 1;
+
+        // The timestamp date, in seconds, in the Unix epoch format.
+        int64 timestamp = 2;
+
+        // the metric value with an optional identifier
+        message MetricValue {
+            // the value of the metric as a double
+            double doubleValue = 1;
+            // the id of the value
+            string Id = 2;
+        }
+
+        // The current metric value.
+        repeated MetricValue values = 3;
+    }
+
+    repeated Data data = 1;
+}
+
+message GetMetricAggregateRequest {
+    // The dimensions for the query
+    repeated Dimension dimensions = 1;
+
+    // the metrics for which the aggregates are retrieved
+    repeated string metric = 2;
+
+    AggregateType aggregateType = 3;
+    int64 startDate = 4;
+    int64 endDate = 5;
+    int64 maxItems = 6;
+    TimeOrdering timeOrdering = 7;
+    string startingToken = 8;
+    int64 intervalMs = 9;
+}
+
+message Metric {
+    string id = 1;
+    string unit = 2;
+}
+
+message GetMetricAggregateResponse {
+    message Data {
+        Metric metric = 1;
+
+        message TimeSeries {
+            // The timestamp date, in seconds, in the Unix epoch format.
+            int64 timestamp = 1;
+
+            message MetricValue {
+                double doubleValue = 1;
+                string id = 2;
+                AggregateType aggregateType = 3;
+            }
+
+            // The current metric value.
+            repeated MetricValue values = 2;
+        }
+
+        repeated TimeSeries series = 2;
+    }
+
+    repeated Data data = 1;
+
+    string nextToken = 2;
 }
 
 message GetMetricHistoryRequest {
     repeated Dimension dimensions = 3;
-    string Metric = 4;
+    repeated string metric = 4;
     int64 startDate = 5;
     int64 endDate = 6;
     int64 maxItems = 7;
@@ -66,48 +131,28 @@ message GetMetricHistoryRequest {
     string startingToken = 9;
 }
 
-message GetMetricAggregateRequest {
-    repeated Dimension dimensions = 1;
-    string Metric = 2;
-    AggregateType aggregateType = 3;
-    int64 startDate = 4;
-    int64 endDate = 5;
-    int64 maxItems = 6;
-    TimeOrdering timeOrdering = 7;
-    string startingToken = 8;
-    int64 intervalMs = 9; 
-}
+message GetMetricHistoryResponse {
+    message Data {
+        Metric metric = 1;
 
-message GetMetricAggregateResponse {
-    message GetMetricAggregateResponse2 {
-        // The asset property's value history.
-        repeated MetricHistoryValue values = 1;
+        message TimeSeries {
+            // The timestamp date, in seconds, in the Unix epoch format.
+            int64 timestamp = 1;
 
-        // The token for the next set of results, or null if there are no additional results.
-        string nextToken = 2;
+            message MetricValue {
+                double doubleValue = 1;
+                string id = 2;
+            }
+
+            // The current metric value.
+            repeated MetricValue values = 2;
+        }
+
+        repeated TimeSeries series = 2;
     }
 
-    repeated GetMetricAggregateResponse2 metricValues = 1;
-}
+    repeated Data data = 1;
 
-message MetricValue {
-    double doubleValue = 1;
-
-    string id = 2;
-}
-
-message MetricHistoryValue {
-    // The timestamp date, in seconds, in the Unix epoch format.
-    int64 timestamp = 1;
-    // Contains asset property value information
-    repeated MetricValue values = 2;
-}
-
-message GetMetricHistoryResponse {
-    // The asset property's value history.
-    repeated MetricHistoryValue values = 1;
-
-    // The token for the next set of results, or null if there are no additional results.
     string nextToken = 2;
 }
 

@@ -1,4 +1,4 @@
-package api
+package connector
 
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
@@ -16,9 +16,13 @@ func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRe
 			Value: d.Value,
 		})
 	}
+	metrics := make([]string, len(query.Metrics))
+	for i := range query.Metrics {
+		metrics[i] = query.Metrics[i].MetricId
+	}
 	return &pb.GetMetricHistoryRequest{
 		Dimensions:    dimensions,
-		Metric:        query.MetricId,
+		Metric:        metrics,
 		StartDate:     query.TimeRange.From.Unix(),
 		EndDate:       query.TimeRange.To.Unix(),
 		StartingToken: query.NextToken,
@@ -35,8 +39,7 @@ func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query
 	}
 	return &framer.MetricHistory{
 		GetMetricHistoryResponse: pb.GetMetricHistoryResponse{
-			Values:    resp.Values,
-			NextToken: resp.NextToken,
+			Data: resp.Data,
 		},
 		MetricHistoryQuery: query,
 	}, nil

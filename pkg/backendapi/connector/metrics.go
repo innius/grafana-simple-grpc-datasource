@@ -1,4 +1,4 @@
-package api
+package connector
 
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"

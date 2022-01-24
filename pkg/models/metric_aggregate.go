@@ -27,13 +27,13 @@ func UnmarshalToMetricAggregateQuery(dq *backend.DataQuery) (*MetricAggregateQue
 	return query, nil
 }
 
-func (q MetricAggregateQuery) FormatDisplayName() string {
+func (q MetricAggregateQuery) FormatDisplayName(metricID, value string) string {
 	if q.MetricBaseQuery.DisplayName == "" {
 		return ""
 	}
-	ctx := newContext(q.MetricBaseQuery)
+	ctx := newContext(q.MetricBaseQuery, metricID)
 	ctx["aggregate"] = strings.ToLower(q.AggregateType)
-
+	ctx["value"] = value
 	s, err := parseDisplayNameExpr(ctx, q.MetricBaseQuery.DisplayName)
 	if err != nil {
 		return ""

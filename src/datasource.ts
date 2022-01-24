@@ -90,12 +90,16 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     if (!query.queryType) {
       return false;
     }
-    return !(isMetricQuery(query.queryType) && !query.metricId);
+    if (!isMetricQuery(query.queryType)) {
+      return true
+    }
+    return true;
+    return (query.metrics != undefined && query.metrics.length > 0) ;
   }
 
   getQueryDisplayText(query: MyQuery): string {
     const dimensions = query.dimensions?.map(x => `${x.key}=${x.value}`).join(',');
-    let text = query.metricId || '';
+    let text = query.metrics?.join('&') || '';
     if (!!dimensions) {
       text = `[${dimensions}] ${text}`;
     }
@@ -121,14 +125,25 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       .toPromise();
   }
 
+
   /**
    * Supports template variables for metricId
    */
   applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars): MyQuery {
     const templateSrv = getTemplateSrv();
+
+    const metrics = query.metrics?.flatMap<string[]>(metric => {
+      const replaced = templateSrv.replace(metric.metricId, scopedVars,"json")
+      try {
+        return JSON.parse(replaced);
+      } catch (e) {
+        return [replaced]
+      }
+    }).flat().map(x =>({metricId: x, metricName: x}));
+
     return {
       ...query,
-      metricId: templateSrv.replace(query.metricId || '', scopedVars),
+      metrics: metrics || [],
     };
   }
 

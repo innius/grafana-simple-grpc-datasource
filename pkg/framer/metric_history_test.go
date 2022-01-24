@@ -8,25 +8,25 @@ import (
 	"time"
 )
 
-func TestMetricAggregate_Frames(t *testing.T) {
+func TestMetricHistory_Frames(t *testing.T) {
 	ts := time.Date(2022, 01, 19, 16, 03, 10, 00, time.Local)
 
-	sut := MetricAggregate{
-		GetMetricAggregateResponse: pb.GetMetricAggregateResponse{
-			Data: []*pb.GetMetricAggregateResponse_Data{
+	sut := MetricHistory{
+		GetMetricHistoryResponse: pb.GetMetricHistoryResponse{
+			Data: []*pb.GetMetricHistoryResponse_Data{
 				{
 					Metric: "foo",
-					Series: []*pb.GetMetricAggregateResponse_Data_TimeSeries{
+					Series: []*pb.GetMetricHistoryResponse_Data_TimeSeries{
 						{
 							Timestamp: ts.Unix(),
-							Values: []*pb.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
+							Values: []*pb.GetMetricHistoryResponse_Data_TimeSeries_MetricValue{
 								{
-									DoubleValue:   10,
-									AggregateType: pb.AggregateType_COUNT,
+									DoubleValue: 10,
+									Id:          "a",
 								},
 								{
-									DoubleValue:   20,
-									AggregateType: pb.AggregateType_MAX,
+									DoubleValue: 20,
+									Id:          "b",
 								},
 							},
 						},
@@ -34,17 +34,17 @@ func TestMetricAggregate_Frames(t *testing.T) {
 				},
 				{
 					Metric: "bar",
-					Series: []*pb.GetMetricAggregateResponse_Data_TimeSeries{
+					Series: []*pb.GetMetricHistoryResponse_Data_TimeSeries{
 						{
 							Timestamp: ts.Unix(),
-							Values: []*pb.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
+							Values: []*pb.GetMetricHistoryResponse_Data_TimeSeries_MetricValue{
 								{
-									DoubleValue:   30,
-									AggregateType: pb.AggregateType_AVERAGE,
+									DoubleValue: 30,
+									Id:          "c",
 								},
 								{
-									DoubleValue:   40,
-									AggregateType: pb.AggregateType_MAX,
+									DoubleValue: 40,
+									Id:          "d",
 								},
 							},
 						},
@@ -53,7 +53,7 @@ func TestMetricAggregate_Frames(t *testing.T) {
 			},
 			NextToken: "next-please",
 		},
-		MetricAggregateQuery: models.MetricAggregateQuery{},
+		MetricHistoryQuery: models.MetricHistoryQuery{},
 	}
 
 	res, err := sut.Frames()
@@ -65,7 +65,7 @@ func TestMetricAggregate_Frames(t *testing.T) {
 		assert.Equal(t, "foo", metricOne.Name)
 		assert.Len(t, metricOne.Fields, 3)
 		for _, f := range metricOne.Fields {
-			assert.Contains(t, []string{"time", "count", "max"}, f.Name)
+			assert.Contains(t, []string{"time", "a", "b"}, f.Name)
 		}
 	}
 

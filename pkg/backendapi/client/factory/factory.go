@@ -15,10 +15,11 @@ func NewClient(conn *grpc.ClientConn) (v2.GrafanaQueryAPIClient, error) {
 	stub := rpb.NewServerReflectionClient(conn)
 
 	c := grpcreflect.NewClient(context.Background(), stub)
-	_, err := c.ResolveService("grafana.GrafanaQueryAPI")
+	_, err := c.ResolveService("grafanav2.GrafanaQueryAPI")
 	if err == nil {
-		backend.Logger.Info("use v1 version of the backend API")
-		return v1client.NewClient(conn)
+		backend.Logger.Info("use v2 version of the backend API")
+		return v2client.NewClient(conn)
 	}
-	return v2client.NewClient(conn)
+	backend.Logger.Info("use default version of the backend API")
+	return v1client.NewClient(conn)
 }

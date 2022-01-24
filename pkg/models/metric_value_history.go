@@ -23,3 +23,18 @@ func UnmarshalToMetricHistoryQuery(dq *backend.DataQuery) (*MetricHistoryQuery, 
 
 	return query, nil
 }
+
+func (q MetricHistoryQuery) FormatDisplayName(metricID, value string) string {
+	if q.DisplayName == "" {
+		return metricID
+	}
+
+	ctx := newContext(q.MetricBaseQuery, metricID)
+	ctx["value"] = value
+
+	s, err := parseDisplayNameExpr(ctx, q.DisplayName)
+	if err != nil {
+		return s
+	}
+	return s
+}
