@@ -91,10 +91,9 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       return false;
     }
     if (!isMetricQuery(query.queryType)) {
-      return true
+      return true;
     }
-    return true;
-    return (query.metrics != undefined && query.metrics.length > 0) ;
+    return query.metrics !== undefined && query.metrics.length > 0;
   }
 
   getQueryDisplayText(query: MyQuery): string {
@@ -125,21 +124,23 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       .toPromise();
   }
 
-
   /**
    * Supports template variables for metricId
    */
   applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars): MyQuery {
     const templateSrv = getTemplateSrv();
 
-    const metrics = query.metrics?.flatMap<string[]>(metric => {
-      const replaced = templateSrv.replace(metric.metricId, scopedVars,"json")
-      try {
-        return JSON.parse(replaced);
-      } catch (e) {
-        return [replaced]
-      }
-    }).flat().map(x =>({metricId: x, metricName: x}));
+    const metrics = query.metrics
+      ?.flatMap<string[]>(metric => {
+        const replaced = templateSrv.replace(metric.metricId, scopedVars, 'json');
+        try {
+          return JSON.parse(replaced);
+        } catch (e) {
+          return [replaced];
+        }
+      })
+      .flat()
+      .map(x => ({ metricId: x, metricName: x }));
 
     return {
       ...query,
