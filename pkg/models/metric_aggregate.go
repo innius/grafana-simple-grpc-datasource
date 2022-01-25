@@ -1,6 +1,7 @@
 package models
 
 import (
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"encoding/json"
 	"strings"
 
@@ -27,13 +28,12 @@ func UnmarshalToMetricAggregateQuery(dq *backend.DataQuery) (*MetricAggregateQue
 	return query, nil
 }
 
-func (q MetricAggregateQuery) FormatDisplayName(metricID, value string) string {
+func (q MetricAggregateQuery) FormatDisplayName(metricID string, labels []*pb.Label) string {
 	if q.MetricBaseQuery.DisplayName == "" {
 		return ""
 	}
-	ctx := newContext(q.MetricBaseQuery, metricID)
+	ctx := newContext(q.MetricBaseQuery, metricID, labels)
 	ctx["aggregate"] = strings.ToLower(q.AggregateType)
-	ctx["value"] = value
 	s, err := parseDisplayNameExpr(ctx, q.MetricBaseQuery.DisplayName)
 	if err != nil {
 		return ""

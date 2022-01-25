@@ -43,7 +43,6 @@ message ListMetricsResponse {
     repeated Metric Metrics = 1;
 }
 
-
 message GetMetricValueRequest {
     repeated Dimension dimensions = 1;
 
@@ -59,16 +58,16 @@ message GetMetricValueResponse {
         // The timestamp date, in seconds, in the Unix epoch format.
         int64 timestamp = 2;
 
+        repeated Label labels = 3;
+
         // the metric value with an optional identifier
         message MetricValue {
             // the value of the metric as a double
             double doubleValue = 1;
-            // the id of the value
-            string Id = 2;
         }
 
         // The current metric value.
-        repeated MetricValue values = 3;
+        MetricValue value = 4;
     }
 
     repeated Data data = 1;
@@ -95,9 +94,16 @@ message Metric {
     string unit = 2;
 }
 
+message Label {
+    string key = 1;
+    string value = 2;
+}
+
 message GetMetricAggregateResponse {
     message Data {
         Metric metric = 1;
+
+        repeated Label labels = 2;
 
         message TimeSeries {
             // The timestamp date, in seconds, in the Unix epoch format.
@@ -105,15 +111,13 @@ message GetMetricAggregateResponse {
 
             message MetricValue {
                 double doubleValue = 1;
-                string id = 2;
-                AggregateType aggregateType = 3;
             }
 
             // The current metric value.
-            repeated MetricValue values = 2;
+            MetricValue value = 2;
         }
 
-        repeated TimeSeries series = 2;
+        repeated TimeSeries series = 3;
     }
 
     repeated Data data = 1;
@@ -135,20 +139,21 @@ message GetMetricHistoryResponse {
     message Data {
         Metric metric = 1;
 
+        repeated Label labels = 2;
+
         message TimeSeries {
             // The timestamp date, in seconds, in the Unix epoch format.
             int64 timestamp = 1;
 
             message MetricValue {
                 double doubleValue = 1;
-                string id = 2;
             }
 
             // The current metric value.
-            repeated MetricValue values = 2;
+            MetricValue value = 3;
         }
 
-        repeated TimeSeries series = 2;
+        repeated TimeSeries series = 3;
     }
 
     repeated Data data = 1;

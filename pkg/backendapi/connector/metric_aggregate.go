@@ -68,10 +68,7 @@ func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, que
 		return nil, err
 	}
 	return &framer.MetricAggregate{
-		GetMetricAggregateResponse: pb.GetMetricAggregateResponse{
-			Data: resp.Data,
-		},
-		MetricAggregateQuery: query,
-		AggregationType:      clientReq.AggregateType,
+		GetMetricAggregateResponse: resp,
+		MetricAggregateQuery:       query,
 	}, nil
 }

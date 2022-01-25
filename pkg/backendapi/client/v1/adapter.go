@@ -85,11 +85,11 @@ func (b *adapter) GetMetricValue(ctx context.Context, in *v2.GetMetricValueReque
 		return nil, err
 	}
 
-	var values []*v2.GetMetricValueResponse_Data_MetricValue
+	var value *v2.GetMetricValueResponse_Data_MetricValue
 	if res.Value != nil {
-		values = append(values, &v2.GetMetricValueResponse_Data_MetricValue{
+		value = &v2.GetMetricValueResponse_Data_MetricValue{
 			DoubleValue: res.Value.DoubleValue,
-		})
+		}
 	}
 	return &v2.GetMetricValueResponse{
 		Data: []*v2.GetMetricValueResponse_Data{
@@ -99,7 +99,7 @@ func (b *adapter) GetMetricValue(ctx context.Context, in *v2.GetMetricValueReque
 					Unit: "",
 				},
 				Timestamp: res.Timestamp,
-				Values:    values,
+				Value:     value,
 			},
 		},
 	}, nil
@@ -141,10 +141,8 @@ func (b *adapter) GetMetricHistory(ctx context.Context, in *v2.GetMetricHistoryR
 		}
 		series[i] = &v2.GetMetricHistoryResponse_Data_TimeSeries{
 			Timestamp: v.Timestamp,
-			Values: []*v2.GetMetricHistoryResponse_Data_TimeSeries_MetricValue{
-				{
-					DoubleValue: v.Value.DoubleValue,
-				},
+			Value: &v2.GetMetricHistoryResponse_Data_TimeSeries_MetricValue{
+				DoubleValue: v.Value.DoubleValue,
 			},
 		}
 	}
@@ -188,11 +186,8 @@ func (b *adapter) GetMetricAggregate(ctx context.Context, in *v2.GetMetricAggreg
 		}
 		series[i] = &v2.GetMetricAggregateResponse_Data_TimeSeries{
 			Timestamp: v.Timestamp,
-			Values: []*v2.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
-				{
-					AggregateType: in.AggregateType,
-					DoubleValue:   v.Value.DoubleValue,
-				},
+			Value: &v2.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
+				DoubleValue: v.Value.DoubleValue,
 			},
 		}
 	}

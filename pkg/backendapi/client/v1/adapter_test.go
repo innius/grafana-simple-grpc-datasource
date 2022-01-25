@@ -58,7 +58,7 @@ func TestAdapter_GetMetricHistory(t *testing.T) {
 				Value: "m1",
 			},
 		},
-		Metric:        "foo",
+		Metric:        []string{"foo"},
 		StartDate:     10000,
 		EndDate:       20000,
 		MaxItems:      30000,
@@ -71,7 +71,7 @@ func TestAdapter_GetMetricHistory(t *testing.T) {
 		Dimensions: []*v1.Dimension{
 			{Key: req.Dimensions[0].Key, Value: req.Dimensions[0].Value},
 		},
-		Metric:        req.Metric,
+		Metric:        req.Metric[0],
 		StartDate:     req.StartDate,
 		EndDate:       req.EndDate,
 		MaxItems:      req.MaxItems,
@@ -100,15 +100,15 @@ func TestAdapter_GetMetricHistory(t *testing.T) {
 	m.AssertExpectations(t)
 	expected := []*v2.GetMetricHistoryResponse_Data{
 		{
-			Metric: req.Metric,
+			Metric: &v2.Metric{
+				Id:   req.Metric[0],
+				Unit: "",
+			},
 			Series: []*v2.GetMetricHistoryResponse_Data_TimeSeries{
 				{
 					Timestamp: 1,
-					Values: []*v2.GetMetricHistoryResponse_Data_TimeSeries_MetricValue{
-						{
-							DoubleValue: 2,
-							Id:          "",
-						},
+					Value: &v2.GetMetricHistoryResponse_Data_TimeSeries_MetricValue{
+						DoubleValue: 2,
 					},
 				},
 			},
@@ -126,7 +126,7 @@ func TestAdapter_GetMetricAggregate(t *testing.T) {
 				Value: "m1",
 			},
 		},
-		Metric:        "foo",
+		Metric:        []string{"foo"},
 		AggregateType: v2.AggregateType_COUNT,
 		StartDate:     10000,
 		EndDate:       20000,
@@ -141,7 +141,7 @@ func TestAdapter_GetMetricAggregate(t *testing.T) {
 		Dimensions: []*v1.Dimension{
 			{Key: req.Dimensions[0].Key, Value: req.Dimensions[0].Value},
 		},
-		Metric:        req.Metric,
+		Metric:        req.Metric[0],
 		AggregateType: v1.AggregateType(req.AggregateType),
 		StartDate:     req.StartDate,
 		EndDate:       req.EndDate,
@@ -172,15 +172,14 @@ func TestAdapter_GetMetricAggregate(t *testing.T) {
 	m.AssertExpectations(t)
 	expected := []*v2.GetMetricAggregateResponse_Data{
 		{
-			Metric: req.Metric,
+			Metric: &v2.Metric{
+				Id: req.Metric[0],
+			},
 			Series: []*v2.GetMetricAggregateResponse_Data_TimeSeries{
 				{
 					Timestamp: 1,
-					Values: []*v2.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
-						{
-							DoubleValue:   2,
-							AggregateType: req.AggregateType,
-						},
+					Value: &v2.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
+						DoubleValue: 2,
 					},
 				},
 			},

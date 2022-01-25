@@ -12,40 +12,36 @@ func TestMetricAggregate_Frames(t *testing.T) {
 	ts := time.Date(2022, 01, 19, 16, 03, 10, 00, time.Local)
 
 	sut := MetricAggregate{
-		GetMetricAggregateResponse: pb.GetMetricAggregateResponse{
+		GetMetricAggregateResponse: &pb.GetMetricAggregateResponse{
 			Data: []*pb.GetMetricAggregateResponse_Data{
 				{
-					Metric: "foo",
+					Metric: &pb.Metric{
+						Id: "foo",
+					},
+					Labels: []*pb.Label{
+						{
+							Key:   "zone",
+							Value: "a",
+						},
+					},
 					Series: []*pb.GetMetricAggregateResponse_Data_TimeSeries{
 						{
 							Timestamp: ts.Unix(),
-							Values: []*pb.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
-								{
-									DoubleValue:   10,
-									AggregateType: pb.AggregateType_COUNT,
-								},
-								{
-									DoubleValue:   20,
-									AggregateType: pb.AggregateType_MAX,
-								},
+							Value: &pb.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
+								DoubleValue: 10,
 							},
 						},
 					},
 				},
 				{
-					Metric: "bar",
+					Metric: &pb.Metric{
+						Id: "bar",
+					},
 					Series: []*pb.GetMetricAggregateResponse_Data_TimeSeries{
 						{
 							Timestamp: ts.Unix(),
-							Values: []*pb.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
-								{
-									DoubleValue:   30,
-									AggregateType: pb.AggregateType_AVERAGE,
-								},
-								{
-									DoubleValue:   40,
-									AggregateType: pb.AggregateType_MAX,
-								},
+							Value: &pb.GetMetricAggregateResponse_Data_TimeSeries_MetricValue{
+								DoubleValue: 10,
 							},
 						},
 					},
@@ -53,21 +49,35 @@ func TestMetricAggregate_Frames(t *testing.T) {
 			},
 			NextToken: "next-please",
 		},
-		MetricAggregateQuery: models.MetricAggregateQuery{},
+		MetricAggregateQuery: models.MetricAggregateQuery{
+			AggregateType: "average",
+			MetricBaseQuery: models.MetricBaseQuery{
+				Dimensions: []models.Dimension{
+					{
+						Key:   "machine",
+						Value: "m1",
+					},
+				},
+				DisplayName: `{{machine}}-{{metric}}-{{zone}}-{{aggregate}}`,
+			},
+		},
 	}
 
 	res, err := sut.Frames()
 
 	assert.NoError(t, err)
-	assert.NotNil(t, res)
-	if assert.Len(t, res, 2) {
-		metricOne := res[0]
-		assert.Equal(t, "foo", metricOne.Name)
-		assert.Len(t, metricOne.Fields, 3)
-		for _, f := range metricOne.Fields {
-			assert.Contains(t, []string{"time", "count", "max"}, f.Name)
-		}
-	}
+	t.Run("the result should contain two frames", func(t *testing.T) {
+		assert.Len(t, res, 2)
+	})
+	t.Run("the data frame should have a name", func(t *testing.T) {
+		assert.Equal(t, "foo", res[0].Name)
+	})
 
-	assert.Equal(t, "next-please", res[0].Meta.Custom.(models.Metadata).NextToken)
+	t.Run("the format name expression should be applied", func(t *testing.T) {
+		assert.Equal(t, "m1-foo-a-average", res[0].Fields[1].Config.DisplayNameFromDS)
+	})
+
+	t.Run("the data frame should have a NextToken", func(t *testing.T) {
+		assert.Equal(t, "next-please", res[0].Meta.Custom.(models.Metadata).NextToken)
+	})
 }

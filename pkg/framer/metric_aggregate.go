@@ -4,16 +4,12 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
-	"fmt"
-	set "github.com/deckarep/golang-set"
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
 type MetricAggregate struct {
 	models.MetricAggregateQuery
-	pb.GetMetricAggregateResponse
-	AggregationType pb.AggregateType
+	*pb.GetMetricAggregateResponse
 }
 
 func (p MetricAggregate) Frames() (data.Frames, error) {
@@ -24,11 +20,10 @@ func (p MetricAggregate) Frames() (data.Frames, error) {
 	var frames data.Frames
 
 	for i := range p.Data {
-		res := p.Data[i]
-		metric, series := res.Metric, res.Series
+		metricData := p.Data[i]
 		frame := &data.Frame{
-			Name:   metric.Id,
-			Fields: p.seriesToFields(metric.Id, series),
+			Name:   metricData.Metric.Id,
+			Fields: p.metricDataToFields(metricData),
 		}
 		frames = append(frames, frame)
 	}
@@ -46,52 +41,33 @@ func (p MetricAggregate) Frames() (data.Frames, error) {
 	return frames, nil
 }
 
-func (p MetricAggregate) seriesToFields(metricID string, series []*pb.GetMetricAggregateResponse_Data_TimeSeries) []*data.Field {
-	set := set.NewSet()
-
-	backend.Logger.Info(fmt.Sprintf("The series: %+v", series))
-	if len(series) == 0 {
+func (p *MetricAggregate) metricDataToFields(metricData *pb.GetMetricAggregateResponse_Data) []*data.Field {
+	length := len(metricData.Series)
+	if length == 0 {
 		return nil
 	}
-	for _, s := range series[0].Values {
-		set.Add(aggrTypeAlias(s.AggregateType))
+	metric := metricData.Metric
+	timeField := fields.TimeField(length)
+	// TODO: take aggrTypeAlias into account
+	var displayName *string
+	if p.DisplayName != "" {
+		s := p.FormatDisplayName(metric.Id, metricData.Labels)
+		displayName = &s
 	}
-	backend.Logger.Info(fmt.Sprintf("The set: %+v", set))
 
-	timeField := fields.TimeField(len(series))
-
-	result := make(map[string]*data.Field)
-
-	for _, value := range set.ToSlice() {
-		key := value.(string)
-		newField := fields.MetricField(key, len(series))
-		if p.DisplayName != "" {
-			newField.Config = &data.FieldConfig{
-				DisplayNameFromDS: p.FormatDisplayName(metricID, value.(string)),
-			}
+	dataField := newDataFieldForMetric(metric, metricData.Labels, displayName, length)
+	for index, v := range metricData.Series {
+		timeField.Set(index, getTime(v.Timestamp))
+		var value float64
+		if v.Value != nil {
+			value = v.Value.DoubleValue
 		}
-		result[key] = newField
+		dataField.Set(index, value)
 	}
-
-	backend.Logger.Info(fmt.Sprintf("The dict: %+v", result))
-
-	for index, metricHistoryValue := range series {
-		timeField.Set(index, getTime(metricHistoryValue.Timestamp))
-		for _, value := range metricHistoryValue.Values {
-			backend.Logger.Info(fmt.Sprintf("The key: %s", aggrTypeAlias(value.AggregateType)))
-
-			result[aggrTypeAlias(value.AggregateType)].Set(index, value.DoubleValue)
-		}
-	}
-	fields := []*data.Field{
+	return []*data.Field{
 		timeField,
+		dataField,
 	}
-
-	for _, field := range result {
-		fields = append(fields, field)
-	}
-
-	return fields
 }
 
 func aggrTypeAlias(at pb.AggregateType) string {

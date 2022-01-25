@@ -1,6 +1,7 @@
 package models
 
 import (
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"bytes"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"strings"
@@ -38,13 +39,18 @@ type MetricBaseQuery struct {
 	QueryType     string            `json:"-"`
 }
 
-func newContext(q MetricBaseQuery, metricID string) map[string]string {
+func newContext(q MetricBaseQuery, metricID string, labels []*pb.Label) map[string]string {
 	ctx := map[string]string{
 		"metric": metricID,
 	}
 	for _, v := range q.Dimensions {
 		ctx[v.Key] = v.Value
 	}
+	for i := range labels {
+		label := labels[i]
+		ctx[label.Key] = label.Value
+	}
+
 	return ctx
 }
 

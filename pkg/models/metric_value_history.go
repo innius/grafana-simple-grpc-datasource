@@ -1,6 +1,7 @@
 package models
 
 import (
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"encoding/json"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
@@ -24,13 +25,12 @@ func UnmarshalToMetricHistoryQuery(dq *backend.DataQuery) (*MetricHistoryQuery, 
 	return query, nil
 }
 
-func (q MetricHistoryQuery) FormatDisplayName(metricID, value string) string {
+func (q MetricBaseQuery) FormatDisplayName(metricID string, labels []*pb.Label) string {
 	if q.DisplayName == "" {
 		return metricID
 	}
 
-	ctx := newContext(q.MetricBaseQuery, metricID)
-	ctx["value"] = value
+	ctx := newContext(q, metricID, labels)
 
 	s, err := parseDisplayNameExpr(ctx, q.DisplayName)
 	if err != nil {
