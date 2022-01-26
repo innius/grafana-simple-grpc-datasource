@@ -51,7 +51,7 @@ func TestMetricHistory_Frames(t *testing.T) {
 			},
 			NextToken: "next-please",
 		},
-		MetricHistoryQuery: models.MetricHistoryQuery{
+		Query: models.MetricHistoryQuery{
 			MetricBaseQuery: models.MetricBaseQuery{
 				Dimensions: []models.Dimension{
 					{

@@ -24,11 +24,11 @@ type GrafanaQueryAPIClient interface {
 	ListDimensionValues(ctx context.Context, in *ListDimensionValuesRequest, opts ...grpc.CallOption) (*ListDimensionValuesResponse, error)
 	// Returns all metrics from the system
 	ListMetrics(ctx context.Context, in *ListMetricsRequest, opts ...grpc.CallOption) (*ListMetricsResponse, error)
-	// Gets a metric's current value
+	// Gets the last known value for one or more metrics
 	GetMetricValue(ctx context.Context, in *GetMetricValueRequest, opts ...grpc.CallOption) (*GetMetricValueResponse, error)
-	// Gets the history of a metric's values
+	// Gets the history for one or more metrics
 	GetMetricHistory(ctx context.Context, in *GetMetricHistoryRequest, opts ...grpc.CallOption) (*GetMetricHistoryResponse, error)
-	// Gets the history of a metric's aggregated value
+	// Gets the history for one or more metrics
 	GetMetricAggregate(ctx context.Context, in *GetMetricAggregateRequest, opts ...grpc.CallOption) (*GetMetricAggregateResponse, error)
 }
 
@@ -104,11 +104,11 @@ type GrafanaQueryAPIServer interface {
 	ListDimensionValues(context.Context, *ListDimensionValuesRequest) (*ListDimensionValuesResponse, error)
 	// Returns all metrics from the system
 	ListMetrics(context.Context, *ListMetricsRequest) (*ListMetricsResponse, error)
-	// Gets a metric's current value
+	// Gets the last known value for one or more metrics
 	GetMetricValue(context.Context, *GetMetricValueRequest) (*GetMetricValueResponse, error)
-	// Gets the history of a metric's values
+	// Gets the history for one or more metrics
 	GetMetricHistory(context.Context, *GetMetricHistoryRequest) (*GetMetricHistoryResponse, error)
-	// Gets the history of a metric's aggregated value
+	// Gets the history for one or more metrics
 	GetMetricAggregate(context.Context, *GetMetricAggregateRequest) (*GetMetricAggregateResponse, error)
 	mustEmbedUnimplementedGrafanaQueryAPIServer()
 }

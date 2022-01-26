@@ -8,22 +8,37 @@ import (
 )
 
 type MetricAggregate struct {
-	models.MetricAggregateQuery
 	*pb.GetMetricAggregateResponse
+	Query models.MetricBaseQuery
+	pb.AggregateType
 }
 
-func (p MetricAggregate) Frames() (data.Frames, error) {
-	if p.Data == nil {
+func (f MetricAggregate) AggregateTypeAlias() string {
+	switch f.AggregateType {
+	case pb.AggregateType_AVERAGE:
+		return "avg"
+	case pb.AggregateType_MIN:
+		return "min"
+	case pb.AggregateType_MAX:
+		return "max"
+	case pb.AggregateType_COUNT:
+		return "count"
+	}
+	return ""
+}
+
+func (f MetricAggregate) Frames() (data.Frames, error) {
+	if f.Data == nil {
 		return data.Frames{}, nil
 	}
 
 	var frames data.Frames
 
-	for i := range p.Data {
-		metricData := p.Data[i]
+	for i := range f.Data {
+		metricData := f.Data[i]
 		frame := &data.Frame{
 			Name:   metricData.Metric.Id,
-			Fields: p.metricDataToFields(metricData),
+			Fields: f.metricDataToFields(metricData),
 		}
 		frames = append(frames, frame)
 	}
@@ -33,7 +48,7 @@ func (p MetricAggregate) Frames() (data.Frames, error) {
 		frame := frames[0]
 		frame.Meta = &data.FrameMeta{
 			Custom: models.Metadata{
-				NextToken: p.NextToken,
+				NextToken: f.NextToken,
 			},
 		}
 	}
@@ -41,21 +56,31 @@ func (p MetricAggregate) Frames() (data.Frames, error) {
 	return frames, nil
 }
 
-func (p *MetricAggregate) metricDataToFields(metricData *pb.GetMetricAggregateResponse_Data) []*data.Field {
+func (f MetricAggregate) FormatDisplayName(metricData *pb.GetMetricAggregateResponse_Data) string {
+	return formatDisplayName(FormatDisplayNameInput{
+		DisplayName: f.Query.DisplayName,
+		MetricID:    metricData.Metric.Id,
+		Dimensions:  f.Query.Dimensions,
+		Labels:      metricData.GetLabels(),
+		Args: []Arg{{
+			Key:   "aggregate",
+			Value: f.AggregateTypeAlias(),
+		}},
+	})
+}
+
+func (f *MetricAggregate) metricDataToFields(metricData *pb.GetMetricAggregateResponse_Data) []*data.Field {
 	length := len(metricData.Series)
 	if length == 0 {
 		return nil
 	}
 	metric := metricData.Metric
 	timeField := fields.TimeField(length)
-	// TODO: take aggrTypeAlias into account
-	var displayName *string
-	if p.DisplayName != "" {
-		s := p.FormatDisplayName(metric.Id, metricData.Labels)
-		displayName = &s
-	}
 
-	dataField := newDataFieldForMetric(metric, metricData.Labels, displayName, length)
+	displayName := f.FormatDisplayName(metricData)
+
+	dataField := newDataFieldForMetric2(metric, f.AggregateTypeAlias(), metricData.Labels, displayName, length)
+
 	for index, v := range metricData.Series {
 		timeField.Set(index, getTime(v.Timestamp))
 		var value float64
@@ -68,18 +93,4 @@ func (p *MetricAggregate) metricDataToFields(metricData *pb.GetMetricAggregateRe
 		timeField,
 		dataField,
 	}
-}
-
-func aggrTypeAlias(at pb.AggregateType) string {
-	switch at {
-	case pb.AggregateType_AVERAGE:
-		return "avg"
-	case pb.AggregateType_MIN:
-		return "min"
-	case pb.AggregateType_MAX:
-		return "max"
-	case pb.AggregateType_COUNT:
-		return "count"
-	}
-	return ""
 }

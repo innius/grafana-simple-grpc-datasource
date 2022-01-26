@@ -49,18 +49,16 @@ func TestMetricAggregate_Frames(t *testing.T) {
 			},
 			NextToken: "next-please",
 		},
-		MetricAggregateQuery: models.MetricAggregateQuery{
-			AggregateType: "average",
-			MetricBaseQuery: models.MetricBaseQuery{
-				Dimensions: []models.Dimension{
-					{
-						Key:   "machine",
-						Value: "m1",
-					},
+		Query: models.MetricBaseQuery{
+			Dimensions: []models.Dimension{
+				{
+					Key:   "machine",
+					Value: "m1",
 				},
-				DisplayName: `{{machine}}-{{metric}}-{{zone}}-{{aggregate}}`,
 			},
+			DisplayName: `{{machine}}-{{metric}}-{{zone}}-{{aggregate}}`,
 		},
+		AggregateType: pb.AggregateType_AVERAGE,
 	}
 
 	res, err := sut.Frames()
@@ -74,7 +72,7 @@ func TestMetricAggregate_Frames(t *testing.T) {
 	})
 
 	t.Run("the format name expression should be applied", func(t *testing.T) {
-		assert.Equal(t, "m1-foo-a-average", res[0].Fields[1].Config.DisplayNameFromDS)
+		assert.Equal(t, "m1-foo-a-avg", res[0].Fields[1].Config.DisplayNameFromDS)
 	})
 
 	t.Run("the data frame should have a NextToken", func(t *testing.T) {

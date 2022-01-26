@@ -33,7 +33,7 @@ export class QueryEditor extends PureComponent<Props> {
   onMetricChange(evt: Array<SelectableValue<string>>) {
     const { onChange, query, onRunQuery } = this.props;
 
-    const m = evt.map(x => ({ metricName: x.value, metricId: x.value }));
+    const m = evt.map((x) => ({ metricName: x.value, metricId: x.value }));
     onChange({ ...query, metrics: m });
     onRunQuery();
   }
@@ -59,17 +59,16 @@ export class QueryEditor extends PureComponent<Props> {
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const currentQueryType = queryTypeInfos.find(v => v.value === query.queryType);
+    const currentQueryType = queryTypeInfos.find((v) => v.value === query.queryType);
     const select = aggReg.selectOptions([query.aggregateType || '']);
-    const key = this.props.query.dimensions?.map(x => x.key + x.value).join();
+    const key = this.props.query.dimensions?.map((x) => x.key + x.value).join();
     // fields which can be used in display name expression
     const displayNameFields = query.dimensions
-      ?.map(x => x.key)
+      ?.map((x) => x.key)
       .concat(['metric', 'aggregate'])
-      .map(x => '{{' + x + '}}')
+      .map((x) => '{{' + x + '}}')
       .join();
-
-    const selectedMetrics = query.metrics?.map(x => ({ label: x.metricName, value: x.metricId }));
+    const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricName, value: x.metricId }));
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
     return (
       <div className="gf-form-group">
@@ -95,7 +94,7 @@ export class QueryEditor extends PureComponent<Props> {
                 defaultOptions={true}
                 value={selectedMetrics}
                 loadOptions={this.loadMetrics}
-                onChange={evt => this.onMetricChange(evt)}
+                onChange={(evt) => this.onMetricChange(evt)}
                 isSearchable={true}
                 isClearable={true}
               />

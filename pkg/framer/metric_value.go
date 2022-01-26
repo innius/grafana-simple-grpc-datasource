@@ -9,28 +9,24 @@ import (
 
 type MetricValue struct {
 	*pb.GetMetricValueResponse
-	models.MetricValueQuery
+	Query models.MetricValueQuery
 }
 
-func (p MetricValue) Frames() (data.Frames, error) {
-	if p.Data == nil {
+func (f MetricValue) Frames() (data.Frames, error) {
+	if f.Data == nil {
 		return data.Frames{}, nil
 	}
 
 	var frames data.Frames
 
-	for i := range p.Data {
-		metricData := p.Data[i]
+	for i := range f.Data {
+		metricData := f.Data[i]
 		metric, timestamp := metricData.Metric, metricData.Timestamp
 
 		timeField := fields.TimeField(1)
 		timeField.Set(0, getTime(timestamp))
 
-		var displayName *string
-		if p.DisplayName != "" {
-			s := p.FormatDisplayName(metric.Id, metricData.Labels)
-			displayName = &s
-		}
+		displayName := f.FormatDisplayName(metricData)
 
 		dataField := newDataFieldForMetric(metric, metricData.Labels, displayName, 1)
 		var value float64
@@ -49,4 +45,13 @@ func (p MetricValue) Frames() (data.Frames, error) {
 	}
 
 	return frames, nil
+}
+
+func (f MetricValue) FormatDisplayName(metricData *pb.GetMetricValueResponse_Data) string {
+	return formatDisplayName(FormatDisplayNameInput{
+		DisplayName: f.Query.DisplayName,
+		MetricID:    metricData.Metric.Id,
+		Dimensions:  f.Query.Dimensions,
+		Labels:      metricData.GetLabels(),
+	})
 }

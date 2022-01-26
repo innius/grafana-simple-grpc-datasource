@@ -32,7 +32,7 @@ func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggr
 		IntervalMs:    query.Interval.Milliseconds(),
 		MaxItems:      query.MaxDataPoints,
 		Dimensions:    dimensions,
-		Metric:        metrics,
+		Metrics:       metrics,
 		StartDate:     query.TimeRange.From.Unix(),
 		EndDate:       query.TimeRange.To.Unix(),
 		AggregateType: aggType,
@@ -69,6 +69,7 @@ func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, que
 	}
 	return &framer.MetricAggregate{
 		GetMetricAggregateResponse: resp,
-		MetricAggregateQuery:       query,
+		Query:                      query.MetricBaseQuery,
+		AggregateType:              clientReq.AggregateType,
 	}, nil
 }

@@ -74,8 +74,10 @@ func (b *adapter) ListMetrics(ctx context.Context, in *v2.ListMetricsRequest, op
 }
 
 func (b *adapter) GetMetricValue(ctx context.Context, in *v2.GetMetricValueRequest, opts ...grpc.CallOption) (*v2.GetMetricValueResponse, error) {
-	//TODO: might give a panic
-	metricId := in.Metric[0]
+	if len(in.Metrics) == 0 {
+		return &v2.GetMetricValueResponse{}, nil
+	}
+	metricId := in.Metrics[0]
 	inv1 := &v1.GetMetricValueRequest{
 		Dimensions: toV1Dimensions(in.Dimensions),
 		Metric:     metricId,
@@ -118,8 +120,10 @@ func toV1Dimensions(dims []*v2.Dimension) []*v1.Dimension {
 }
 
 func (b *adapter) GetMetricHistory(ctx context.Context, in *v2.GetMetricHistoryRequest, opts ...grpc.CallOption) (*v2.GetMetricHistoryResponse, error) {
-	//TODO: might give a panic
-	metricId := in.Metric[0]
+	if len(in.Metrics) == 0 {
+		return &v2.GetMetricHistoryResponse{}, nil
+	}
+	metricId := in.Metrics[0]
 	inv1 := &v1.GetMetricHistoryRequest{
 		Dimensions:    toV1Dimensions(in.Dimensions),
 		Metric:        metricId,
@@ -161,8 +165,10 @@ func (b *adapter) GetMetricHistory(ctx context.Context, in *v2.GetMetricHistoryR
 }
 
 func (b *adapter) GetMetricAggregate(ctx context.Context, in *v2.GetMetricAggregateRequest, opts ...grpc.CallOption) (*v2.GetMetricAggregateResponse, error) {
-	//TODO: might give a panic
-	metricId := in.Metric[0]
+	if len(in.Metrics) == 0 {
+		return &v2.GetMetricAggregateResponse{}, nil
+	}
+	metricId := in.Metrics[0]
 	inv1 := &v1.GetMetricAggregateRequest{
 		Dimensions:    toV1Dimensions(in.Dimensions),
 		Metric:        metricId,

@@ -22,7 +22,7 @@ func valueQueryToInput(query models.MetricValueQuery) *pb.GetMetricValueRequest 
 	}
 	return &pb.GetMetricValueRequest{
 		Dimensions: dimensions,
-		Metric:     metrics,
+		Metrics:    metrics,
 	}
 }
 
@@ -37,6 +37,6 @@ func GetMetricValue(ctx context.Context, client client.BackendAPIClient, query m
 
 	return &framer.MetricValue{
 		GetMetricValueResponse: resp,
-		MetricValueQuery:       query,
+		Query:                  query,
 	}, nil
 }

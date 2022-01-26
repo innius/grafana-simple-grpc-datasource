@@ -9,21 +9,21 @@ import (
 
 type MetricHistory struct {
 	*pb.GetMetricHistoryResponse
-	models.MetricHistoryQuery
+	Query models.MetricHistoryQuery
 }
 
-func (p MetricHistory) Frames() (data.Frames, error) {
-	if p.Data == nil {
+func (f MetricHistory) Frames() (data.Frames, error) {
+	if f.Data == nil {
 		return data.Frames{}, nil
 	}
 
 	var frames data.Frames
 
-	for i := range p.Data {
-		metricData := p.Data[i]
+	for i := range f.Data {
+		metricData := f.Data[i]
 		frame := &data.Frame{
 			Name:   metricData.Metric.Id,
-			Fields: p.metricDataToFields(metricData),
+			Fields: f.metricDataToFields(metricData),
 		}
 		frames = append(frames, frame)
 	}
@@ -33,7 +33,7 @@ func (p MetricHistory) Frames() (data.Frames, error) {
 		frame := frames[0]
 		frame.Meta = &data.FrameMeta{
 			Custom: models.Metadata{
-				NextToken: p.NextToken,
+				NextToken: f.NextToken,
 			},
 		}
 	}
@@ -41,27 +41,16 @@ func (p MetricHistory) Frames() (data.Frames, error) {
 	return frames, nil
 }
 
-func newDataFieldForMetric(metric *pb.Metric, labels []*pb.Label, displayName *string, length int) *data.Field {
-	dataField := fields.MetricField(metric.Id, length)
-	dataField.Config = &data.FieldConfig{}
-	if displayName != nil {
-		dataField.Config.DisplayNameFromDS = *displayName
-	}
-	if metric.Unit != "" {
-		dataField.Config.Unit = metric.Unit
-	}
-
-	if len(labels) > 0 {
-		dataField.Labels = data.Labels{}
-		for i := range labels {
-			label := labels[i]
-			dataField.Labels[label.Key] = label.Value
-		}
-	}
-	return dataField
+func (f MetricHistory) FormatDisplayName(metricData *pb.GetMetricHistoryResponse_Data) string {
+	return formatDisplayName(FormatDisplayNameInput{
+		DisplayName: f.Query.DisplayName,
+		MetricID:    metricData.Metric.Id,
+		Dimensions:  f.Query.Dimensions,
+		Labels:      metricData.GetLabels(),
+	})
 }
 
-func (p MetricHistory) metricDataToFields(metricData *pb.GetMetricHistoryResponse_Data) []*data.Field {
+func (f MetricHistory) metricDataToFields(metricData *pb.GetMetricHistoryResponse_Data) []*data.Field {
 	length := len(metricData.Series)
 	if length == 0 {
 		return nil
@@ -69,11 +58,7 @@ func (p MetricHistory) metricDataToFields(metricData *pb.GetMetricHistoryRespons
 	metric := metricData.Metric
 	timeField := fields.TimeField(length)
 
-	var displayName *string
-	if p.DisplayName != "" {
-		s := p.FormatDisplayName(metric.Id, metricData.Labels)
-		displayName = &s
-	}
+	displayName := f.FormatDisplayName(metricData)
 
 	dataField := newDataFieldForMetric(metric, metricData.Labels, displayName, length)
 

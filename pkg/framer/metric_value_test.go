@@ -40,7 +40,7 @@ func TestMetricValue_Frames(t *testing.T) {
 				},
 			},
 		},
-		MetricValueQuery: models.MetricValueQuery{
+		Query: models.MetricValueQuery{
 			MetricBaseQuery: models.MetricBaseQuery{
 				Dimensions: []models.Dimension{
 					{

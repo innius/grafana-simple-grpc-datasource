@@ -29,6 +29,7 @@ Additionally, the datasource supports API-key authorization. The API-key will be
 
 ##  Usage
 ![screenshot](https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/src/img/screenshots/image-1.png)
+
 #### Metric
 The variable that is updated with new values as the stream of timeseries datapoints is appended.
 
@@ -40,9 +41,9 @@ A measure can have zero or many dimensions that collectively uniquely identify i
 
 | type | description |
 | --- | --- |
-| Get Metric History | gets historical timeseries values of a metric for the selected period |
-| Get Metric Aggregate | gets aggregated timeseries for the selected metric  
-| Get Metric Value | gets the current value or last known value of a specified metric.  
+| Get Metric History | gets historical timeseries values |
+| Get Metric Aggregate | gets aggregated timeseries |  
+| Get Metric Value | gets the last known value |  
 
 
 ## Getting started
@@ -60,24 +61,63 @@ docker run -p 50051:50051 innius/sample-grpc-server
 
 ## Implement your own backend API 
 
-This datasource plugin expects a backend to implement `GrafanaQueryAPI` interface. The definition of this interface can be found [here](https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/api.proto). This API provides the following operations:
+This datasource plugin expects a backend to implement the [Simple][1] or the [Advanced][2] interface. 
 
-| name | description | 
-| --- | --- |
-| ListDimensionKeys| Returns a list of all available dimension keys |
+### The Simple API ([GrafanaQueryAPI][1])
+
+This API provides the following operations:
+
+| name                | description                                                         | 
+|---------------------|---------------------------------------------------------------------|
+| ListDimensionKeys   | Returns a list of all available dimension keys                      |
 | ListDimensionValues | Returns a list of all available dimension values of a dimension key |
-| ListMetrics | Returns a list of all metrics for a combination of dimensions. |
-| GetMetricValue | Returns the last known value of a metric. |
-| GetMetricHistory | Returns historical values of a metric |
-| GetMetricAggregate | Returns aggregated metric values |
+| ListMetrics         | Returns a list of all metrics for a combination of dimensions.      |
+| GetMetricValue      | Returns the last known value of a metric.                           |
+| GetMetricHistory    | Returns historical values of a metric                               |
+| GetMetricAggregate  | Returns aggregated metric values                                    |
 
 A sample implementation can be found [here](https://bitbucket.org/innius/sample-grpc-server/src/master/).
+
+This API has some limitations: 
+- it only supports one metric per query 
+- it does not support variables with multiple options 
+- it does not support enhanced metadata for metrics (like unit, etc.)
+
+### The Advanced API ([GrafanaQueryAPIV2][2])
+
+This API provides almost the same operations as the Simple API but with one major difference: it supports multiple metrics 
+for the same query. As a result this API integrates seamlessly with grafana templating capabilities. 
+In addition, it supports enhanced metric metadata, like unit of measure. Another difference is that it supports grafana labels. 
+
+This API provides the following operations:
+
+| name                | description                                                         | 
+|---------------------|---------------------------------------------------------------------|
+| ListDimensionKeys   | Returns a list of all available dimension keys                      |
+| ListDimensionValues | Returns a list of all available dimension values of a dimension key |
+| ListMetrics         | Returns a list of all metrics for a combination of dimensions.      |
+| GetMetricValue      | Returns the last known value for one or more metrics.               |
+| GetMetricHistory    | Returns historical values for one or more metrics                   |
+| GetMetricAggregate  | Returns aggregated values for one or more metrics                   |
+
+A sample implementation can be found [here](https://bitbucket.org/innius/sample-grpc-server/src/master/).
+
+#### Example Use Cases: 
+- different time series for the same metric with different labels. For example: the temperature measure is a room. The room has four zones: north, south, east and west. The V1 API does not support this unless there are four different metrics defined for each temperature / zone combination. 
+The V2 API does support this scenario by returning multiple time series for the same metric `temperature`, each annotated with different label `zone`. 
+- different time series for different metrics. For example: a room has multiple temperature sensors. The V1 API supports this by defining multiple queries for each metric. 
+The V2 API can do this with a single query. 
+
+Important Note: in order to use the V2 API the backend server needs to support [gRPC Reflection][3]. The plugin uses this to determine if a backend supports the V2 protocol. If V2 is not supported it falls back on the Simple API implementation. 
 
 Please note gRPC is programming language agnostic which makes it possible to implement a backend in the language of your choice. Checkout the gRPC [documentation](https://grpc.io/docs/languages/) of your language.
 
 ## Roadmap
 
 - add more authentication schemes (certificates, basic authentication etc. )
-- add more tests
 - support annotations
 - support streaming queries 
+
+[1]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v1/api.proto
+[2]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v2/apiv2.proto
+[3]: https://github.com/grpc/grpc/blob/master/doc/server-reflection.md
