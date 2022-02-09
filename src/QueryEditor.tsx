@@ -1,14 +1,15 @@
 import defaults from 'lodash/defaults';
 
 import React, { ChangeEvent, PureComponent } from 'react';
-import { InlineFormLabel, LegacyForms } from '@grafana/ui';
+import { InlineFormLabel, LegacyForms, AsyncMultiSelect } from '@grafana/ui';
 import { QueryEditorProps, Registry, SelectableValue } from '@grafana/data';
 import { DataSource } from './datasource';
 import { AggregateType, defaultQuery, MyDataSourceOptions, MyQuery, QueryType } from './types';
 import { changeQueryType, QueryTypeInfo, queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './QueryDimensions';
+import { convertQuery } from './convert';
 
-const { Select, AsyncSelect, FormField } = LegacyForms;
+const { Select, FormField } = LegacyForms;
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
@@ -30,11 +31,13 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
-  onMetricChange = (sel: SelectableValue<string>) => {
+  onMetricChange(evt: Array<SelectableValue<string>>) {
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, metricName: sel.label, metricId: sel.value });
+
+    const m = evt.map((x) => ({ metricName: x.value, metricId: x.value }));
+    onChange({ ...query, metrics: m });
     onRunQuery();
-  };
+  }
 
   onAggregateChange = (item: SelectableValue<AggregateType>) => {
     const { onChange, query, onRunQuery } = this.props;
@@ -56,17 +59,17 @@ export class QueryEditor extends PureComponent<Props> {
   };
 
   render() {
-    const query = defaults(this.props.query, defaultQuery);
-    const currentQueryType = queryTypeInfos.find(v => v.value === query.queryType);
+    const query = convertQuery(defaults(this.props.query, defaultQuery));
+    const currentQueryType = queryTypeInfos.find((v) => v.value === query.queryType);
     const select = aggReg.selectOptions([query.aggregateType || '']);
-    const key = this.props.query.dimensions?.map(x => x.key + x.value).join();
+    const key = this.props.query.dimensions?.map((x) => x.key + x.value).join();
     // fields which can be used in display name expression
     const displayNameFields = query.dimensions
-      ?.map(x => x.key)
+      ?.map((x) => x.key)
       .concat(['metric', 'aggregate'])
-      .map(x => '{{' + x + '}}')
+      .map((x) => '{{' + x + '}}')
       .join();
-
+    const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricName, value: x.metricId }));
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
     return (
       <div className="gf-form-group">
@@ -87,14 +90,12 @@ export class QueryEditor extends PureComponent<Props> {
               <InlineFormLabel width={8} tooltip={'start typing to query for metrics'}>
                 Metric
               </InlineFormLabel>
-              <AsyncSelect
+              <AsyncMultiSelect
                 key={key}
-                width={12}
                 defaultOptions={true}
-                value={{ label: query.metricName, value: query.metricId }}
+                value={selectedMetrics}
                 loadOptions={this.loadMetrics}
-                noOptionsMessage={() => 'type to search for metrics'}
-                onChange={this.onMetricChange}
+                onChange={(evt) => this.onMetricChange(evt)}
                 isSearchable={true}
                 isClearable={true}
               />

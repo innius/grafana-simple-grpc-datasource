@@ -1,42 +1,26 @@
 package framer
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
-	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
-
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
 type MetricHistory struct {
-	pb.GetMetricHistoryResponse
-	models.MetricHistoryQuery
+	*pb.GetMetricHistoryResponse
+	Query models.MetricHistoryQuery
 }
 
-func (p MetricHistory) Frames() (data.Frames, error) {
-	length := len(p.Values)
+func (f MetricHistory) FormatDisplayName(frame *pb.Frame, fld *pb.Field) string {
+	return formatDisplayName(FormatDisplayNameInput{
+		DisplayName: f.Query.DisplayName,
+		FieldName:   fld.Name,
+		MetricID:    frame.Metric,
+		Dimensions:  f.Query.Dimensions,
+		Labels:      fld.GetLabels(),
+	})
+}
 
-	timeField := fields.TimeField(length)
-	valueField := fields.MetricField("Value", length)
-	if p.DisplayName != "" {
-		valueField.Config = &data.FieldConfig{
-			DisplayNameFromDS: p.FormatDisplayName(),
-		}
-	}
-	log.DefaultLogger.Debug("MetricHistory", "value", p.MetricId)
-
-	frame := data.NewFrame(p.MetricId, timeField, valueField)
-
-	frame.Meta = &data.FrameMeta{
-		Custom: models.Metadata{
-			NextToken: p.NextToken,
-		},
-	}
-	for i, v := range p.Values {
-		timeField.Set(i, getTime(v.Timestamp))
-		valueField.Set(i, v.Value.DoubleValue)
-	}
-
-	return data.Frames{frame}, nil
+func (f MetricHistory) Frames() (data.Frames, error) {
+	return convertToDataFrames(f), nil
 }

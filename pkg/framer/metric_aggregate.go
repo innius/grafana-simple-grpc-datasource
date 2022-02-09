@@ -1,48 +1,19 @@
 package framer
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
-	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
 type MetricAggregate struct {
-	models.MetricAggregateQuery
-	pb.GetMetricAggregateResponse
-	AggregationType pb.AggregateType
+	*pb.GetMetricAggregateResponse
+	Query models.MetricBaseQuery
+	pb.AggregateType
 }
 
-func (p MetricAggregate) Frames() (data.Frames, error) {
-	length := len(p.Values)
-	timeField := fields.TimeField(length)
-	valueField := fields.AggregationField(length, aggrTypeAlias(p.AggregationType))
-
-	if p.DisplayName != "" {
-		valueField.Config = &data.FieldConfig{
-			DisplayNameFromDS: p.FormatDisplayName(),
-		}
-	}
-
-	log.DefaultLogger.Debug("MetricAggregate", "value", p.MetricId)
-	for i, v := range p.Values {
-		timeField.Set(i, getTime(v.Timestamp))
-		valueField.Set(i, v.Value.DoubleValue)
-	}
-
-	frame := data.NewFrame(p.MetricId, timeField, valueField)
-
-	frame.Meta = &data.FrameMeta{
-		Custom: models.Metadata{
-			NextToken: p.NextToken,
-		},
-	}
-	return data.Frames{frame}, nil
-}
-
-func aggrTypeAlias(at pb.AggregateType) string {
-	switch at {
+func (f MetricAggregate) AggregateTypeAlias() string {
+	switch f.AggregateType {
 	case pb.AggregateType_AVERAGE:
 		return "avg"
 	case pb.AggregateType_MIN:
@@ -53,4 +24,22 @@ func aggrTypeAlias(at pb.AggregateType) string {
 		return "count"
 	}
 	return ""
+}
+
+func (f MetricAggregate) Frames() (data.Frames, error) {
+	return convertToDataFrames(f), nil
+}
+
+func (f MetricAggregate) FormatDisplayName(frame *pb.Frame, fld *pb.Field) string {
+	return formatDisplayName(FormatDisplayNameInput{
+		DisplayName: f.Query.DisplayName,
+		FieldName:   fld.Name,
+		MetricID:    frame.Metric,
+		Dimensions:  f.Query.Dimensions,
+		Labels:      fld.GetLabels(),
+		Args: []Arg{{
+			Key:   "aggregate",
+			Value: f.AggregateTypeAlias(),
+		}},
+	})
 }

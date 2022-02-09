@@ -69,7 +69,7 @@ const DimensionRow: React.FC<DimensionRowProps> = ({
             value={{ label: dimension.key, value: dimension.key }}
             cacheOptions={false}
             loadOptions={loadDimensions}
-            onChange={e => onChange({ ...dimension, key: e.value || '' })}
+            onChange={(e) => onChange({ ...dimension, key: e.value || '' })}
           />
         </div>
       </>
@@ -80,13 +80,13 @@ const DimensionRow: React.FC<DimensionRowProps> = ({
           width={12}
           defaultOptions={true}
           value={{ label: dimension.value, value: dimension.value }}
-          loadOptions={query => loadDimensionValues(dimension.key, query)}
+          loadOptions={(query) => loadDimensionValues(dimension.key, query)}
           isSearchable={true}
           isClearable={true}
-          onChange={e => onChange({ ...dimension, value: e ? e.value || '' : '' })}
+          onChange={(e) => onChange({ ...dimension, value: e ? e.value || '' : '' })}
         />
       </>
-      <Button variant="secondary" size="xs" onClick={_e => onRemove(dimension.id)}>
+      <Button variant="secondary" size="xs" onClick={(_e) => onRemove(dimension.id)}>
         <Icon name="trash-alt" />
       </Button>
     </div>
@@ -118,7 +118,7 @@ export class DimensionSettings extends PureComponent<Props, State> {
   };
 
   onDimensionAdd = () => {
-    this.setState(prevState => {
+    this.setState((prevState) => {
       // @ts-ignore
       return { dimensions: [...prevState.dimensions, { id: uniqueId(), key: '', value: '', configured: false }] };
     });
@@ -157,7 +157,7 @@ export class DimensionSettings extends PureComponent<Props, State> {
   onDimensionRemove = (dimensionId: string) => {
     this.setState(
       ({ dimensions }) => ({
-        dimensions: dimensions.filter(h => h.id !== dimensionId),
+        dimensions: dimensions.filter((h) => h.id !== dimensionId),
       }),
       this.updateSettings
     );
@@ -183,7 +183,7 @@ export class DimensionSettings extends PureComponent<Props, State> {
             <DimensionRow
               key={dimension.id}
               dimension={dimension}
-              onChange={h => {
+              onChange={(h) => {
                 this.onDimensionChange(i, h);
               }}
               onBlur={this.updateSettings}
@@ -198,7 +198,7 @@ export class DimensionSettings extends PureComponent<Props, State> {
           <Button
             variant="secondary"
             icon="plus"
-            onClick={e => {
+            onClick={(e) => {
               this.onDimensionAdd();
             }}
           >

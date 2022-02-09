@@ -4,7 +4,7 @@
 // 	protoc        v3.17.3
 // source: pkg/proto/api.proto
 
-package grafana_simple_grpc_datasource
+package v1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

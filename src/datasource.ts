@@ -10,12 +10,14 @@ import {
 } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import {
+  Dimension,
   Dimensions,
   isMetricQuery,
   ListDimensionsQuery,
   ListDimensionValuesQuery,
   ListMetricsQuery,
   Metadata,
+  Metric,
   MyDataSourceOptions,
   MyQuery,
   NextQuery,
@@ -25,6 +27,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
+import { convertMetrics, convertQuery } from './convert';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -40,7 +43,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
           for (const frame of rsp.data as DataFrame[]) {
             const meta = frame.meta?.custom as Metadata;
             if (meta && meta.nextToken) {
-              const query = request.targets.find(t => t.refId === frame.refId);
+              const query = request.targets.find((t) => t.refId === frame.refId);
               if (query) {
                 next.push({
                   ...query,
@@ -55,7 +58,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
         }
         return undefined;
       },
-
       /**
        * The original request
        */
@@ -90,34 +92,51 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     if (!query.queryType) {
       return false;
     }
-    return !(isMetricQuery(query.queryType) && !query.metricId);
+    if (!isMetricQuery(query.queryType)) {
+      return true;
+    }
+    const metrics = convertMetrics(query);
+    return metrics !== undefined && metrics.length > 0;
+  }
+
+  formatMetric(metric: Metric): string {
+    return metric.metricName || metric.metricId || '';
+  }
+
+  formatDimension(dim: Dimension): string {
+    return `${dim.key}=${dim.value}`;
   }
 
   getQueryDisplayText(query: MyQuery): string {
-    const dimensions = query.dimensions?.map(x => `${x.key}=${x.value}`).join(',');
-    let text = query.metricId || '';
-    if (!!dimensions) {
-      text = `[${dimensions}] ${text}`;
+    let displayText = '[' + query.dimensions?.map(this.formatDimension).join(',') + ']';
+
+    if (query.metrics && query.metrics?.length > 0) {
+      displayText += ' ' + query.metrics.map(this.formatMetric).join('&');
     }
-    return text;
+    return displayText || query.refId;
+  }
+
+  // parses a string from a variable query into Dimensions
+  // query has the format dimension1=value1;dimension2=value.... split this string into {dimension1: value1, dimension2: value2}
+  parseDimensions(query: string): Dimensions {
+    return query
+      .split(';')
+      .map((x) => x.split('='))
+      .filter((x) => x.length === 2)
+      .map((v) => ({
+        id: '',
+        key: v[0],
+        value: v[1],
+      }));
   }
 
   /**
    * Supports lists of metrics
    */
   async metricFindQuery(query: string, options?: any): Promise<MetricFindValue[]> {
-    // query has the format dimension1=value1;dimension2=value.... split this string into {dimension1: value1, dimension2: value2}
-    let dimensions = query
-      .split(';')
-      .map(x => x.split('='))
-      .filter(x => x.length === 2)
-      .map(v => ({
-        id: '',
-        key: v[0],
-        value: v[1],
-      }));
+    const dimensions = this.parseDimensions(query);
     return await this.runListMetricsQuery(dimensions, '')
-      .pipe(map(x => x.map(x => ({ text: x.value || '' }))))
+      .pipe(map((x) => x.map((x) => ({ text: x.value || '' }))))
       .toPromise();
   }
 
@@ -126,15 +145,32 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
    */
   applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars): MyQuery {
     const templateSrv = getTemplateSrv();
+
+    const query2 = convertQuery(query);
+    const metrics = query2.metrics
+      ?.flatMap<string[]>((metric) => {
+        const replaced = templateSrv.replace(metric.metricId, scopedVars, 'json');
+        try {
+          return JSON.parse(replaced);
+        } catch (e) {
+          return [replaced];
+        }
+      })
+      .flat()
+      .map((x) => ({ metricId: x }));
+
     return {
-      ...query,
-      metricId: templateSrv.replace(query.metricId || '', scopedVars),
+      ...query2,
+      metrics: metrics || [],
     };
   }
 
   runQuery(query: MyQuery, maxDataPoints?: number): Observable<DataQueryResponse> {
-    // @ts-ignore
-    return this.query({ targets: [query], requestId: `iot.${counter++}`, maxDataPoints });
+    return this.query({
+      targets: [query],
+      requestId: `iot.${counter++}`,
+      maxDataPoints,
+    } as DataQueryRequest<MyQuery>);
   }
 
   async listDimensionKeys(filter: string): Promise<Array<SelectableValue<string>>> {
@@ -145,7 +181,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     };
     return this.runQuery(query)
       .pipe(
-        map(res => {
+        map((res) => {
           if (res.data.length) {
             const dimensions = new DataFrameView<SelectableValue<string>>(res.data[0]);
             return dimensions.toArray();
@@ -154,7 +190,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
         })
       )
       .toPromise();
-    // return this.getResource('dimensions', {filter: filter})
   }
 
   async listDimensionsValues(key: string, filter: string): Promise<Array<SelectableValue<string>>> {
@@ -166,7 +201,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     };
     return this.runQuery(query)
       .pipe(
-        map(res => {
+        map((res) => {
           if (res.data.length) {
             const dimensionValues = new DataFrameView<SelectableValue<string>>(res.data[0]);
             return dimensionValues.toArray();
@@ -185,7 +220,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       filter: filter,
     };
     return this.runQuery(query).pipe(
-      map(res => {
+      map((res) => {
         if (res.data.length) {
           const metrics = new DataFrameView<SelectableValue<string>>(res.data[0]);
           return metrics.toArray();
@@ -200,7 +235,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
     const variables = getTemplateSrv()
       .getVariables()
-      .map(x => ({
+      .map((x) => ({
         value: `$${x.name}`,
         label: `$${x.name}`,
       })) as Array<SelectableValue<string>>;

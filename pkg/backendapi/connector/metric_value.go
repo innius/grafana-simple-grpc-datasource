@@ -1,13 +1,11 @@
-package api
+package connector
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
-	"context"
-
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
-
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
+	"context"
 )
 
 func valueQueryToInput(query models.MetricValueQuery) *pb.GetMetricValueRequest {
@@ -18,9 +16,13 @@ func valueQueryToInput(query models.MetricValueQuery) *pb.GetMetricValueRequest 
 			Value: d.Value,
 		})
 	}
+	metrics := make([]string, len(query.Metrics))
+	for i := range query.Metrics {
+		metrics[i] = query.Metrics[i].MetricId
+	}
 	return &pb.GetMetricValueRequest{
 		Dimensions: dimensions,
-		Metric:     query.MetricId,
+		Metrics:    metrics,
 	}
 }
 
@@ -32,11 +34,9 @@ func GetMetricValue(ctx context.Context, client client.BackendAPIClient, query m
 	if err != nil {
 		return nil, err
 	}
+
 	return &framer.MetricValue{
-		GetMetricValueResponse: pb.GetMetricValueResponse{
-			Timestamp: resp.Timestamp,
-			Value:     resp.Value,
-		},
-		MetricValueQuery: query,
+		GetMetricValueResponse: resp,
+		Query:                  query,
 	}, nil
 }

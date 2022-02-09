@@ -1,14 +1,15 @@
-package api
+package connector
 
 import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"strings"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto"
 )
 
 func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggregateRequest, error) {
@@ -23,13 +24,18 @@ func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggr
 	if err != nil {
 		return nil, err
 	}
+
+	metrics := make([]string, len(query.Metrics))
+	for i := range query.Metrics {
+		metrics[i] = query.Metrics[i].MetricId
+	}
 	return &pb.GetMetricAggregateRequest{
 		IntervalMs:    query.Interval.Milliseconds(),
 		MaxItems:      query.MaxDataPoints,
 		Dimensions:    dimensions,
-		Metric:        query.MetricId,
-		StartDate:     query.TimeRange.From.Unix(),
-		EndDate:       query.TimeRange.To.Unix(),
+		Metrics:       metrics,
+		StartDate:     timestamppb.New(query.TimeRange.From),
+		EndDate:       timestamppb.New(query.TimeRange.To),
 		AggregateType: aggType,
 		StartingToken: query.NextToken,
 	}, nil
@@ -63,11 +69,8 @@ func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, que
 		return nil, err
 	}
 	return &framer.MetricAggregate{
-		GetMetricAggregateResponse: pb.GetMetricAggregateResponse{
-			Values:    resp.Values,
-			NextToken: resp.NextToken,
-		},
-		MetricAggregateQuery: query,
-		AggregationType:      clientReq.AggregateType,
+		GetMetricAggregateResponse: resp,
+		Query:                      query.MetricBaseQuery,
+		AggregateType:              clientReq.AggregateType,
 	}, nil
 }

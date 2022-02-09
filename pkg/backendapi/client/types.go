@@ -1,10 +1,16 @@
 package client
 
 import (
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"encoding/json"
 	"fmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
+
+type BackendAPIClient interface {
+	v2.GrafanaQueryAPIClient
+	Dispose()
+}
 
 type BackendAPIDatasourceSettings struct {
 	ID                          string `json:"-"`
