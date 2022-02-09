@@ -23,8 +23,8 @@ import {
   NextQuery,
   QueryType,
 } from './types';
-import { Observable, lastValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { from, lastValueFrom, Observable, concat } from 'rxjs';
+import { map, mergeMap, toArray } from 'rxjs/operators';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
 import { convertMetrics, convertQuery } from './convert';
@@ -229,17 +229,19 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     );
   }
 
-  async listMetrics(dimensions: Dimensions, filter: string): Promise<Array<SelectableValue<string>>> {
-    const remoteMetrics = await this.runListMetricsQuery(dimensions, filter);
+  listMetrics(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
+    const remoteMetrics = this.runListMetricsQuery(dimensions, filter).pipe(mergeMap((x) => x.flat()));
 
-    const variables = getTemplateSrv()
-      .getVariables()
-      .map((x) => ({
-        value: `$${x.name}`,
-        label: `$${x.name}`,
-      })) as Array<SelectableValue<string>>;
+    const variables = from(
+      getTemplateSrv()
+        .getVariables()
+        .map((x) => ({
+          value: `$${x.name}`,
+          label: `$${x.name}`,
+        }))
+    );
 
-    return remoteMetrics ? variables.concat(remoteMetrics) : variables;
+    return concat(remoteMetrics, variables).pipe(toArray());
   }
 }
 

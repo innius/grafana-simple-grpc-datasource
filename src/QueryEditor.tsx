@@ -1,5 +1,5 @@
 import defaults from 'lodash/defaults';
-
+import { lastValueFrom } from 'rxjs';
 import React, { ChangeEvent, PureComponent } from 'react';
 import { InlineFormLabel, LegacyForms, AsyncMultiSelect } from '@grafana/ui';
 import { QueryEditorProps, Registry, SelectableValue } from '@grafana/data';
@@ -55,7 +55,7 @@ export class QueryEditor extends PureComponent<Props> {
     const { datasource } = this.props;
     const { dimensions } = this.props.query;
 
-    return datasource.listMetrics(dimensions || [], value);
+    return lastValueFrom(datasource.listMetrics(dimensions || [], value));
   };
 
   render() {
