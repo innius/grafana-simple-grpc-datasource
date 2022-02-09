@@ -23,7 +23,7 @@ import {
   NextQuery,
   QueryType,
 } from './types';
-import { Observable } from 'rxjs';
+import { Observable, lastValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
@@ -135,9 +135,10 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
    */
   async metricFindQuery(query: string, options?: any): Promise<MetricFindValue[]> {
     const dimensions = this.parseDimensions(query);
-    return await this.runListMetricsQuery(dimensions, '')
-      .pipe(map((x) => x.map((x) => ({ text: x.value || '' }))))
-      .toPromise();
+
+    const metrics = this.runListMetricsQuery(dimensions, '').pipe(map((x) => x.map((x) => ({ text: x.value || '' }))));
+
+    return lastValueFrom(metrics);
   }
 
   /**
@@ -179,17 +180,16 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       queryType: QueryType.ListDimensionKeys,
       filter: filter,
     };
-    return this.runQuery(query)
-      .pipe(
-        map((res) => {
-          if (res.data.length) {
-            const dimensions = new DataFrameView<SelectableValue<string>>(res.data[0]);
-            return dimensions.toArray();
-          }
-          throw `no dimensions found ${res.error}`;
-        })
-      )
-      .toPromise();
+    const dimKeys = this.runQuery(query).pipe(
+      map((res) => {
+        if (res.data.length) {
+          const dimensions = new DataFrameView<SelectableValue<string>>(res.data[0]);
+          return dimensions.toArray();
+        }
+        throw `no dimensions found ${res.error}`;
+      })
+    );
+    return lastValueFrom(dimKeys);
   }
 
   async listDimensionsValues(key: string, filter: string): Promise<Array<SelectableValue<string>>> {
@@ -199,17 +199,16 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       dimensionKey: key,
       filter: filter,
     };
-    return this.runQuery(query)
-      .pipe(
-        map((res) => {
-          if (res.data.length) {
-            const dimensionValues = new DataFrameView<SelectableValue<string>>(res.data[0]);
-            return dimensionValues.toArray();
-          }
-          throw 'no dimension values found';
-        })
-      )
-      .toPromise();
+    const dimValues = this.runQuery(query).pipe(
+      map((res) => {
+        if (res.data.length) {
+          const dimensionValues = new DataFrameView<SelectableValue<string>>(res.data[0]);
+          return dimensionValues.toArray();
+        }
+        throw 'no dimension values found';
+      })
+    );
+    return lastValueFrom(dimValues);
   }
 
   runListMetricsQuery(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
@@ -231,7 +230,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   async listMetrics(dimensions: Dimensions, filter: string): Promise<Array<SelectableValue<string>>> {
-    const remoteMetrics = await this.runListMetricsQuery(dimensions, filter).toPromise();
+    const remoteMetrics = await this.runListMetricsQuery(dimensions, filter);
 
     const variables = getTemplateSrv()
       .getVariables()
