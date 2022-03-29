@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6
+* upgrade: upgrade to latest grafana toolkit
+* feature: add v2 API which better aligns with grafana dataframe API 
+* feature: add fieldname to display name expressions
+
 ## 1.0.5
 * feature: add `COUNT` aggregate type to list of possible aggregations
 * feature: support display name expression (also known as aliasing)
