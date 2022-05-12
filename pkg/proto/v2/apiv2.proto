@@ -243,6 +243,7 @@ enum AggregateType {
 
 message ListDimensionKeysRequest {
   string filter = 1;
+  repeated Dimension selected_dimensions = 2;
 }
 
 message ListDimensionKeysResponse {
@@ -256,6 +257,7 @@ message ListDimensionKeysResponse {
 message ListDimensionValuesRequest {
   string dimension_key = 1;
   string filter = 2;
+  repeated Dimension selected_dimensions = 3;
 }
 
 message ListDimensionValuesResponse {
