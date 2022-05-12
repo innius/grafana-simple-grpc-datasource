@@ -174,10 +174,11 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     } as DataQueryRequest<MyQuery>);
   }
 
-  async listDimensionKeys(filter: string): Promise<Array<SelectableValue<string>>> {
+  async listDimensionKeys(filter: string, selected_dimensions: Dimensions): Promise<Array<SelectableValue<string>>> {
     const query: ListDimensionsQuery = {
       refId: 'listDimensionKeys',
       queryType: QueryType.ListDimensionKeys,
+      selected_dimensions,
       filter: filter,
     };
     const dimKeys = this.runQuery(query).pipe(
@@ -192,11 +193,16 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return lastValueFrom(dimKeys);
   }
 
-  async listDimensionsValues(key: string, filter: string): Promise<Array<SelectableValue<string>>> {
+  async listDimensionsValues(
+    key: string,
+    filter: string,
+    selected_dimensions: Dimensions
+  ): Promise<Array<SelectableValue<string>>> {
     const query: ListDimensionValuesQuery = {
       refId: 'listDimensionsValues',
       queryType: QueryType.ListDimensionValues,
       dimensionKey: key,
+      selected_dimensions,
       filter: filter,
     };
     const dimValues = this.runQuery(query).pipe(

@@ -164,11 +164,13 @@ export class DimensionSettings extends PureComponent<Props, State> {
   };
 
   getDimensionKeys = (query: string): Promise<Array<SelectableValue<string>>> => {
-    return this.props.datasource.listDimensionKeys(query);
+    const { dimensions } = this.state;
+    return this.props.datasource.listDimensionKeys(query, dimensions);
   };
 
   getDimensionValues = (key: string, query: string): Promise<Array<SelectableValue<string>>> => {
-    return this.props.datasource.listDimensionsValues(key, query);
+    const { dimensions } = this.state;
+    return this.props.datasource.listDimensionsValues(key, query, dimensions);
   };
 
   render() {
