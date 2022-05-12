@@ -1,17 +1,26 @@
 package connector
 
 import (
+	"context"
+
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
-	"context"
 )
 
 func ListDimensionValues(ctx context.Context, client client.BackendAPIClient, query models.DimensionValueQuery) (*framer.DimensionValues, error) {
+	selectedDimensions := make([]*pb.Dimension, len(query.SelectedDimensions))
+	for _, dimension := range query.SelectedDimensions {
+		selectedDimensions = append(selectedDimensions, &pb.Dimension{
+			Key:   dimension.Key,
+			Value: dimension.Value,
+		})
+	}
 	resp, err := client.ListDimensionValues(ctx, &pb.ListDimensionValuesRequest{
-		DimensionKey: query.DimensionKey,
-		Filter:       query.Filter,
+		DimensionKey:       query.DimensionKey,
+		Filter:             query.Filter,
+		SelectedDimensions: selectedDimensions,
 	})
 
 	if err != nil {

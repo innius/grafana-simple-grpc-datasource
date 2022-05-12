@@ -2,12 +2,14 @@ package models
 
 import (
 	"encoding/json"
+
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
 type DimensionValueQuery struct {
-	DimensionKey string `json:"dimensionKey"`
-	Filter       string `json:"filter"`
+	DimensionKey       string      `json:"dimensionKey"`
+	Filter             string      `json:"filter"`
+	SelectedDimensions []Dimension `json:"selected_dimensions"`
 }
 
 func UnmarshalToDimensionValueQuery(dq *backend.DataQuery) (*DimensionValueQuery, error) {

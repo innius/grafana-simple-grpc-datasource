@@ -99,11 +99,13 @@ export interface GetMetricAggregateQuery extends MyQuery {
 
 export interface ListDimensionsQuery extends MyQuery {
   queryType: QueryType.ListDimensionKeys;
+  selected_dimensions: Dimensions;
   filter: string;
 }
 
 export interface ListDimensionValuesQuery extends MyQuery {
   queryType: QueryType.ListDimensionValues;
+  selected_dimensions: Dimensions;
   dimensionKey: string;
   filter: string;
 }
