@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.7 
+* feature: provide ListDimensions with selected dimensions to enable advanced backend filtering
+* feature: support frame metadata to enable user notifications from backend 
+* bugfix: pagination for queries with multiple frames did not work properly 
+
 ## 1.0.6
 * upgrade: upgrade to latest grafana toolkit
 * feature: add v2 API which better aligns with grafana dataframe API 
