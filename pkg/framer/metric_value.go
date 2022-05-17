@@ -39,6 +39,7 @@ func (f MetricValue) Frames() (data.Frames, error) {
 		frame := &data.Frame{
 			Name:   metricFrame.Metric,
 			Fields: fields,
+			Meta:   convertFrameMeta(metricFrame.Meta),
 		}
 		res = append(res, frame)
 	}

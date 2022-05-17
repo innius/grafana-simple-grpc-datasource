@@ -82,18 +82,118 @@ func convertToDataFrames(response framesResponse) data.Frames {
 			Name:   metricFrame.Metric,
 			Fields: fields,
 		}
+
+		frame.Meta = convertFrameMeta(metricFrame.Meta)
+
 		res = append(res, frame)
 	}
 
 	// add metadata -> add next token to the first frame (this is how other datasource plugins are doing this)
 	if len(res) > 0 {
 		frame := res[0]
-		frame.Meta = &data.FrameMeta{
-			Custom: models.Metadata{
+		if frame.Meta == nil {
+			frame.Meta = &data.FrameMeta{
+				Custom: models.Metadata{
+					NextToken: response.GetNextToken(),
+				},
+			}
+		} else {
+			frame.Meta.Custom = models.Metadata{
 				NextToken: response.GetNextToken(),
-			},
+			}
 		}
 	}
 
 	return res
+}
+
+func convertFrameMeta(meta *pb.FrameMeta) *data.FrameMeta {
+	if meta == nil {
+		return nil
+	}
+	return &data.FrameMeta{
+		Type:                   convertFrameMetaFrameType(meta.Type),
+		Custom:                 nil,
+		Stats:                  nil,
+		Notices:                convertFrameMetaNotices(meta.Notices),
+		Channel:                "",
+		PreferredVisualization: converFrameMetaVisType(meta.PreferredVisualization),
+		ExecutedQueryString:    meta.ExecutedQueryString,
+	}
+}
+
+func converFrameMetaVisType(t pb.FrameMeta_VisType) data.VisType {
+	switch t {
+	case pb.FrameMeta_VisTypeTable:
+		return data.VisTypeTable
+	case pb.FrameMeta_VisTypeLogs:
+		return data.VisTypeLogs
+	case pb.FrameMeta_VisTypeTrace:
+		return data.VisTypeTrace
+	case pb.FrameMeta_VisTypeNodeGraph:
+		return data.VisTypeNodeGraph
+	default:
+		return data.VisTypeGraph
+	}
+}
+
+func convertFrameMetaNotices(notices []*pb.FrameMeta_Notice) []data.Notice {
+	var res = make([]data.Notice, len(notices))
+	for i := range notices {
+		n := notices[i]
+		res[i] = convertFrameMetaNotice(n)
+	}
+	return res
+}
+
+func convertFrameMetaNotice(n *pb.FrameMeta_Notice) data.Notice {
+	return data.Notice{
+		Severity: convertFrameMetaNoticeSeverity(n.Severity),
+		Text:     n.Text,
+		Link:     n.Link,
+		Inspect:  convertFrameMetaNoticeInspectType(n.Inspect),
+	}
+}
+
+func convertFrameMetaNoticeSeverity(s pb.FrameMeta_Notice_NoticeSeverity) data.NoticeSeverity {
+	switch s {
+	case pb.FrameMeta_Notice_NoticeSeverityError:
+		return data.NoticeSeverityError
+	case pb.FrameMeta_Notice_NoticeSeverityWarning:
+		return data.NoticeSeverityWarning
+	default:
+		return data.NoticeSeverityInfo
+	}
+}
+
+func convertFrameMetaNoticeInspectType(v pb.FrameMeta_Notice_InspectType) data.InspectType {
+	switch v {
+	case pb.FrameMeta_Notice_InspectTypeMeta:
+		return data.InspectTypeMeta
+	case pb.FrameMeta_Notice_InspectTypeError:
+		return data.InspectTypeError
+	case pb.FrameMeta_Notice_InspectTypeData:
+		return data.InspectTypeData
+	case pb.FrameMeta_Notice_InspectTypeStats:
+		return data.InspectTypeStats
+	default:
+		return data.InspectTypeNone
+	}
+}
+
+func convertFrameMetaFrameType(t pb.FrameMeta_FrameType) data.FrameType {
+	switch t {
+	case pb.FrameMeta_FrameTypeTimeSeriesWide:
+		return data.FrameTypeTimeSeriesWide
+	case pb.FrameMeta_FrameTypeTimeSeriesLong:
+		return data.FrameTypeTimeSeriesLong
+	case pb.FrameMeta_FrameTypeTimeSeriesMany:
+		return data.FrameTypeTimeSeriesMany
+	case pb.FrameMeta_FrameTypeTable:
+		return data.FrameTypeTable
+	case pb.FrameMeta_FrameTypeDirectoryListing:
+		return data.FrameTypeDirectoryListing
+	default:
+		return data.FrameTypeUnknown
+	}
 }
