@@ -59,6 +59,8 @@ message GetMetricValueResponse {
     google.protobuf.Timestamp timestamp = 2;
 
     repeated SingleValueField fields = 3;
+
+    FrameMeta meta = 4;
   }
 
   repeated Frame frames = 1;
@@ -138,6 +140,93 @@ message Frame {
   repeated google.protobuf.Timestamp timestamps = 2;
 
   repeated Field fields = 3;
+
+  FrameMeta meta = 4;
+}
+
+// FrameMeta matches:
+// https://github.com/grafana/grafana/blob/master/packages/grafana-data/src/types/data.ts#L11
+// NOTE -- in javascript this can accept any `[key: string]: any;` however
+// this interface only exposes the values we want to be exposed
+message FrameMeta {
+  enum FrameType {
+    FrameTypeUnknown = 0;
+    FrameTypeTimeSeriesWide = 1;
+    FrameTypeTimeSeriesLong = 2;
+    FrameTypeTimeSeriesMany = 3;
+    FrameTypeDirectoryListing = 4;
+    FrameTypeTable = 5;
+  }
+  // Type asserts that the frame matches a known type structure
+  FrameType type = 1 ;
+
+  message Notice {
+    enum NoticeSeverity {
+      // NoticeSeverityInfo is informational severity.
+      NoticeSeverityInfo = 0;
+      // NoticeSeverityWarning is warning severity.
+      NoticeSeverityWarning = 1;
+      // NoticeSeverityError is error severity.
+      NoticeSeverityError = 3;
+    }
+    // Severity is the severity level of the notice: info, warning, or error.
+    NoticeSeverity Severity = 1;
+
+    // Text is freeform descriptive text for the notice.
+    string text = 2;
+
+    // Link is an optional link for display in the user interface and can be an
+    // absolute URL or a path relative to Grafana's root url.
+    string link = 3;
+
+    enum InspectType {
+      // InspectTypeNone is no suggestion for a tab of the panel editor in Grafana's user interface.
+      InspectTypeNone = 0;
+
+      // InspectTypeMeta suggests the "meta" tab of the panel editor in Grafana's user interface.
+      InspectTypeMeta = 1;
+
+      // InspectTypeError suggests the "error" tab of the panel editor in Grafana's user interface.
+      InspectTypeError = 2;
+
+      // InspectTypeData suggests the "data" tab of the panel editor in Grafana's user interface.
+      InspectTypeData = 3;
+
+      // InspectTypeStats suggests the "stats" tab of the panel editor in Grafana's user interface.
+      InspectTypeStats = 4;
+    }
+    // Inspect is an optional suggestion for which tab to display in the panel inspector
+    // in Grafana's User interface. Can be meta, error, data, or stats.
+    InspectType inspect = 4;
+  }
+  // Notices provide additional information about the data in the Frame that
+  // Grafana can display to the user in the user interface.
+  repeated Notice  Notices = 6;
+
+  // VisType is used to indicate how the data should be visualized in explore.
+  enum VisType {
+    // VisTypeGraph indicates the response should be visualized using a graph.
+    VisTypeGraph = 0;
+
+    // VisTypeTable indicates the response should be visualized using a table.
+    VisTypeTable = 1;
+
+    // VisTypeLogs indicates the response should be visualized using a logs visualization.
+    VisTypeLogs = 2;
+
+    // VisTypeTrace indicates the response should be visualized using a trace view visualization.
+    VisTypeTrace = 3;
+
+    // VisTypeNodeGraph indicates the response should be visualized using a node graph visualization.
+    VisTypeNodeGraph = 4;
+  }
+
+  // PreferredVisualization is currently used to show results in Explore only in preferred visualisation option.
+  VisType PreferredVisualization = 8;
+
+  // ExecutedQueryString is the raw query sent to the underlying system. All macros and templating
+  // have been applied.  When metadata contains this value, it will be shown in the query inspector.
+  string executedQueryString = 9;
 }
 
 enum TimeOrdering {
