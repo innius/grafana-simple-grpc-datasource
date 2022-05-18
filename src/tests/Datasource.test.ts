@@ -1,5 +1,5 @@
 import { DataSource } from '../datasource';
-import { DataSourceInstanceSettings, ScopedVars, VariableModel } from '@grafana/data';
+import { DataSourceInstanceSettings, ScopedVars, TimeRange, VariableModel } from '@grafana/data';
 import { Dimensions, MyDataSourceOptions, MyQuery, QueryType } from '../types';
 import { setTemplateSrv } from '@grafana/runtime';
 
@@ -22,6 +22,12 @@ describe('Datasource', () => {
         return JSON.stringify(['a', 'b', 'c']);
       }
       return target || '';
+    },
+    containsTemplate: function (target?: string): boolean {
+      throw new Error('Function not implemented.');
+    },
+    updateTimeRange: function (timeRange: TimeRange): void {
+      throw new Error('Function not implemented.');
     },
   });
 
