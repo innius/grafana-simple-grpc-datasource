@@ -1,7 +1,7 @@
 {
   "name": "grafana-simple-grpc-datasource",
   "version": "1.0.7",
-  "state" : "beta",
+  "state": "beta",
   "description": "simple grpc datasource plugin",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
@@ -14,10 +14,10 @@
   "author": "Ron van der Wijngaard",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@grafana/data": "^8.3.4",
-    "@grafana/runtime": "^8.3.4",
-    "@grafana/toolkit": "^8.3.4",
-    "@grafana/ui": "^8.3.4",
+    "@grafana/data": "^8.5.2",
+    "@grafana/runtime": "^8.5.2",
+    "@grafana/toolkit": "^8.5.2",
+    "@grafana/ui": "^8.5.2",
     "emotion": "10.0.27"
   },
   "resolutions": {
@@ -27,6 +27,7 @@
     "node": ">=14"
   },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "^5.10.1"
+    "@typescript-eslint/typescript-estree": "^5.10.1",
+    "rxjs": "7.3.0"
   }
 }

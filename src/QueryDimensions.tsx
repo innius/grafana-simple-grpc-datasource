@@ -2,13 +2,11 @@ import React, { PureComponent } from 'react';
 import { css } from 'emotion';
 import uniqueId from 'lodash/uniqueId';
 
-import { Button, Icon, InlineFormLabel, LegacyForms, stylesFactory } from '@grafana/ui';
+import { Button, Icon, InlineFormLabel, AsyncSelect, useStyles } from '@grafana/ui';
 import { Dimension, Dimensions } from './types';
-import { SelectableValue } from '@grafana/data';
+import { GrafanaTheme, SelectableValue } from '@grafana/data';
 
 import { Props } from './QueryEditor';
-
-const { AsyncSelect } = LegacyForms;
 
 export interface State {
   dimensions: Dimensions;
@@ -24,7 +22,7 @@ interface DimensionRowProps {
   onBlur: () => void;
 }
 
-const getDimensionRowStyles = stylesFactory(() => {
+const getDimensionRowStyles = (theme: GrafanaTheme) => {
   return {
     layout: css`
       display: flex;
@@ -41,7 +39,7 @@ const getDimensionRowStyles = stylesFactory(() => {
       }
     `,
   };
-});
+};
 
 const selectClass = css({
   minWidth: '160px',
@@ -56,15 +54,14 @@ const DimensionRow: React.FC<DimensionRowProps> = ({
   loadDimensions,
   loadDimensionValues,
 }) => {
-  const styles = getDimensionRowStyles();
-
+  const styles = useStyles(getDimensionRowStyles);
   return (
     <div className={styles.layout}>
       <>
         <InlineFormLabel width={5}>Key</InlineFormLabel>
         <div className={selectClass}>
           <AsyncSelect
-            width={12}
+            width={16}
             defaultOptions={true}
             value={{ label: dimension.key, value: dimension.key }}
             cacheOptions={false}
@@ -77,7 +74,7 @@ const DimensionRow: React.FC<DimensionRowProps> = ({
         <InlineFormLabel width={5}>Value</InlineFormLabel>
         <AsyncSelect
           key={dimension.key}
-          width={12}
+          width={24}
           defaultOptions={true}
           value={{ label: dimension.value, value: dimension.value }}
           loadOptions={(query) => loadDimensionValues(dimension.key, query)}
