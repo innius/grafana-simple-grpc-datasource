@@ -8,8 +8,13 @@ import (
 
 func processQueries(ctx context.Context, req *backend.QueryDataRequest, handler QueryHandlerFunc) *backend.QueryDataResponse {
 	res := backend.Responses{}
+	if req == nil || req.Queries == nil {
+		return &backend.QueryDataResponse{
+			Responses: res,
+		}
+	}
 	for _, v := range req.Queries {
-		res[v.RefID] = handler(ctx, req, v)
+		res[v.RefID] = handler(ctx, *req, v)
 	}
 
 	return &backend.QueryDataResponse{
@@ -21,7 +26,7 @@ func (s *Server) HandleGetMetricValueQuery(ctx context.Context, req *backend.Que
 	return processQueries(ctx, req, s.handleGetMetricValueQuery), nil
 }
 
-func (s *Server) handleGetMetricValueQuery(ctx context.Context, req *backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Server) handleGetMetricValueQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricValueQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
@@ -42,7 +47,7 @@ func (s *Server) HandleGetMetricHistoryQuery(ctx context.Context, req *backend.Q
 	return processQueries(ctx, req, s.handleGetMetricHistoryQuery), nil
 }
 
-func (s *Server) handleGetMetricHistoryQuery(ctx context.Context, req *backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Server) handleGetMetricHistoryQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricHistoryQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
@@ -63,7 +68,7 @@ func (s *Server) HandleGetMetricAggregate(ctx context.Context, req *backend.Quer
 	return processQueries(ctx, req, s.handleGetMetricAggregateQuery), nil
 }
 
-func (s *Server) handleGetMetricAggregateQuery(ctx context.Context, req *backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Server) handleGetMetricAggregateQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricAggregateQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
@@ -84,7 +89,7 @@ func (s *Server) HandleListDimensionKeysQuery(ctx context.Context, req *backend.
 	return processQueries(ctx, req, s.handleListDimensionKeysQuery), nil
 }
 
-func (s *Server) handleListDimensionKeysQuery(ctx context.Context, req *backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Server) handleListDimensionKeysQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToDimensionKeysQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
@@ -105,7 +110,7 @@ func (s *Server) HandleListDimensionValuesQuery(ctx context.Context, req *backen
 	return processQueries(ctx, req, s.handleListDimensionValuesQuery), nil
 }
 
-func (s *Server) handleListDimensionValuesQuery(ctx context.Context, req *backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Server) handleListDimensionValuesQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToDimensionValueQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
@@ -126,7 +131,7 @@ func (s *Server) HandleListMetricsQuery(ctx context.Context, req *backend.QueryD
 	return processQueries(ctx, req, s.handleListMetricsQuery), nil
 }
 
-func (s *Server) handleListMetricsQuery(ctx context.Context, req *backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Server) handleListMetricsQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricsQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)

@@ -34,7 +34,7 @@ var (
 // QueryHandlerFunc is the function signature used for mux.HandleFunc
 // Looks like mux.HandleFunc uses backend.QueryHandlerFunc
 // type QueryDataHandlerFunc func(ctx context.Context, req *QueryDataRequest) (*QueryDataResponse, error)
-type QueryHandlerFunc func(context.Context, *backend.QueryDataRequest, backend.DataQuery) backend.DataResponse
+type QueryHandlerFunc func(context.Context, backend.QueryDataRequest, backend.DataQuery) backend.DataResponse
 
 func DataResponseErrorUnmarshal(err error) backend.DataResponse {
 	return backend.DataResponse{
