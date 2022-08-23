@@ -68,15 +68,11 @@ describe('Datasource', () => {
         { key: 'dim1', value: '1', id: '' },
         { key: 'dim1', value: '2', id: '' },
       ],
-      metrics: [
-        { metricId: 'id1', metricName: 'metric-1' },
-        { metricId: 'id2', metricName: 'metric-2' },
-        { metricId: '$sensor' },
-      ],
+      metrics: [{ metricId: 'id1' }, { metricId: 'id2' }, { metricId: '$sensor' }],
     };
     const displayText = ds.getQueryDisplayText(input);
     it('be formatted to a nice string', () => {
-      expect(displayText).toEqual('[dim1=1,dim1=2] metric-1&metric-2&$sensor');
+      expect(displayText).toEqual('[dim1=1,dim1=2] id1&id2&$sensor');
     });
   });
 });

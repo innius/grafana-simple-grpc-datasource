@@ -25,8 +25,14 @@ export function isMetricQuery(queryType: QueryType): boolean {
 }
 
 export interface Metric {
-  metricName?: string;
   metricId?: string;
+}
+
+interface QueryOption {
+  id: string;
+  name: string;
+  description?: string;
+  link?: string;
 }
 
 export interface MyQuery extends DataQuery {
@@ -36,10 +42,6 @@ export interface MyQuery extends DataQuery {
   aggregateType?: AggregateType;
   displayName?: string;
 
-  /**
-   * @deprecated use metrics
-   */
-  metricName?: string;
   /**
    * @deprecated use metrics
    */

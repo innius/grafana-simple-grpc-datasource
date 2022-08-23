@@ -7,7 +7,6 @@ import { Metric, MyQuery } from './types';
 export function convertQuery(query: MyQuery): MyQuery {
   return {
     ...query,
-    metricName: undefined,
     metricId: undefined,
     metrics: convertMetrics(query),
   };
@@ -22,7 +21,7 @@ export function convertMetrics(query: MyQuery): Metric[] | undefined {
     return query.metrics;
   }
   if (query.metricId) {
-    return [{ metricId: query.metricId, metricName: query.metricName }];
+    return [{ metricId: query.metricId }];
   }
   return undefined;
 }
