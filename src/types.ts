@@ -28,13 +28,6 @@ export interface Metric {
   metricId?: string;
 }
 
-interface QueryOption {
-  id: string;
-  name: string;
-  description?: string;
-  link?: string;
-}
-
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
   dimensions?: Dimensions;
