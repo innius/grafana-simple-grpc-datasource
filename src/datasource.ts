@@ -100,7 +100,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   formatMetric(metric: Metric): string {
-    return metric.metricName || metric.metricId || '';
+    return metric.metricId || '';
   }
 
   formatDimension(dim: Dimension): string {
@@ -143,6 +143,8 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
   /**
    * Supports template variables for metricId
+   * one metric var may can be expanded into multiple metric
+   * for example: [*] -> becomes ["a","b","c"]
    */
   applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars): MyQuery {
     const templateSrv = getTemplateSrv();

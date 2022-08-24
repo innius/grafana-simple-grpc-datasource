@@ -3,6 +3,7 @@ import { lastValueFrom } from 'rxjs';
 import React, { ChangeEvent, PureComponent } from 'react';
 import { InlineFormLabel, LegacyForms, AsyncMultiSelect } from '@grafana/ui';
 import { QueryEditorProps, Registry, SelectableValue } from '@grafana/data';
+
 import { DataSource } from './datasource';
 import { AggregateType, defaultQuery, MyDataSourceOptions, MyQuery, QueryType } from './types';
 import { changeQueryType, QueryTypeInfo, queryTypeInfos } from 'queryInfo';
@@ -34,7 +35,7 @@ export class QueryEditor extends PureComponent<Props> {
   onMetricChange(evt: Array<SelectableValue<string>>) {
     const { onChange, query, onRunQuery } = this.props;
 
-    const m = evt.map((x) => ({ metricName: x.value, metricId: x.value }));
+    const m = evt.map((x) => ({ metricId: x.value }));
     onChange({ ...query, metrics: m });
     onRunQuery();
   }
@@ -69,7 +70,7 @@ export class QueryEditor extends PureComponent<Props> {
       .concat(['metric', 'aggregate'])
       .map((x) => '{{' + x + '}}')
       .join();
-    const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricName, value: x.metricId }));
+    const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
     return (
       <div className="gf-form-group">
