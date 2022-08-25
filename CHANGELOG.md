@@ -1,4 +1,7 @@
 # Changelog
+## 1.0.8 
+* bugfix: incorrect metrics when Explore is triggered from dashboard panel
+* bugfix: fix dimension drop down glitch for Chrome browser
 
 ## 1.0.7 
 * feature: provide ListDimensions with selected dimensions to enable advanced backend filtering
