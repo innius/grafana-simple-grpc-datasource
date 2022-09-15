@@ -112,11 +112,13 @@ export interface ListMetricsQuery extends MyQuery {
 }
 
 export enum VariableQueryType {
-  metric,
+  metric = 'metric',
+  dimensionValue = 'dimension Value',
 }
 
 export interface VariableQuery {
   queryType: VariableQueryType;
+  dimensionKey?: string;
   dimensions: Dimension[];
 }
 

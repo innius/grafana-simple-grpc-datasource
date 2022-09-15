@@ -24,8 +24,9 @@ import {
   NextQuery,
   QueryType,
   VariableQuery,
+  VariableQueryType,
 } from './types';
-import { from, lastValueFrom, Observable, concat } from 'rxjs';
+import { concat, from, lastValueFrom, Observable } from 'rxjs';
 import { map, mergeMap, toArray } from 'rxjs/operators';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
@@ -124,10 +125,17 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   async metricFindQuery(query: VariableQuery | string, options?: any): Promise<MetricFindValue[]> {
     const q = migrateLegacyQuery(query);
 
+    if (q.queryType === VariableQueryType.dimensionValue) {
+      if (!q.dimensionKey) {
+        return [];
+      }
+      const values = await this.listDimensionsValues(q.dimensionKey, '', []);
+      return values.map((x) => ({ text: x.value || '' }));
+    }
+
     const metrics = this.runListMetricsQuery(q.dimensions, '').pipe(
       map((x) => x.map((x) => ({ text: x.value || '' })))
     );
-
     return lastValueFrom(metrics);
   }
 
