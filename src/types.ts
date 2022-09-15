@@ -110,3 +110,34 @@ export interface ListMetricsQuery extends MyQuery {
   dimensions: Dimensions;
   filter: string;
 }
+
+export enum VariableQueryType {
+  metric,
+}
+
+export interface VariableQuery {
+  queryType: VariableQueryType;
+  dimensions: Dimension[];
+}
+
+const parseLegacyVariableQueryString = (query: string): Dimension[] => {
+  return query
+    .split(';')
+    .map((x) => x.split('='))
+    .filter((x) => x.length === 2)
+    .map((v) => ({
+      id: v[0],
+      key: v[0],
+      value: v[1],
+    }));
+};
+
+export const migrateLegacyQuery = (query: VariableQuery | string): VariableQuery => {
+  if (typeof query === 'string') {
+    return {
+      queryType: VariableQueryType.metric,
+      dimensions: parseLegacyVariableQueryString(query),
+    };
+  }
+  return query;
+};

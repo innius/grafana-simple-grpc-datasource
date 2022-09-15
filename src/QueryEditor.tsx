@@ -1,13 +1,13 @@
 import defaults from 'lodash/defaults';
 import { lastValueFrom } from 'rxjs';
 import React, { ChangeEvent, PureComponent } from 'react';
-import { InlineFormLabel, LegacyForms, AsyncMultiSelect } from '@grafana/ui';
+import { LegacyForms, AsyncMultiSelect } from '@grafana/ui';
 import { QueryEditorProps, Registry, SelectableValue } from '@grafana/data';
 
 import { DataSource } from './datasource';
-import { AggregateType, defaultQuery, MyDataSourceOptions, MyQuery, QueryType } from './types';
+import { AggregateType, defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType } from './types';
 import { changeQueryType, QueryTypeInfo, queryTypeInfos } from 'queryInfo';
-import DimensionSettings from './QueryDimensions';
+import DimensionSettings from './components/DimensionSettings';
 import { convertQuery } from './convert';
 
 const { Select, FormField } = LegacyForms;
@@ -52,31 +52,38 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
+  onDimensionsChange = (dimensions: Dimension[]) => {
+    const { onChange, query, onRunQuery } = this.props;
+    onChange({ ...query, dimensions: dimensions });
+    onRunQuery();
+  };
+
   loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
     const { datasource } = this.props;
     const { dimensions } = this.props.query;
-
     return lastValueFrom(datasource.listMetrics(dimensions || [], value));
   };
+  // fields which can be used in display name expression
+  displayNameFields = (dimensions?: Dimension[]) =>
+    dimensions
+      ?.map((x) => x.key)
+      .concat(['metric', 'aggregate'])
+      .map((x) => '{{' + x + '}}')
+      .join();
 
   render() {
     const query = convertQuery(defaults(this.props.query, defaultQuery));
     const currentQueryType = queryTypeInfos.find((v) => v.value === query.queryType);
     const select = aggReg.selectOptions([query.aggregateType || '']);
     const key = this.props.query.dimensions?.map((x) => x.key + x.value).join();
-    // fields which can be used in display name expression
-    const displayNameFields = query.dimensions
-      ?.map((x) => x.key)
-      .concat(['metric', 'aggregate'])
-      .map((x) => '{{' + x + '}}')
-      .join();
+
     const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
     return (
       <div className="gf-form-group">
         <>
           <div className="gf-form">
-            <InlineFormLabel width={8}>Query Type</InlineFormLabel>
+            <label className="gf-form-label width-10">Query Type</label>
             <Select
               options={queryTypeInfos}
               value={currentQueryType}
@@ -85,12 +92,14 @@ export class QueryEditor extends PureComponent<Props> {
               menuPlacement="bottom"
             />
           </div>
-          <DimensionSettings {...this.props} />
+          <DimensionSettings
+            initState={query.dimensions || []}
+            datasource={this.props.datasource}
+            onChange={this.onDimensionsChange}
+          />
           <>
             <div className={'gf-form'}>
-              <InlineFormLabel width={8} tooltip={'start typing to query for metrics'}>
-                Metric
-              </InlineFormLabel>
+              <label className="gf-form-label width-10">Metric</label>
               <AsyncMultiSelect
                 key={key}
                 defaultOptions={true}
@@ -105,7 +114,7 @@ export class QueryEditor extends PureComponent<Props> {
               className={'gf-form'}
               hidden={currentQueryType ? currentQueryType.value !== QueryType.GetMetricAggregate : true}
             >
-              <InlineFormLabel width={8}>Aggregate</InlineFormLabel>
+              <label className="gf-form-label width-10">Aggregate</label>
               <Select
                 value={select.current} //TODO: improve this
                 options={select.options as any}
@@ -115,13 +124,12 @@ export class QueryEditor extends PureComponent<Props> {
           </>
           <>
             <FormField
-              width={5}
-              labelWidth={8}
+              labelWidth={10}
               value={query.displayName}
               onChange={this.onDisplayNameChange}
               label="Display Name"
               type="text"
-              tooltip={`use ${displayNameFields} for dynamic expressions`}
+              tooltip={`use ${this.displayNameFields(query.dimensions)} for dynamic expressions`}
             />
           </>
         </>

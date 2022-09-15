@@ -1,6 +1,6 @@
 import { DataSource } from '../datasource';
 import { DataSourceInstanceSettings, ScopedVars, TimeRange, VariableModel } from '@grafana/data';
-import { Dimensions, MyDataSourceOptions, MyQuery, QueryType } from '../types';
+import { Dimensions, migrateLegacyQuery, MyDataSourceOptions, MyQuery, QueryType, VariableQueryType } from '../types';
 import { setTemplateSrv } from '@grafana/runtime';
 
 describe('Datasource', () => {
@@ -44,13 +44,24 @@ describe('Datasource', () => {
     });
   });
 
-  describe('metricFind query should', () => {
+  describe('parse legacy VariableQuery', () => {
     it('give no error if dimensions are not specified', () => {
-      const dimensions = ds.parseDimensions('');
+      const dimensions = migrateLegacyQuery('');
       expect(dimensions).toHaveLength(0);
     });
+    it('migrates a normal VariableQuery', () => {
+      const query = {
+        queryType: VariableQueryType.metric,
+        dimensions: [
+          { id: '', key: 'machine', value: 'foo' },
+          { id: '', key: 'sensor_type', value: 'discrete' },
+        ],
+      };
+      const res = migrateLegacyQuery(query);
+      expect(res).toEqual(query);
+    });
     it('parses a dimension string to dimensions', () => {
-      const dimensions = ds.parseDimensions('machine=foo;sensor_type=discrete');
+      const dimensions = migrateLegacyQuery('machine=foo;sensor_type=discrete');
       expect(dimensions).toHaveLength(2);
       const expected: Dimensions = [
         { id: '', key: 'machine', value: 'foo' },
