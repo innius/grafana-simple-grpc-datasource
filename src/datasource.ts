@@ -133,9 +133,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       return values.map((x) => ({ text: x.value || '' }));
     }
 
-    const metrics = this.listMetrics(q.dimensions, '').pipe(
-      map((x) => x.map((x) => ({ text: x.value || '' })))
-    );
+    const metrics = this.listMetrics(q.dimensions, '').pipe(map((x) => x.map((x) => ({ text: x.value || '' }))));
     return lastValueFrom(metrics);
   }
 

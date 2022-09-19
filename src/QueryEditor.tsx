@@ -41,10 +41,12 @@ export class QueryEditor extends PureComponent<Props> {
   }
 
   onAddMetric(metric?: string) {
-    if (!metric) return
+    if (!metric) {
+      return;
+    }
     const { onChange, query, onRunQuery } = this.props;
     const { metrics } = query;
-    onChange({ ...query, metrics: metrics?.concat({metricId: metric}) || [{metricId: metric}] });
+    onChange({ ...query, metrics: metrics?.concat({ metricId: metric }) || [{ metricId: metric }] });
     onRunQuery();
   }
 
@@ -114,7 +116,7 @@ export class QueryEditor extends PureComponent<Props> {
                 value={selectedMetrics}
                 loadOptions={this.loadMetrics}
                 onChange={(evt) => this.onMetricChange(evt)}
-                onCreateOption={x => this.onAddMetric(x)}
+                onCreateOption={(x) => this.onAddMetric(x)}
                 allowCustomValue={true}
                 isSearchable={true}
                 isClearable={true}
