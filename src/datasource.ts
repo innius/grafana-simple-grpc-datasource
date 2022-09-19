@@ -26,8 +26,8 @@ import {
   VariableQuery,
   VariableQueryType,
 } from './types';
-import { concat, from, lastValueFrom, Observable } from 'rxjs';
-import { map, mergeMap, toArray } from 'rxjs/operators';
+import { lastValueFrom, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
 import { convertMetrics, convertQuery } from './convert';
@@ -133,7 +133,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       return values.map((x) => ({ text: x.value || '' }));
     }
 
-    const metrics = this.runListMetricsQuery(q.dimensions, '').pipe(
+    const metrics = this.listMetrics(q.dimensions, '').pipe(
       map((x) => x.map((x) => ({ text: x.value || '' })))
     );
     return lastValueFrom(metrics);
@@ -224,7 +224,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return lastValueFrom(dimValues);
   }
 
-  runListMetricsQuery(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
+  listMetrics(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
     const query: ListMetricsQuery = {
       refId: 'listMetrics',
       queryType: QueryType.ListMetrics,
@@ -241,21 +241,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
         throw 'no metrics found';
       })
     );
-  }
-
-  listMetrics(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
-    const remoteMetrics = this.runListMetricsQuery(dimensions, filter).pipe(mergeMap((x) => x.flat()));
-
-    const variables = from(
-      getTemplateSrv()
-        .getVariables()
-        .map((x) => ({
-          value: `$${x.name}`,
-          label: `$${x.name}`,
-        }))
-    );
-
-    return concat(remoteMetrics, variables).pipe(toArray());
   }
 }
 
