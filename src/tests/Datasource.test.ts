@@ -46,7 +46,7 @@ describe('Datasource', () => {
 
   describe('parse legacy VariableQuery', () => {
     it('give no error if dimensions are not specified', () => {
-      const {dimensions} = migrateLegacyQuery('');
+      const { dimensions } = migrateLegacyQuery('');
       expect(dimensions).toHaveLength(0);
     });
     it('migrates a normal VariableQuery', () => {
@@ -61,7 +61,7 @@ describe('Datasource', () => {
       expect(res).toEqual(query);
     });
     it('parses a dimension string to dimensions', () => {
-      const {dimensions} = migrateLegacyQuery('machine=foo;sensor_type=discrete');
+      const { dimensions } = migrateLegacyQuery('machine=foo;sensor_type=discrete');
       expect(dimensions).toHaveLength(2);
       const expected: Dimensions = [
         { id: 'machine', key: 'machine', value: 'foo' },
