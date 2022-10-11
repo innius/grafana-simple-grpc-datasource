@@ -1,4 +1,8 @@
 # Changelog
+## 1.0.9
+* feature: imporoved dimension selection component 
+* feature: add variable editor which supports dimension keys and metrics 
+
 ## 1.0.8 
 * bugfix: incorrect metrics when Explore is triggered from dashboard panel
 * bugfix: fix dimension drop down glitch for Chrome browser
