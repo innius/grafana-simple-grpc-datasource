@@ -1,11 +1,16 @@
 package client
 
 import (
+	"time"
+
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client/factory"
 	v2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type backendClient struct {
@@ -20,19 +25,23 @@ func (b *backendClient) Dispose() {
 }
 
 func New(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) {
-	options := []grpc.DialOption{}
-	if settings.ApiKeyAuthenticationEnabled {
+	opts := []grpc_retry.CallOption{
+		grpc_retry.WithMax(settings.MaxRetries),
+		grpc_retry.WithBackoff(grpc_retry.BackoffExponentialWithJitter(500*time.Millisecond, 0.10)),
+		grpc_retry.WithCodes(codes.ResourceExhausted),
+	}
+	options := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(GRPCDebugLogger()),
+		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(opts...)),
+	}
+	if settings.APIKey != "" {
 		log.DefaultLogger.Info("dial with api-key authentication", "endpoint", settings.Endpoint)
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)),
 			grpc.WithPerRPCCredentials(ApiKeyAuthenticator{
 				ApiKey: settings.APIKey,
 			}),
-			grpc.WithUnaryInterceptor(GRPCDebugLogger()),
 		)
-	} else {
-		log.DefaultLogger.Info("dial without credentials", "endpoint", settings.Endpoint)
-		options = append(options, grpc.WithUnaryInterceptor(GRPCDebugLogger()),
-			grpc.WithInsecure())
 	}
 
 	conn, err := grpc.Dial(settings.Endpoint, options...)

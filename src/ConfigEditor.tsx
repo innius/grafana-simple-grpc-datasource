@@ -1,103 +1,102 @@
-import React, { ChangeEvent, PureComponent } from 'react';
-import { LegacyForms } from '@grafana/ui';
-import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { MyDataSourceOptions, MySecureJsonData } from './types';
+import React from 'react';
+import {InlineField, InlineLabel, Input, SecretInput, Slider} from '@grafana/ui';
+import {DataSourcePluginOptionsEditorProps} from '@grafana/data';
+import {MyDataSourceOptions, MySecureJsonData} from './types';
 
-const { SecretFormField, FormField, Switch } = LegacyForms;
+interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions, MySecureJsonData> {
+}
 
-interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions> {}
+const ConfigEditor = ({options, onOptionsChange}: Props) => {
+    return (
+        <div className="gf-form-group">
+            <ServerSettings options={options} onOptionsChange={onOptionsChange}/>
+            <SecureSettings options={options} onOptionsChange={onOptionsChange}/>
+        </div>
+    )
+}
 
-export class ConfigEditor extends PureComponent<Props> {
-  onEndpointChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    const jsonData = {
-      ...options.jsonData,
-      endpoint: event.target.value,
+export default ConfigEditor;
+
+const SecureSettings = ({options, onOptionsChange}: Props) => {
+
+    const onAPIKeyChange = (apikey: string) => {
+        onOptionsChange({
+            ...options,
+            secureJsonData: {
+                apiKey: apikey,
+            },
+        });
     };
-    onOptionsChange({ ...options, jsonData });
-  };
 
-  // Secure field (only sent to the backend)
-  onAPIKeyChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    onOptionsChange({
-      ...options,
-      secureJsonData: {
-        apiKey: event.target.value,
-      },
-    });
-  };
-
-  onResetAPIKey = () => {
-    const { onOptionsChange, options } = this.props;
-    onOptionsChange({
-      ...options,
-      secureJsonFields: {
-        ...options.secureJsonFields,
-        apiKey: false,
-      },
-      secureJsonData: {
-        ...options.secureJsonData,
-        apiKey: '',
-      },
-    });
-  };
-
-  toggleAuth = () => {
-    const { onOptionsChange, options } = this.props;
-    const jsonData = {
-      ...options.jsonData,
-      apikey_authentication_enabled: !options.jsonData.apikey_authentication_enabled,
+    const onResetAPIKey = () => {
+        onOptionsChange({
+            ...options,
+            secureJsonFields: {
+                ...options.secureJsonFields,
+                apiKey: false,
+            },
+            secureJsonData: {
+                ...options.secureJsonData,
+                apiKey: '',
+            },
+        })
+    }
+    return (
+        <>
+            <label>Authentication</label>
+            <div className="gf-form">
+                <InlineLabel width={20}
+                             tooltip="The API key for backend API authentication">
+                    API Key
+                </InlineLabel>
+                <SecretInput
+                    width={40}
+                    value={options.secureJsonData?.apiKey}
+                    isConfigured={options.secureJsonFields.apiKey}
+                    placeholder={"enter your backend api key"}
+                    onReset={onResetAPIKey}
+                    onChange={(event) => onAPIKeyChange(event.currentTarget.value.trim())}
+                />
+            </div>
+        </>
+    )
+}
+const ServerSettings = ({options, onOptionsChange}: Props) => {
+    const onEndpointChange = (endpoint: string) => {
+        const jsonData = {
+            ...options.jsonData,
+            endpoint: endpoint,
+        };
+        onOptionsChange({...options, jsonData});
     };
-    onOptionsChange({ ...options, jsonData });
-  };
 
-  render() {
-    const { options } = this.props;
-    const { jsonData, secureJsonFields } = options;
-    const secureJsonData = (options.secureJsonData || {}) as MySecureJsonData;
+    const updateMaxRetries = (maxRetries: number) => {
+        const jsonData = {
+            ...options.jsonData,
+            max_retries: maxRetries,
+        };
+        onOptionsChange({...options, jsonData});
+    };
 
     return (
-      <div className="gf-form-group">
-        <>
-          <h3 className="page-heading">Backend</h3>
-          <div className="gf-form-group">
+        <div className="gf-form-group">
             <div className="gf-form">
-              <FormField
-                label="Endpoint"
-                labelWidth={6}
-                inputWidth={20}
-                onChange={this.onEndpointChange}
-                value={jsonData.endpoint || ''}
-                placeholder="endpoint of the grpc server"
-                tooltip="Specify a complete HTTP URL (for example grpc.example.com:443)"
-              />
+                <InlineField label="Endpoint" labelWidth={20}
+                             tooltip={"Specify a complete HTTP URL (for example grpc.example.com:443)"}>
+                    <Input width={40} placeholder="endpoint of the grpc server" value={options.jsonData.endpoint}
+                           onChange={x => onEndpointChange(x.currentTarget.value)}/>
+                </InlineField>
             </div>
-          </div>
-          <h3 className="page-heading">Auth</h3>
-          {/*TODO styling: make sure width of toggle and API Key labels are equal*/}
-          <Switch
-            onChange={this.toggleAuth}
-            label={'API Key Authentication'}
-            key={'test key'}
-            checked={jsonData.apikey_authentication_enabled}
-          />
-          <div className="gf-form-group" hidden={!jsonData.apikey_authentication_enabled}>
             <div className="gf-form">
-              <SecretFormField
-                isConfigured={(secureJsonFields && secureJsonFields.apiKey) as boolean}
-                value={secureJsonData.apiKey || ''}
-                label="API Key"
-                placeholder="secure json field (backend only)"
-                labelWidth={6}
-                inputWidth={20}
-                onReset={this.onResetAPIKey}
-                onChange={this.onAPIKeyChange}
-              />
+                <InlineLabel width={20}
+                             tooltip="The number of times a backend invocation is retried if rate limit is reached">
+                    Max. Retries
+                </InlineLabel>
+                <div style={{width: '300px'}}>
+                    <Slider min={0} max={10} onChange={updateMaxRetries} value={options.jsonData.max_retries}/>
+                </div>
             </div>
-          </div>
-        </>
-      </div>
-    );
-  }
+        </div>
+
+    )
 }

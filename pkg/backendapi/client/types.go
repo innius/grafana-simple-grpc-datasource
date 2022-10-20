@@ -1,9 +1,10 @@
 package client
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"encoding/json"
 	"fmt"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
@@ -13,10 +14,10 @@ type BackendAPIClient interface {
 }
 
 type BackendAPIDatasourceSettings struct {
-	ID                          string `json:"-"`
-	Endpoint                    string `json:"endpoint"`
-	APIKey                      string `json:"-"`
-	ApiKeyAuthenticationEnabled bool   `json:"apikey_authentication_enabled"`
+	ID         string `json:"-"`
+	Endpoint   string `json:"endpoint"`
+	APIKey     string `json:"-"`
+	MaxRetries uint   `json:"max_retries"`
 }
 
 func (s *BackendAPIDatasourceSettings) Load(config backend.DataSourceInstanceSettings) error {

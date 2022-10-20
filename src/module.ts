@@ -1,6 +1,6 @@
 import { DataSourcePlugin } from '@grafana/data';
 import { DataSource } from './datasource';
-import { ConfigEditor } from './ConfigEditor';
+import  ConfigEditor from './ConfigEditor';
 import { QueryEditor } from './QueryEditor';
 import { MyQuery, MyDataSourceOptions } from './types';
 import VariableQueryEditor from './VariableQueryEditor';
