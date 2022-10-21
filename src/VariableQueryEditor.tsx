@@ -1,10 +1,9 @@
 import React, {useState} from 'react';
 import {Dimension, migrateLegacyQuery, VariableQuery, VariableQueryType} from './types';
 import {DataSource} from './datasource';
-import {DataSourceVariableSupport} from '@grafana/data'
+import {DataSourceVariableSupport, SelectableValue} from '@grafana/data'
 import DimensionSettings from './components/DimensionSettings';
 import {AsyncSelect, Select} from '@grafana/ui';
-import {SelectableValue} from '@grafana/data';
 
 export type Props = DataSourceVariableSupport<DataSource>;
 
