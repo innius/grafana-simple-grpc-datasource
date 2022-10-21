@@ -1,16 +1,24 @@
 import React from 'react';
 import {InlineField, InlineLabel, Input, SecretInput, Slider} from '@grafana/ui';
 import {DataSourcePluginOptionsEditorProps} from '@grafana/data';
-import {MyDataSourceOptions, MySecureJsonData} from './types';
+import {defaultDataSourceOptions, MyDataSourceOptions, MySecureJsonData} from './types';
 
 interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions, MySecureJsonData> {
 }
 
 const ConfigEditor = ({options, onOptionsChange}: Props) => {
+    const jsonData = {
+        ...options.jsonData,
+        ...defaultDataSourceOptions,
+    }
+    const opts = {
+        ...options,
+        jsonData,
+    }
     return (
         <div className="gf-form-group">
-            <ServerSettings options={options} onOptionsChange={onOptionsChange}/>
-            <SecureSettings options={options} onOptionsChange={onOptionsChange}/>
+            <ServerSettings options={opts} onOptionsChange={onOptionsChange}/>
+            <SecureSettings options={opts} onOptionsChange={onOptionsChange}/>
         </div>
     )
 }
