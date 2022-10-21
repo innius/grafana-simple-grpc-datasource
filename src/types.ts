@@ -65,10 +65,6 @@ export const defaultQuery: Partial<MyQuery> = {
     dimensions: [],
 };
 
-export const defaultDatasource: Partial<MyDataSourceOptions> = {
-    max_retries: 5,
-}
-
 /**
  are options configured for each DataSource instance
  */

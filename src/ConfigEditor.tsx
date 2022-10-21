@@ -18,7 +18,6 @@ const ConfigEditor = ({options, onOptionsChange}: Props) => {
 export default ConfigEditor;
 
 const SecureSettings = ({options, onOptionsChange}: Props) => {
-
     const onAPIKeyChange = (apikey: string) => {
         onOptionsChange({
             ...options,

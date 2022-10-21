@@ -23,6 +23,16 @@ func (b *backendClient) Dispose() {
 		log.DefaultLogger.Error("could not close connection on dispose", "error", err.Error())
 	}
 }
+func getTransportCredentials(s BackendAPIDatasourceSettings) []grpc.DialOption {
+	if s.APIKey == "" {
+		return []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	}
+	log.DefaultLogger.Info("dial with api-key authentication", "endpoint", s.Endpoint)
+	return []grpc.DialOption{
+		grpc.WithTransportCredentials(credentials.NewTLS(nil)),
+		grpc.WithPerRPCCredentials(ApiKeyAuthenticator{ApiKey: s.APIKey}),
+	}
+}
 
 func New(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) {
 	opts := []grpc_retry.CallOption{
@@ -30,19 +40,10 @@ func New(settings BackendAPIDatasourceSettings) (BackendAPIClient, error) {
 		grpc_retry.WithBackoff(grpc_retry.BackoffExponentialWithJitter(500*time.Millisecond, 0.10)),
 		grpc_retry.WithCodes(codes.ResourceExhausted),
 	}
-	options := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	options := getTransportCredentials(settings)
+	options = append(options,
 		grpc.WithUnaryInterceptor(GRPCDebugLogger()),
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(opts...)),
-	}
-	if settings.APIKey != "" {
-		log.DefaultLogger.Info("dial with api-key authentication", "endpoint", settings.Endpoint)
-		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)),
-			grpc.WithPerRPCCredentials(ApiKeyAuthenticator{
-				ApiKey: settings.APIKey,
-			}),
-		)
-	}
+		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(opts...)))
 
 	conn, err := grpc.Dial(settings.Endpoint, options...)
 	if err != nil {
