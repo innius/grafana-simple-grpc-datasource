@@ -3,7 +3,7 @@ import {Dimension, migrateLegacyQuery, VariableQuery, VariableQueryType} from '.
 import {DataSource} from './datasource';
 import {DataSourceVariableSupport, SelectableValue} from '@grafana/data'
 import DimensionSettings from './components/DimensionSettings';
-import {AsyncSelect, Select} from '@grafana/ui';
+import {AsyncSelect, InlineField, Input, Select} from '@grafana/ui';
 
 export type Props = DataSourceVariableSupport<DataSource>;
 
@@ -21,7 +21,7 @@ const VariableQueryEditor = (props: {
             case VariableQueryType.metric:
                 return query.dimensions.map((x) => `${x.key}=${x.value}`).join(';');
             case VariableQueryType.dimensionValue:
-                return `dimension=${query.dimensionKey}`;
+                return `dimension=${query.dimensionKey}&filter=${query.dimensionValueFilter}`;
         }
     };
 
@@ -57,6 +57,13 @@ const VariableQueryEditor = (props: {
             description: 'the query selects dimension values',
         },
     ];
+
+    function onDimensionValueFilterChange(filter: string) {
+        const newState = {...state, dimensionValueFilter: filter}
+        updateState(newState);
+        onChange(newState, formatDefinition(newState));
+    }
+
     return (
         <>
             <div className="gf-form">
@@ -77,6 +84,11 @@ const VariableQueryEditor = (props: {
                             loadOptions={loadDimensionKeys}
                             onChange={(e) => onDimensionKeyChange(e.value)}
                         />
+                        <InlineField label="Filter" labelWidth={20}
+                                     tooltip={"filter dimension values"}>
+                            <Input width={40} onChange={x => onDimensionValueFilterChange(x.currentTarget.value)}
+                                   value={state.dimensionValueFilter}/>
+                        </InlineField>
                     </div>
                 </>
             )}

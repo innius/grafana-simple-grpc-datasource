@@ -129,7 +129,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       if (!q.dimensionKey) {
         return [];
       }
-      const values = await this.listDimensionsValues(q.dimensionKey, '', []);
+      const values = await this.listDimensionsValues(q.dimensionKey, q.dimensionValueFilter || '', []);
       return values.map((x) => ({ text: x.value || '' }));
     }
 

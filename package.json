@@ -17,7 +17,9 @@
     "@grafana/data": "^9.2.1",
     "@grafana/runtime": "^9.2.1",
     "@grafana/toolkit": "^9.2.1",
-    "@grafana/ui": "^9.2.1"
+    "@grafana/ui": "^9.2.1",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
   },
   "resolutions": {
     "rxjs": "7.3.0"
@@ -26,7 +28,6 @@
     "node": ">=14"
   },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "^5.10.1",
-    "rxjs": "7.3.0"
+    "@typescript-eslint/typescript-estree": "^5.10.1"
   }
 }
