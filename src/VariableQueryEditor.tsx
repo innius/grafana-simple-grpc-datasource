@@ -1,12 +1,18 @@
 import React, {useState} from 'react';
 import {Dimension, migrateLegacyQuery, VariableQuery, VariableQueryType} from './types';
 import {DataSource} from './datasource';
-import {DataSourceVariableSupport, SelectableValue} from '@grafana/data'
+import {SelectableValue} from '@grafana/data'
 import DimensionSettings from './components/DimensionSettings';
 import {AsyncSelect, InlineField, Input, Select} from '@grafana/ui';
 
-export type Props = DataSourceVariableSupport<DataSource>;
-
+const formatDefinition = (query: VariableQuery): string => {
+    switch (query.queryType) {
+        case VariableQueryType.metric:
+            return query.dimensions.map((x) => `${x.key}=${x.value}`).join(';');
+        case VariableQueryType.dimensionValue:
+            return `dimension=${query.dimensionKey}&filter=${query.dimensionValueFilter}`;
+    }
+};
 const VariableQueryEditor = (props: {
     query: VariableQuery | string;
     onChange: (query: VariableQuery, definition: string) => void;
@@ -15,15 +21,6 @@ const VariableQueryEditor = (props: {
     const {datasource, onChange} = props;
     const query = migrateLegacyQuery(props.query);
     const [state, updateState] = useState(query);
-
-    const formatDefinition = (query: VariableQuery): string => {
-        switch (query.queryType) {
-            case VariableQueryType.metric:
-                return query.dimensions.map((x) => `${x.key}=${x.value}`).join(';');
-            case VariableQueryType.dimensionValue:
-                return `dimension=${query.dimensionKey}&filter=${query.dimensionValueFilter}`;
-        }
-    };
 
     const onChangeQueryType = (qt?: VariableQueryType) => {
         const newState = {...state, queryType: qt || VariableQueryType.metric};
@@ -68,7 +65,7 @@ const VariableQueryEditor = (props: {
         <>
             <div className="gf-form">
                 <label className="gf-form-label width-10">Query Type</label>
-                <Select onChange={(x) => onChangeQueryType(x.value)} options={options} value={query.queryType}/>
+                <Select onChange={(x) => onChangeQueryType(x.value)} options={options} value={state.queryType}/>
             </div>
             {state.queryType === VariableQueryType.metric && (
                 <DimensionSettings initState={state.dimensions} onChange={onDimensionsChange} datasource={datasource}/>
@@ -79,7 +76,7 @@ const VariableQueryEditor = (props: {
                         <label className="gf-form-label width-10">Dimension Key</label>
                         <AsyncSelect
                             defaultOptions={true}
-                            value={{label: query.dimensionKey, value: query.dimensionKey}}
+                            value={{label: state.dimensionKey, value: state.dimensionKey}}
                             cacheOptions={false}
                             loadOptions={loadDimensionKeys}
                             onChange={(e) => onDimensionKeyChange(e.value)}
