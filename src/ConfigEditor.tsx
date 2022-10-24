@@ -8,8 +8,8 @@ interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions, 
 
 const ConfigEditor = ({options, onOptionsChange}: Props) => {
     const jsonData = {
-        ...options.jsonData,
         ...defaultDataSourceOptions,
+        ...options.jsonData,
     }
     const opts = {
         ...options,
