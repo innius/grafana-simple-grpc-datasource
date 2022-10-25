@@ -127,6 +127,7 @@ export interface VariableQuery {
     queryType: VariableQueryType;
     dimensionKey?: string;
     dimensions: Dimension[];
+    dimensionValueFilter?: string;
 }
 
 const parseLegacyVariableQueryString = (query: string): Dimension[] => {
