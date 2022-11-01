@@ -1,4 +1,9 @@
 # Changelog
+## 1.0.10 
+* feature: retry mechanism for backend grpc calls 
+* feature: add dimension value filter to VariableQueryEditor 
+* feature: update to latest grafana frameworks 
+
 ## 1.0.9
 * feature: imporoved dimension selection component 
 * feature: add variable editor which supports dimension keys and metrics 
