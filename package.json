@@ -1,6 +1,6 @@
 {
   "name": "grafana-simple-grpc-datasource",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "state": "beta",
   "description": "simple grpc datasource plugin",
   "scripts": {

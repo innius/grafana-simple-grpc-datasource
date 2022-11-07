@@ -1,4 +1,7 @@
 # Changelog
+## 1.0.11 
+* fix: specify correct grafana version dependency 
+
 ## 1.0.10 
 * feature: retry mechanism for backend grpc calls 
 * feature: add dimension value filter to VariableQueryEditor 
