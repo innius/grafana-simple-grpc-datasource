@@ -119,8 +119,18 @@ message Field {
   repeated double values = 4;
 }
 
+message ValueMapping {
+  double from = 1;
+  double to = 2; 
+  string value = 3; 
+  string text = 4;
+  string color = 5;
+}
+
 message config {
   string unit = 1;
+
+  repeated ValueMapping Mappings = 2;
 }
 
 message SingleValueField {
