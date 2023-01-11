@@ -112,6 +112,16 @@ Important Note: in order to use the V2 API the backend server needs to support [
 
 Please note gRPC is programming language agnostic which makes it possible to implement a backend in the language of your choice. Checkout the gRPC [documentation](https://grpc.io/docs/languages/) of your language.
 
+## Features 
+* select multiple metrics in one query 
+* flexible dimension selection 
+* integrated with Grafana variables and templating 
+* allows backend systems to provided additional metadata, like value mappings, unit of measure, etc. 
+* supports notifications 
+* supports pagination
+* supports retries for grpc calls if backend server is at maximum capacity
+
+
 ## Roadmap
 
 - add more authentication schemes (certificates, basic authentication etc. )

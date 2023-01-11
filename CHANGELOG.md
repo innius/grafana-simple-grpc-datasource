@@ -1,4 +1,8 @@
 # Changelog
+
+## 1.0.11
+* feature: support backend value mapping
+
 ## 1.0.11 
 * fix: specify correct grafana version dependency 
 
