@@ -27,6 +27,27 @@ func convertToDataFieldConfig(config *pb.Config, formatDisplayName string) *data
 		cfg.DisplayNameFromDS = formatDisplayName
 	}
 
+	mappings := []data.ValueMapping{}
+	for _, v := range config.GetMappings() {
+		switch {
+		case v.GetValue() != "":
+			m := data.ValueMapper{}
+			m[v.Value] = data.ValueMappingResult{Text: v.Text}
+			mappings = append(mappings, m)
+		case v.GetFrom() >= 0 || v.GetTo() > 0:
+			m := data.RangeValueMapper{From: (*data.ConfFloat64)(&v.From), To: (*data.ConfFloat64)(&v.To), Result: data.ValueMappingResult{Text: v.Text}}
+			mappings = append(mappings, m)
+		default:
+			continue
+		}
+	}
+	if len(mappings) > 0 {
+		if cfg == nil {
+			cfg = &data.FieldConfig{}
+		}
+		cfg.Mappings = mappings
+
+	}
 	return cfg
 }
 

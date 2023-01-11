@@ -1,10 +1,12 @@
 package framer
 
 import (
+	"reflect"
+	"testing"
+
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestConvertMetadata(t *testing.T) {
@@ -62,4 +64,40 @@ func TestConvertMetadata(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expectedNotices, res.Notices)
+}
+
+func Test_convertToDataFieldConfig(t *testing.T) {
+	type args struct {
+		config            *pb.Config
+		formatDisplayName string
+	}
+	from, to := float64(0), float64(10)
+	tests := []struct {
+		name string
+		args args
+		want *data.FieldConfig
+	}{
+		{
+			name: "single value mapping",
+			args: args{config: &pb.Config{Mappings: []*pb.ValueMapping{{Value: "1", Text: "ON"}}}},
+			want: &data.FieldConfig{Mappings: []data.ValueMapping{data.ValueMapper{"1": data.ValueMappingResult{Text: "ON"}}}},
+		},
+		{
+			name: "range mapping",
+			args: args{config: &pb.Config{Mappings: []*pb.ValueMapping{{From: 0, To: 10, Text: "ON"}}}},
+			want: &data.FieldConfig{Mappings: []data.ValueMapping{data.RangeValueMapper{From: (*data.ConfFloat64)(&from), To: (*data.ConfFloat64)(&to), Result: data.ValueMappingResult{Text: "ON"}}}},
+		},
+		{
+			name: "empty mapping",
+			args: args{config: &pb.Config{Mappings: []*pb.ValueMapping{}}},
+			want: &data.FieldConfig{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := convertToDataFieldConfig(tt.args.config, tt.args.formatDisplayName); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("convertToDataFieldConfig() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
