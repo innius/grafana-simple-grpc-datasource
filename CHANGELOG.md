@@ -1,6 +1,9 @@
 # Changelog
 
-## 1.0.11
+## 1.0.13 
+upgrade grafana dependencies and grafana tools 
+
+## 1.0.12
 * feature: support backend value mapping
 
 ## 1.0.11 
