@@ -38,7 +38,7 @@ func TestConvertMetadata(t *testing.T) {
 
 	res := convertFrameMeta(m)
 
-	assert.Equal(t, data.FrameTypeTimeSeriesMany, string(res.Type))
+	assert.Equal(t, string(data.FrameTypeTimeSeriesMany), string(res.Type))
 
 	assert.Equal(t, m.ExecutedQueryString, res.ExecutedQueryString)
 	assert.Equal(t, data.VisTypeTable, string(res.PreferredVisualization))
