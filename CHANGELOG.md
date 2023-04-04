@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.13 
+## 1.0.14 
 upgrade grafana dependencies and grafana tools 
 
 ## 1.0.12
