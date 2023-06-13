@@ -1,15 +1,16 @@
 package v1
 
 import (
-	v1 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v1"
-	v2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"context"
+	"testing"
+	"time"
+
+	v1 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v1"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"testing"
-	"time"
 )
 
 type v1Mock struct {
@@ -58,8 +59,8 @@ func (v *v1Mock) GetMetricAggregate(ctx context.Context, in *v1.GetMetricAggrega
 func TestAdapter_GetMetricValue(t *testing.T) {
 	ts := time.Unix(1000, 0)
 
-	req := &v2.GetMetricValueRequest{
-		Dimensions: []*v2.Dimension{
+	req := &v3.GetMetricValueRequest{
+		Dimensions: []*v3.Dimension{
 			{
 				Key:   "machine",
 				Value: "m1",
@@ -89,10 +90,10 @@ func TestAdapter_GetMetricValue(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	m.AssertExpectations(t)
-	expected := []*v2.GetMetricValueResponse_Frame{
+	expected := []*v3.GetMetricValueResponse_Frame{
 		{
 			Metric: req.Metrics[0],
-			Fields: []*v2.SingleValueField{
+			Fields: []*v3.SingleValueField{
 				{
 					Name:   "",
 					Labels: nil,
@@ -107,8 +108,8 @@ func TestAdapter_GetMetricValue(t *testing.T) {
 }
 
 func TestAdapter_GetMetricHistory(t *testing.T) {
-	req := &v2.GetMetricHistoryRequest{
-		Dimensions: []*v2.Dimension{
+	req := &v3.GetMetricHistoryRequest{
+		Dimensions: []*v3.Dimension{
 			{
 				Key:   "machine",
 				Value: "m1",
@@ -118,7 +119,7 @@ func TestAdapter_GetMetricHistory(t *testing.T) {
 		StartDate:     timestamppb.New(time.Unix(1000, 0)),
 		EndDate:       timestamppb.New(time.Unix(2000, 0)),
 		MaxItems:      30000,
-		TimeOrdering:  v2.TimeOrdering_DESCENDING,
+		TimeOrdering:  v3.TimeOrdering_DESCENDING,
 		StartingToken: "start-here",
 	}
 
@@ -154,10 +155,10 @@ func TestAdapter_GetMetricHistory(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	m.AssertExpectations(t)
-	expected := []*v2.Frame{
+	expected := []*v3.Frame{
 		{
 			Metric: req.Metrics[0],
-			Fields: []*v2.Field{
+			Fields: []*v3.Field{
 				{
 					Name:   "",
 					Labels: nil,
@@ -175,21 +176,21 @@ func TestAdapter_GetMetricHistory(t *testing.T) {
 }
 
 func TestAdapter_GetMetricAggregate(t *testing.T) {
-	req := &v2.GetMetricAggregateRequest{
-		Dimensions: []*v2.Dimension{
+	req := &v3.GetMetricAggregateRequest{
+		Dimensions: []*v3.Dimension{
 			{
 				Key:   "machine",
 				Value: "m1",
 			},
 		},
 		Metrics:       []string{"foo"},
-		AggregateType: v2.AggregateType_COUNT,
 		StartDate:     timestamppb.New(time.Unix(1000, 0)),
 		EndDate:       timestamppb.New(time.Unix(2000, 0)),
 		MaxItems:      30000,
-		TimeOrdering:  v2.TimeOrdering_DESCENDING,
+		TimeOrdering:  v3.TimeOrdering_DESCENDING,
 		StartingToken: "start-here",
 		IntervalMs:    999,
+		Options:       map[string]string{aggregateTypeOptionKey: "3"},
 	}
 
 	m := &v1Mock{}
@@ -198,7 +199,7 @@ func TestAdapter_GetMetricAggregate(t *testing.T) {
 			{Key: req.Dimensions[0].Key, Value: req.Dimensions[0].Value},
 		},
 		Metric:        req.Metrics[0],
-		AggregateType: v1.AggregateType(req.AggregateType),
+		AggregateType: v1.AggregateType_COUNT,
 		StartDate:     req.StartDate.Seconds,
 		EndDate:       req.EndDate.Seconds,
 		MaxItems:      req.MaxItems,
@@ -226,10 +227,10 @@ func TestAdapter_GetMetricAggregate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	m.AssertExpectations(t)
-	expected := []*v2.Frame{
+	expected := []*v3.Frame{
 		{
 			Metric: req.Metrics[0],
-			Fields: []*v2.Field{
+			Fields: []*v3.Field{
 				{
 					Name:   "",
 					Labels: nil,

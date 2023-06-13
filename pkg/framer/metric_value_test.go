@@ -1,12 +1,13 @@
 package framer
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
-	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"testing"
 	"time"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestMetricValue_Frames(t *testing.T) {

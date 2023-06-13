@@ -1,19 +1,43 @@
 package v1
 
 import (
-	v1 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v1"
-	v2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"context"
+	"strconv"
+	"time"
+
+	v1 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v1"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"time"
 )
 
 type adapter struct {
 	v1Client v1.GrafanaQueryAPIClient
 }
 
-func (b *adapter) ListDimensionKeys(ctx context.Context, in *v2.ListDimensionKeysRequest, opts ...grpc.CallOption) (*v2.ListDimensionKeysResponse, error) {
+// Gets the options for the specified query type
+func (adapter *adapter) GetQueryOptions(ctx context.Context, in *v3.GetOptionsRequest, opts ...grpc.CallOption) (*v3.GetOptionsResponse, error) {
+	if in.QueryType == v3.GetOptionsRequest_GetMetricAggregate {
+		return &v3.GetOptionsResponse{
+			Options: []*v3.Option{
+				{
+					Id:          "Aggregate",
+					Label:       "Aggregate",
+					Type:        v3.Option_Enum,
+					Description: "Selects the aggregate for metric values",
+					EnumValues: []*v3.EnumValue{
+						{Label: "Average", Description: "Average value aggregate", Id: strconv.Itoa(int(v1.AggregateType_AVERAGE))},
+						{Label: "Min", Description: "Min value aggregate", Id: strconv.Itoa(int(v1.AggregateType_MIN))},
+						{Label: "Max", Description: "Max value aggregate", Id: strconv.Itoa(int(v1.AggregateType_MAX))},
+						{Label: "Count", Description: "Count value aggregate", Id: strconv.Itoa(int(v1.AggregateType_COUNT))},
+					}},
+			},
+		}, nil
+	}
+	return &v3.GetOptionsResponse{}, nil
+}
+
+func (b *adapter) ListDimensionKeys(ctx context.Context, in *v3.ListDimensionKeysRequest, opts ...grpc.CallOption) (*v3.ListDimensionKeysResponse, error) {
 	inv1 := &v1.ListDimensionKeysRequest{
 		Filter: in.Filter,
 	}
@@ -21,19 +45,19 @@ func (b *adapter) ListDimensionKeys(ctx context.Context, in *v2.ListDimensionKey
 	if err != nil {
 		return nil, err
 	}
-	r := make([]*v2.ListDimensionKeysResponse_Result, len(res.Results))
+	r := make([]*v3.ListDimensionKeysResponse_Result, len(res.Results))
 	for i := range res.Results {
-		r[i] = &v2.ListDimensionKeysResponse_Result{
+		r[i] = &v3.ListDimensionKeysResponse_Result{
 			Key:         res.Results[i].Key,
 			Description: res.Results[i].Description,
 		}
 	}
-	return &v2.ListDimensionKeysResponse{
+	return &v3.ListDimensionKeysResponse{
 		Results: r,
 	}, nil
 }
 
-func (b *adapter) ListDimensionValues(ctx context.Context, in *v2.ListDimensionValuesRequest, opts ...grpc.CallOption) (*v2.ListDimensionValuesResponse, error) {
+func (b *adapter) ListDimensionValues(ctx context.Context, in *v3.ListDimensionValuesRequest, opts ...grpc.CallOption) (*v3.ListDimensionValuesResponse, error) {
 	inv1 := &v1.ListDimensionValuesRequest{
 		DimensionKey: in.DimensionKey,
 		Filter:       in.Filter,
@@ -42,19 +66,19 @@ func (b *adapter) ListDimensionValues(ctx context.Context, in *v2.ListDimensionV
 	if err != nil {
 		return nil, err
 	}
-	r := make([]*v2.ListDimensionValuesResponse_Result, len(res.Results))
+	r := make([]*v3.ListDimensionValuesResponse_Result, len(res.Results))
 	for i := range res.Results {
-		r[i] = &v2.ListDimensionValuesResponse_Result{
+		r[i] = &v3.ListDimensionValuesResponse_Result{
 			Value:       res.Results[i].Value,
 			Description: res.Results[i].Description,
 		}
 	}
-	return &v2.ListDimensionValuesResponse{
+	return &v3.ListDimensionValuesResponse{
 		Results: r,
 	}, nil
 }
 
-func (b *adapter) ListMetrics(ctx context.Context, in *v2.ListMetricsRequest, opts ...grpc.CallOption) (*v2.ListMetricsResponse, error) {
+func (b *adapter) ListMetrics(ctx context.Context, in *v3.ListMetricsRequest, opts ...grpc.CallOption) (*v3.ListMetricsResponse, error) {
 	inv1 := &v1.ListMetricsRequest{
 		Dimensions: toV1Dimensions(in.Dimensions),
 		Filter:     in.Filter,
@@ -63,21 +87,21 @@ func (b *adapter) ListMetrics(ctx context.Context, in *v2.ListMetricsRequest, op
 	if err != nil {
 		return nil, err
 	}
-	r := make([]*v2.ListMetricsResponse_Metric, len(res.Metrics))
+	r := make([]*v3.ListMetricsResponse_Metric, len(res.Metrics))
 	for i := range res.Metrics {
-		r[i] = &v2.ListMetricsResponse_Metric{
+		r[i] = &v3.ListMetricsResponse_Metric{
 			Name:        res.Metrics[i].Name,
 			Description: res.Metrics[i].Description,
 		}
 	}
-	return &v2.ListMetricsResponse{
+	return &v3.ListMetricsResponse{
 		Metrics: r,
 	}, nil
 }
 
-func (b *adapter) GetMetricValue(ctx context.Context, in *v2.GetMetricValueRequest, opts ...grpc.CallOption) (*v2.GetMetricValueResponse, error) {
+func (b *adapter) GetMetricValue(ctx context.Context, in *v3.GetMetricValueRequest, opts ...grpc.CallOption) (*v3.GetMetricValueResponse, error) {
 	if len(in.Metrics) == 0 {
-		return &v2.GetMetricValueResponse{}, nil
+		return &v3.GetMetricValueResponse{}, nil
 	}
 	metricId := in.Metrics[0]
 	inv1 := &v1.GetMetricValueRequest{
@@ -93,12 +117,12 @@ func (b *adapter) GetMetricValue(ctx context.Context, in *v2.GetMetricValueReque
 	if res.Value != nil {
 		value = res.Value.DoubleValue
 	}
-	return &v2.GetMetricValueResponse{
-		Frames: []*v2.GetMetricValueResponse_Frame{
+	return &v3.GetMetricValueResponse{
+		Frames: []*v3.GetMetricValueResponse_Frame{
 			{
 				Metric:    metricId,
 				Timestamp: timestamppb.New(getTime(res.Timestamp)),
-				Fields: []*v2.SingleValueField{
+				Fields: []*v3.SingleValueField{
 					{
 						Name:   "",
 						Labels: nil,
@@ -111,7 +135,7 @@ func (b *adapter) GetMetricValue(ctx context.Context, in *v2.GetMetricValueReque
 	}, nil
 }
 
-func toV1Dimensions(dims []*v2.Dimension) []*v1.Dimension {
+func toV1Dimensions(dims []*v3.Dimension) []*v1.Dimension {
 	d := make([]*v1.Dimension, len(dims))
 	for i := range dims {
 		v := dims[i]
@@ -123,9 +147,9 @@ func toV1Dimensions(dims []*v2.Dimension) []*v1.Dimension {
 	return d
 }
 
-func (b *adapter) GetMetricHistory(ctx context.Context, in *v2.GetMetricHistoryRequest, opts ...grpc.CallOption) (*v2.GetMetricHistoryResponse, error) {
+func (b *adapter) GetMetricHistory(ctx context.Context, in *v3.GetMetricHistoryRequest, opts ...grpc.CallOption) (*v3.GetMetricHistoryResponse, error) {
 	if len(in.Metrics) == 0 {
-		return &v2.GetMetricHistoryResponse{}, nil
+		return &v3.GetMetricHistoryResponse{}, nil
 	}
 	metricId := in.Metrics[0]
 	inv1 := &v1.GetMetricHistoryRequest{
@@ -155,12 +179,12 @@ func (b *adapter) GetMetricHistory(ctx context.Context, in *v2.GetMetricHistoryR
 		}
 		doubleValues[i] = value
 	}
-	return &v2.GetMetricHistoryResponse{
-		Frames: []*v2.Frame{
+	return &v3.GetMetricHistoryResponse{
+		Frames: []*v3.Frame{
 			{
 				Metric:     metricId,
 				Timestamps: timestamps,
-				Fields: []*v2.Field{
+				Fields: []*v3.Field{
 					{
 						Name:   "",
 						Labels: nil,
@@ -174,15 +198,32 @@ func (b *adapter) GetMetricHistory(ctx context.Context, in *v2.GetMetricHistoryR
 	}, nil
 }
 
-func (b *adapter) GetMetricAggregate(ctx context.Context, in *v2.GetMetricAggregateRequest, opts ...grpc.CallOption) (*v2.GetMetricAggregateResponse, error) {
+const aggregateTypeOptionKey = "aggregateType"
+
+func (b *adapter) GetMetricAggregate(ctx context.Context, in *v3.GetMetricAggregateRequest, opts ...grpc.CallOption) (*v3.GetMetricAggregateResponse, error) {
 	if len(in.Metrics) == 0 {
-		return &v2.GetMetricAggregateResponse{}, nil
+		return &v3.GetMetricAggregateResponse{}, nil
 	}
 	metricId := in.Metrics[0]
+
+	var aggregateType v1.AggregateType
+	switch in.GetOptions()[aggregateTypeOptionKey] {
+	case "0":
+		aggregateType = v1.AggregateType_AVERAGE
+	case "1":
+		aggregateType = v1.AggregateType_MIN
+	case "2":
+		aggregateType = v1.AggregateType_MAX
+	case "3":
+		aggregateType = v1.AggregateType_COUNT
+	default:
+		aggregateType = v1.AggregateType_AVERAGE
+	}
+
 	inv1 := &v1.GetMetricAggregateRequest{
 		Dimensions:    toV1Dimensions(in.Dimensions),
 		Metric:        metricId,
-		AggregateType: v1.AggregateType(in.AggregateType),
+		AggregateType: aggregateType,
 		StartDate:     in.StartDate.AsTime().Unix(),
 		EndDate:       in.EndDate.AsTime().Unix(),
 		MaxItems:      in.MaxItems,
@@ -209,12 +250,12 @@ func (b *adapter) GetMetricAggregate(ctx context.Context, in *v2.GetMetricAggreg
 		doubleValues[i] = value
 	}
 
-	return &v2.GetMetricAggregateResponse{
-		Frames: []*v2.Frame{
+	return &v3.GetMetricAggregateResponse{
+		Frames: []*v3.Frame{
 			{
 				Metric:     metricId,
 				Timestamps: timestamps,
-				Fields: []*v2.Field{
+				Fields: []*v3.Field{
 					{
 						Name:   "",
 						Labels: nil,

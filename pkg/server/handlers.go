@@ -1,8 +1,9 @@
 package server
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	"context"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
@@ -32,7 +33,7 @@ func (s *Server) handleGetMetricValueQuery(ctx context.Context, req backend.Quer
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.Datasource.HandleGetMetricValueQuery(ctx, query)
+	frames, err := s.backendAPI.HandleGetMetricValueQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}
@@ -53,7 +54,7 @@ func (s *Server) handleGetMetricHistoryQuery(ctx context.Context, req backend.Qu
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.Datasource.HandleGetMetricHistoryQuery(ctx, query)
+	frames, err := s.backendAPI.HandleGetMetricHistoryQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}
@@ -74,7 +75,7 @@ func (s *Server) handleGetMetricAggregateQuery(ctx context.Context, req backend.
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.Datasource.HandleGetMetricAggregateQuery(ctx, query)
+	frames, err := s.backendAPI.HandleGetMetricAggregateQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}
@@ -95,7 +96,7 @@ func (s *Server) handleListDimensionKeysQuery(ctx context.Context, req backend.Q
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.Datasource.HandleListDimensionsQuery(ctx, query)
+	frames, err := s.backendAPI.HandleListDimensionsQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}
@@ -116,7 +117,7 @@ func (s *Server) handleListDimensionValuesQuery(ctx context.Context, req backend
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.Datasource.HandleListDimensionValuesQuery(ctx, query)
+	frames, err := s.backendAPI.HandleListDimensionValuesQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}
@@ -137,7 +138,7 @@ func (s *Server) handleListMetricsQuery(ctx context.Context, req backend.QueryDa
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.Datasource.HandleListMetricsQuery(ctx, query)
+	frames, err := s.backendAPI.HandleListMetricsQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}

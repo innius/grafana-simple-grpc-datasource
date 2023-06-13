@@ -1,11 +1,12 @@
 package framer
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
 	"bytes"
 	"strings"
 	"text/template"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 )
 
 type FormatDisplayNameInput struct {

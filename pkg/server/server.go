@@ -1,9 +1,13 @@
 package server
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+
+	backendapi "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -17,7 +21,7 @@ import (
 )
 
 type Server struct {
-	Datasource    Datasource
+	backendAPI    backendapi.Backend
 	channelPrefix string
 	queryMux      *datasource.QueryTypeMux
 }
@@ -63,12 +67,12 @@ func getQueryHandlers(s *Server) *datasource.QueryTypeMux {
 }
 
 func NewServerInstance(settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-	ds, err := backendapi.NewDatasource(settings)
+	ds, err := backendapi.New(settings)
 	if err != nil {
 		return nil, err
 	}
 	srvr := &Server{
-		Datasource:    ds,
+		backendAPI:    ds,
 		channelPrefix: fmt.Sprintf("ds/%d/", settings.ID),
 	}
 	srvr.queryMux = getQueryHandlers(srvr) // init once
@@ -83,12 +87,37 @@ func (s *Server) QueryData(ctx context.Context, req *backend.QueryDataRequest) (
 	return s.queryMux.QueryData(ctx, req)
 }
 
+func (s *Server) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
+	pu, err := url.Parse(req.URL)
+	if err != nil {
+		return err
+	}
+	res, err := s.backendAPI.GetQueryOptions(ctx, backendapi.GetQueryOptionsRequest{QueryType: pu.Query().Get("query_type")})
+	if err != nil {
+		return err
+	}
+	if res == nil {
+		return nil
+	}
+	b, err := json.Marshal(res.Options)
+	if err != nil {
+		return err
+	}
+	resp := &backend.CallResourceResponse{
+		Status:  http.StatusOK,
+		Headers: map[string][]string{},
+		Body:    b,
+	}
+	sender.Send(resp)
+	return nil
+}
+
 // CheckHealth handles health checks sent from Grafana to the plugin.
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
 func (s *Server) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	_, err := s.Datasource.HandleListDimensionsQuery(ctx, &models.DimensionKeysQuery{})
+	_, err := s.backendAPI.HandleListDimensionsQuery(ctx, &models.DimensionKeysQuery{})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unauthenticated:
@@ -116,5 +145,5 @@ func (s *Server) CheckHealth(ctx context.Context, req *backend.CheckHealthReques
 }
 
 func (s *Server) Dispose() {
-	s.Datasource.Dispose()
+	s.backendAPI.Dispose()
 }

@@ -1,10 +1,11 @@
 package framer
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFormatDisplayName(t *testing.T) {

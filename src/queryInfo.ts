@@ -1,7 +1,6 @@
 import { SelectableValue } from '@grafana/data';
 
 import {
-  AggregateType,
   GetMetricAggregateQuery,
   GetMetricHistoryQuery,
   GetMetricValueQuery,
@@ -32,7 +31,6 @@ export const queryTypeInfos: QueryTypeInfo[] = [
     value: QueryType.GetMetricAggregate,
     description: `Gets a metrics aggregate value.`,
     defaultQuery: {
-      aggregateType: AggregateType.AVERAGE,
     } as GetMetricAggregateQuery,
   },
 ];

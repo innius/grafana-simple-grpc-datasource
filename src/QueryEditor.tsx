@@ -2,24 +2,18 @@ import defaults from 'lodash/defaults';
 import { lastValueFrom } from 'rxjs';
 import React, { ChangeEvent, PureComponent } from 'react';
 import { LegacyForms, AsyncMultiSelect } from '@grafana/ui';
-import { QueryEditorProps, Registry, SelectableValue } from '@grafana/data';
+import { QueryEditorProps, SelectableValue } from '@grafana/data';
 
 import { DataSource } from './datasource';
-import { AggregateType, defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType } from './types';
+import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, OptionValue } from './types';
 import { changeQueryType, QueryTypeInfo, queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './components/DimensionSettings';
+import QueryOptionsEditor from './components/QueryOptionsEditor';
 import { convertQuery } from './convert';
 
 const { Select, FormField } = LegacyForms;
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
-
-export const aggReg = new Registry(() => [
-  { id: AggregateType.AVERAGE, name: 'Average' },
-  { id: AggregateType.COUNT, name: 'Count' },
-  { id: AggregateType.MAXIMUM, name: 'Max' },
-  { id: AggregateType.MINIMUM, name: 'Min' },
-]);
 
 export class QueryEditor extends PureComponent<Props> {
   constructor(props: Props) {
@@ -28,7 +22,7 @@ export class QueryEditor extends PureComponent<Props> {
 
   onQueryTypeChange = (sel: SelectableValue<QueryType>) => {
     const { onChange, query, onRunQuery } = this.props;
-    onChange(changeQueryType(query, sel as QueryTypeInfo));
+    onChange({ ...changeQueryType(query, sel as QueryTypeInfo), queryOptions: undefined });
     onRunQuery();
   };
 
@@ -50,12 +44,6 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   }
 
-  onAggregateChange = (item: SelectableValue<AggregateType>) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, aggregateType: item && item.value });
-    onRunQuery();
-  };
-
   onDisplayNameChange = (item: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query, onRunQuery } = this.props;
     onChange({ ...query, displayName: item && item.target.value });
@@ -68,11 +56,19 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
+  onQueryOptionsChange = (key: string, value?: OptionValue) => {
+    const { onChange, query, onRunQuery } = this.props;
+    const { queryOptions } = query;
+    onChange({ ...query, queryOptions: { ...queryOptions, [key]: value || {} } });
+    onRunQuery();
+  };
+
   loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
     const { datasource } = this.props;
     const { dimensions } = this.props.query;
     return lastValueFrom(datasource.listMetrics(dimensions || [], value));
   };
+
   // fields which can be used in display name expression
   displayNameFields = (dimensions?: Dimension[]) =>
     dimensions
@@ -84,7 +80,6 @@ export class QueryEditor extends PureComponent<Props> {
   render() {
     const query = convertQuery(defaults(this.props.query, defaultQuery));
     const currentQueryType = queryTypeInfos.find((v) => v.value === query.queryType);
-    const select = aggReg.selectOptions([query.aggregateType || '']);
     const key = this.props.query.dimensions?.map((x) => x.key + x.value).join();
 
     const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
@@ -119,20 +114,14 @@ export class QueryEditor extends PureComponent<Props> {
                 onCreateOption={(x) => this.onAddMetric(x)}
                 allowCustomValue={true}
                 isSearchable={true}
-                isClearable={true}
               />
             </div>
-            <div
-              className={'gf-form'}
-              hidden={currentQueryType ? currentQueryType.value !== QueryType.GetMetricAggregate : true}
-            >
-              <label className="gf-form-label width-10">Aggregate</label>
-              <Select
-                value={select.current} //TODO: improve this
-                options={select.options as any}
-                onChange={this.onAggregateChange}
-              />
-            </div>
+            <QueryOptionsEditor
+              onChange={this.onQueryOptionsChange}
+              datasource={this.props.datasource}
+              queryType={query.queryType}
+              queryOptions={query.queryOptions || {}}
+            />
           </>
           <>
             <FormField

@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-option go_package = "bitbucket.org/innius/grafana-simple-grpc-datasource/v2";
+option go_package = "bitbucket.org/innius/grafana-simple-grpc-datasource/v3";
 
 import "google/protobuf/timestamp.proto";
 
-package grafanav2;
+package grafanav3;
 
 // The GrafanaQueryAPI definition.
 service GrafanaQueryAPI {
@@ -18,6 +18,11 @@ service GrafanaQueryAPI {
 
   // Returns all metrics from the system
   rpc ListMetrics (ListMetricsRequest) returns (ListMetricsResponse) {
+  }
+
+  // Gets the options for the specified query type
+  rpc GetQueryOptions (GetOptionsRequest) returns (GetOptionsResponse) {
+
   }
 
   // Gets the last known value for one or more metrics
@@ -50,6 +55,8 @@ message GetMetricValueRequest {
   repeated Dimension dimensions = 1;
 
   repeated string metrics = 2;
+
+  map<string,string> options = 3 ;
 }
 
 message GetMetricValueResponse {
@@ -66,6 +73,44 @@ message GetMetricValueResponse {
   repeated Frame frames = 1;
 }
 
+message GetOptionsRequest {
+  enum QueryType {
+    GetMetricHistory = 0;
+    GetMetricValue=1;
+    GetMetricAggregate=2;
+  }
+  // the query type for which options are requested
+  QueryType queryType = 1;
+}
+
+message EnumValue {
+  // the id of the enum value 
+  string id = 1;
+  // the description of the option
+  string description = 2;
+  // the label of the option 
+  string label = 3;
+}
+
+message Option {
+  // the id of the option 
+  string id = 1; 
+  string description = 2;
+  enum Type {
+    Enum = 0; // enum is rendered as a Select control in the frontend 
+    Boolean = 1;
+  }
+  Type  type = 3; 
+  repeated EnumValue enumValues = 4;
+  bool required = 5; 
+  // the label of the option 
+  string label = 6;
+}
+
+message GetOptionsResponse {
+  repeated Option options = 1;
+}
+
 message GetMetricAggregateRequest {
   // The dimensions for the query
   repeated Dimension dimensions = 1;
@@ -73,13 +118,13 @@ message GetMetricAggregateRequest {
   // the metrics for which the aggregates are retrieved
   repeated string metrics = 2;
 
-  AggregateType aggregateType = 3;
   google.protobuf.Timestamp startDate = 4;
   google.protobuf.Timestamp endDate = 5;
   int64 maxItems = 6;
   TimeOrdering timeOrdering = 7;
   string startingToken = 8;
   int64 intervalMs = 9;
+  map<string,string> options = 10 ;
 }
 
 message GetMetricAggregateResponse {
@@ -96,6 +141,7 @@ message GetMetricHistoryRequest {
   int64 maxItems = 7;
   TimeOrdering timeOrdering = 8;
   string startingToken = 9;
+  map<string,string> options = 10 ;
 }
 
 message GetMetricHistoryResponse {
@@ -244,13 +290,6 @@ enum TimeOrdering {
   DESCENDING = 1;
 }
 
-enum AggregateType {
-  AVERAGE = 0;
-  MAX = 1;
-  MIN = 2;
-  COUNT = 3;
-}
-
 message ListDimensionKeysRequest {
   string filter = 1;
   repeated Dimension selected_dimensions = 2;
@@ -308,4 +347,3 @@ message QueryResponse {
   }
   repeated Value values = 3;
 }
-

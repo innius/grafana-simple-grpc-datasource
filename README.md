@@ -82,12 +82,15 @@ This API has some limitations:
 - it only supports one metric per query 
 - it does not support variables with multiple options 
 - it does not support enhanced metadata for metrics (like unit, etc.)
+- it does not support flexible query options 
 
-### The Advanced API ([GrafanaQueryAPIV2][2])
+### The Advanced API ([GrafanaQueryAPIV3][2])
 
 This API provides almost the same operations as the Simple API but with one major difference: it supports multiple metrics 
 for the same query. As a result this API integrates seamlessly with grafana templating capabilities. 
 In addition, it supports enhanced metric metadata, like unit of measure. Another difference is that it supports grafana labels. 
+
+The advanced API supports dynamic query options which are defined by the backend system. This makes it possible to tailor the behavior of grafana queries for specific backends. An example of a custom option is the Aggregate of the _GetMetricAggregate_ query. The v1 version of the API has a fixed number of Aggregates, defined by the plugin. It is not possible for a backend system to add a different option. With the V3 API, however, this is supported. Currently an option can be either an Enumeration or a Boolean type. 
 
 This API provides the following operations:
 
@@ -99,6 +102,7 @@ This API provides the following operations:
 | GetMetricValue      | Returns the last known value for one or more metrics.               |
 | GetMetricHistory    | Returns historical values for one or more metrics                   |
 | GetMetricAggregate  | Returns aggregated values for one or more metrics                   |
+| GetQueryOptions     | Returns the options for a selected query type                       |
 
 A sample implementation can be found [here](https://bitbucket.org/innius/sample-grpc-server/src/master/).
 
@@ -116,18 +120,16 @@ Please note gRPC is programming language agnostic which makes it possible to imp
 * select multiple metrics in one query 
 * flexible dimension selection 
 * integrated with Grafana variables and templating 
-* allows backend systems to provided additional metadata, like value mappings, unit of measure, etc. 
+* allow backend systems to provided additional metadata, like value mappings, unit of measure, etc. 
 * supports notifications 
 * supports pagination
 * supports retries for grpc calls if backend server is at maximum capacity
-
+* allow backend systems to define custom query options. 
 
 ## Roadmap
-
-- add more authentication schemes (certificates, basic authentication etc. )
 - support annotations
 - support streaming queries 
 
 [1]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v1/api.proto
-[2]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v2/apiv2.proto
+[2]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v3/apiv3.proto
 [3]: https://github.com/grpc/grpc/blob/master/doc/server-reflection.md

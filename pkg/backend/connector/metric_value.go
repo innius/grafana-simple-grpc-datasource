@@ -1,11 +1,13 @@
 package connector
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
+	"context"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
-	"context"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	"github.com/samber/lo"
 )
 
 func valueQueryToInput(query models.MetricValueQuery) *pb.GetMetricValueRequest {
@@ -21,6 +23,7 @@ func valueQueryToInput(query models.MetricValueQuery) *pb.GetMetricValueRequest 
 		metrics[i] = query.Metrics[i].MetricId
 	}
 	return &pb.GetMetricValueRequest{
+		Options:    lo.MapValues(query.Options, func(value models.OptionValue, key string) string { return value.Value }),
 		Dimensions: dimensions,
 		Metrics:    metrics,
 	}

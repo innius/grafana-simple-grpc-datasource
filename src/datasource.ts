@@ -25,6 +25,7 @@ import {
   QueryType,
   VariableQuery,
   VariableQueryType,
+  QueryOptions,
 } from './types';
 import { lastValueFrom, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -239,6 +240,10 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
         throw 'no metrics found';
       })
     );
+  }
+
+  async getQueryOptions(qt: QueryType): Promise<QueryOptions>  {
+    return this.getResource<QueryOptions>("/options", {query_type: qt});
   }
 }
 

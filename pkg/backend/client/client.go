@@ -3,8 +3,8 @@ package client
 import (
 	"time"
 
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client/factory"
-	v2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client/factory"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"google.golang.org/grpc"
@@ -15,7 +15,7 @@ import (
 
 type backendClient struct {
 	conn *grpc.ClientConn
-	v2.GrafanaQueryAPIClient
+	v3.GrafanaQueryAPIClient
 }
 
 func (b *backendClient) Dispose() {

@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"time"
+
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
 const (
@@ -23,14 +24,19 @@ type Metric struct {
 	MetricId string `json:"metricId"`
 }
 
-type MetricBaseQuery struct {
-	Dimensions  []Dimension `json:"dimensions"`
-	Metrics     []Metric    `json:"metrics,omitempty"`
-	NextToken   string      `json:"nextToken,omitempty"`
-	DisplayName string      `json:"displayName,omitempty"`
+type OptionValue struct {
+	Value string `json:"value,omitempty"`
+	Label string `json:"label,omitempty"`
+}
 
-	Interval      time.Duration     `json:"-"`
-	TimeRange     backend.TimeRange `json:"-"`
-	MaxDataPoints int64             `json:"-"`
-	QueryType     string            `json:"-"`
+type MetricBaseQuery struct {
+	Dimensions    []Dimension            `json:"dimensions"`
+	Metrics       []Metric               `json:"metrics,omitempty"`
+	NextToken     string                 `json:"nextToken,omitempty"`
+	DisplayName   string                 `json:"displayName,omitempty"`
+	Interval      time.Duration          `json:"-"`
+	TimeRange     backend.TimeRange      `json:"-"`
+	MaxDataPoints int64                  `json:"-"`
+	QueryType     string                 `json:"-"`
+	Options       map[string]OptionValue `json:"queryOptions,omitempty"`
 }

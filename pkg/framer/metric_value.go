@@ -1,10 +1,12 @@
 package framer
 
 import (
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
-	"github.com/grafana/grafana-plugin-sdk-go/data"
+	"strings"
 	"time"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
 type MetricValue struct {
@@ -48,11 +50,16 @@ func (f MetricValue) Frames() (data.Frames, error) {
 }
 
 func (f MetricValue) FormatDisplayName(frame *pb.GetMetricValueResponse_Frame, fld *pb.SingleValueField) string {
+	var args []Arg
+	for key, value := range f.Query.Options {
+		args = append(args, Arg{Key: strings.ToLower(key), Value: value.Label})
+	}
 	return formatDisplayName(FormatDisplayNameInput{
 		DisplayName: f.Query.DisplayName,
 		FieldName:   fld.Name,
 		MetricID:    frame.GetMetric(),
 		Dimensions:  f.Query.Dimensions,
 		Labels:      fld.GetLabels(),
+		Args:        args,
 	})
 }

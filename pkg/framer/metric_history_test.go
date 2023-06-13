@@ -1,13 +1,14 @@
 package framer
 
 import (
+	"testing"
+	"time"
+
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"testing"
-	"time"
 )
 
 func TestGetHistoryResponseFrameConversion(t *testing.T) {

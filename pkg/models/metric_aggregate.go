@@ -2,12 +2,12 @@ package models
 
 import (
 	"encoding/json"
+
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
 type MetricAggregateQuery struct {
 	MetricBaseQuery
-	AggregateType string `json:"aggregateType"`
 }
 
 func UnmarshalToMetricAggregateQuery(dq *backend.DataQuery) (*MetricAggregateQuery, error) {

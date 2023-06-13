@@ -3,10 +3,10 @@ package connector
 import (
 	"context"
 
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backendapi/client"
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 )
 
 func ListDimensionValues(ctx context.Context, client client.BackendAPIClient, query models.DimensionValueQuery) (*framer.DimensionValues, error) {

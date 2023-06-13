@@ -5,9 +5,30 @@ import { Metric, MyQuery } from './types';
  * @param query query which might contain a legacy metric definition using deprecated metricId, metricName fields.
  */
 export function convertQuery(query: MyQuery): MyQuery {
+  let options = query.queryOptions;
+  // convert deprecated aggregateType to query options
+  if (!options && query.aggregateType) {
+    const { aggregateType } = query;
+    let aggregateTypeEnumValue = 0;
+    switch (aggregateType) {
+      case 'AVERAGE':
+        aggregateTypeEnumValue = 0;
+      case 'MAX':
+        aggregateTypeEnumValue = 1;
+      case 'MIN':
+        aggregateTypeEnumValue = 2;
+      case 'COUNT':
+        aggregateTypeEnumValue = 3;
+    }
+    options = {
+      aggregateType: {value: aggregateTypeEnumValue.toString(),label: aggregateType }
+    };
+  }
   return {
     ...query,
     metricId: undefined,
+    aggregateType: undefined,
+    queryOptions: options,
     metrics: convertMetrics(query),
   };
 }
