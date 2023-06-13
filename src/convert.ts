@@ -10,18 +10,22 @@ export function convertQuery(query: MyQuery): MyQuery {
   if (!options && query.aggregateType) {
     const { aggregateType } = query;
     let aggregateTypeEnumValue = 0;
-    switch (aggregateType) {
+    switch (aggregateType.toUpperCase()) {
       case 'AVERAGE':
         aggregateTypeEnumValue = 0;
+        break;
       case 'MAX':
         aggregateTypeEnumValue = 1;
+        break;
       case 'MIN':
         aggregateTypeEnumValue = 2;
+        break;
       case 'COUNT':
         aggregateTypeEnumValue = 3;
+        break;
     }
     options = {
-      aggregateType: {value: aggregateTypeEnumValue.toString(),label: aggregateType }
+      aggregateType: { value: aggregateTypeEnumValue.toString(), label: aggregateType.toLowerCase() },
     };
   }
   return {
