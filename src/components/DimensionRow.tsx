@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, AsyncSelect, Icon } from '@grafana/ui';
+import { Button, AsyncSelect, Icon, InlineField, InlineFieldRow } from '@grafana/ui';
 import { Dimension } from '../types';
 import { SelectableValue } from '@grafana/data';
 
@@ -29,35 +29,37 @@ const DimensionRow = (props: DimensionRowProps) => {
   };
 
   return (
-    <div className="gf-form">
-      <>
-        <label className="gf-form-label width-10">Key</label>
-        <AsyncSelect
-          defaultOptions={true}
-          value={{ label: dimension.key, value: dimension.key }}
-          cacheOptions={false}
-          loadOptions={loadDimensions}
-          onChange={(e) => onChangeDimensionKey(e.value)}
-        />
-      </>
-      <>
-        <span className="gf-form-label width-10">Value</span>
-        <AsyncSelect
-          key={dimension.key}
-          defaultOptions={true}
-          value={{ label: dimension.value, value: dimension.value }}
-          loadOptions={(query) => loadDimensionValues(dimension.key, query)}
-          isSearchable={true}
-          isClearable={true}
-          allowCustomValue={true}
-          onCreateOption={onChangeDimensionValue}
-          onChange={(e) => onChangeDimensionValue(e?.value)}
-        />
-      </>
-      <Button variant="secondary" onClick={(_) => onRemove(dimension)}>
-        <Icon name="trash-alt" />
-      </Button>
-    </div>
+    <>
+      <InlineFieldRow>
+        <InlineField labelWidth={24} label={'Key'}>
+          <AsyncSelect
+            width={32}
+            defaultOptions={true}
+            value={{ label: dimension.key, value: dimension.key }}
+            cacheOptions={false}
+            loadOptions={loadDimensions}
+            onChange={(e) => onChangeDimensionKey(e.value)}
+          />
+        </InlineField>
+        <InlineField labelWidth={24} label={'Value'}>
+          <AsyncSelect
+            width={32}
+            key={dimension.key}
+            defaultOptions={true}
+            value={{ label: dimension.value, value: dimension.value }}
+            loadOptions={(query) => loadDimensionValues(dimension.key, query)}
+            isSearchable={true}
+            isClearable={true}
+            allowCustomValue={true}
+            onCreateOption={onChangeDimensionValue}
+            onChange={(e) => onChangeDimensionValue(e?.value)}
+          />
+        </InlineField>
+        <Button variant="secondary" onClick={(_) => onRemove(dimension)}>
+          <Icon name="trash-alt" />
+        </Button>
+      </InlineFieldRow>
+    </>
   );
 };
 

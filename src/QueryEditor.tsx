@@ -1,7 +1,7 @@
 import defaults from 'lodash/defaults';
 import { lastValueFrom } from 'rxjs';
 import React, { ChangeEvent, PureComponent } from 'react';
-import { LegacyForms, AsyncMultiSelect } from '@grafana/ui';
+import { Select, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 
 import { DataSource } from './datasource';
@@ -10,8 +10,6 @@ import { changeQueryType, QueryTypeInfo, queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './components/DimensionSettings';
 import QueryOptionsEditor from './components/QueryOptionsEditor';
 import { convertQuery } from './convert';
-
-const { Select, FormField } = LegacyForms;
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
@@ -85,56 +83,42 @@ export class QueryEditor extends PureComponent<Props> {
     const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
     return (
-      <div className="gf-form-group">
-        <>
-          <div className="gf-form">
-            <label className="gf-form-label width-10">Query Type</label>
-            <Select
-              options={queryTypeInfos}
-              value={currentQueryType}
-              onChange={this.onQueryTypeChange}
-              placeholder="Select query type"
-              menuPlacement="bottom"
-            />
-          </div>
-          <DimensionSettings
-            initState={query.dimensions || []}
-            datasource={this.props.datasource}
-            onChange={this.onDimensionsChange}
+      <>
+        <InlineField labelWidth={24} label="Query Type">
+          <Select options={queryTypeInfos} value={currentQueryType} onChange={this.onQueryTypeChange} width={32} />
+        </InlineField>
+        <DimensionSettings
+          initState={query.dimensions || []}
+          datasource={this.props.datasource}
+          onChange={this.onDimensionsChange}
+        />
+        <InlineField labelWidth={24} label="Metric">
+          <AsyncMultiSelect
+            width={32}
+            key={key}
+            defaultOptions={true}
+            value={selectedMetrics}
+            loadOptions={this.loadMetrics}
+            onChange={(evt) => this.onMetricChange(evt)}
+            onCreateOption={(x) => this.onAddMetric(x)}
+            allowCustomValue={true}
+            isSearchable={true}
           />
-          <>
-            <div className={'gf-form'}>
-              <label className="gf-form-label width-10">Metric</label>
-              <AsyncMultiSelect
-                key={key}
-                defaultOptions={true}
-                value={selectedMetrics}
-                loadOptions={this.loadMetrics}
-                onChange={(evt) => this.onMetricChange(evt)}
-                onCreateOption={(x) => this.onAddMetric(x)}
-                allowCustomValue={true}
-                isSearchable={true}
-              />
-            </div>
+        </InlineField>
+        <InlineField
+          labelWidth={24}
+          label="Display Name"
+          tooltip={`use ${this.displayNameFields(query.dimensions)} for dynamic expressions`}
+        >
+          <Input value={query.displayName} type="text" width={32} onChange={this.onDisplayNameChange} />
+        </InlineField>
             <QueryOptionsEditor
               onChange={this.onQueryOptionsChange}
               datasource={this.props.datasource}
               queryType={query.queryType}
               queryOptions={query.queryOptions || {}}
             />
-          </>
-          <>
-            <FormField
-              labelWidth={10}
-              value={query.displayName}
-              onChange={this.onDisplayNameChange}
-              label="Display Name"
-              type="text"
-              tooltip={`use ${this.displayNameFields(query.dimensions)} for dynamic expressions`}
-            />
-          </>
         </>
-      </div>
     );
   }
 }

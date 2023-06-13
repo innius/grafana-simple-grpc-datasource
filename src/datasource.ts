@@ -4,9 +4,9 @@ import {
   DataQueryRequest,
   DataQueryResponse,
   DataSourceInstanceSettings,
-  MetricFindValue,
   ScopedVars,
   SelectableValue,
+  MetricFindValue,
 } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import {
@@ -18,24 +18,26 @@ import {
   ListMetricsQuery,
   Metadata,
   Metric,
-  migrateLegacyQuery,
   MyDataSourceOptions,
   MyQuery,
   NextQuery,
   QueryType,
+  QueryOptions,
+  OptionValue,
   VariableQuery,
   VariableQueryType,
-  QueryOptions,
 } from './types';
 import { lastValueFrom, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
 import { convertMetrics, convertQuery } from './convert';
+import { DatasourceVariableSupport } from './variables';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
+    this.variables = new DatasourceVariableSupport(this);
   }
 
   query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
@@ -123,8 +125,8 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   /**
    * Supports lists of metrics
    */
-  async metricFindQuery(query: VariableQuery | string, options?: any): Promise<MetricFindValue[]> {
-    const q = migrateLegacyQuery(query);
+  async metricFindQuery(query: VariableQuery, options?: any): Promise<MetricFindValue[]> {
+    const q = query;
 
     if (q.queryType === VariableQueryType.dimensionValue) {
       if (!q.dimensionKey) {
@@ -164,10 +166,13 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       value: templateSrv.replace(x.value, scopedVars),
     }));
 
+    const { queryOptions } = query2;
+
     return {
       ...query2,
       dimensions: dimensions,
       metrics: metrics || [],
+      queryOptions: cloneQueryOptionsWithModifiedValues(queryOptions!, (x) => templateSrv.replace(x, scopedVars)),
     };
   }
 
@@ -242,9 +247,25 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     );
   }
 
-  async getQueryOptions(qt: QueryType): Promise<QueryOptions>  {
-    return this.getResource<QueryOptions>("/options", {query_type: qt});
+  async getQueryOptions(qt: QueryType): Promise<QueryOptions> {
+    return this.getResource<QueryOptions>('/options', { query_type: qt });
   }
+}
+
+function cloneQueryOptionsWithModifiedValues(
+  queryOptions: { [key: string]: OptionValue },
+  replace: (x: string) => string
+) {
+  const clonedOptions = queryOptions || {};
+
+  for (const key in queryOptions) {
+    if (queryOptions.hasOwnProperty(key)) {
+      const {label, value} = queryOptions[key];
+      clonedOptions[key] = { label: replace(label!), value: replace(value!) };
+    }
+  }
+
+  return clonedOptions;
 }
 
 let counter = 1000;
