@@ -1,6 +1,6 @@
 import {DataSource} from '../datasource';
 import {DataSourceInstanceSettings, ScopedVars, TimeRange, TypedVariableModel} from '@grafana/data';
-import {Dimensions, migrateLegacyQuery, MyDataSourceOptions, MyQuery, QueryType, VariableQueryType} from '../types';
+import {MyDataSourceOptions, MyQuery, QueryType } from '../types';
 import {setTemplateSrv} from '@grafana/runtime';
 
 describe('Datasource', () => {
@@ -20,6 +20,9 @@ describe('Datasource', () => {
         replace(target?: string, scopedVars?: ScopedVars, format?: string | Function): string {
             if (target === '$sensor') {
                 return JSON.stringify(['a', 'b', 'c']);
+            }
+            if (target === '$view') {
+                return 'changes';
             }
             return target || '';
         },
@@ -43,33 +46,24 @@ describe('Datasource', () => {
             expect(res.metrics).toEqual([{metricId: 'foo'}, {metricId: 'a'}, {metricId: 'b'}, {metricId: 'c'}]);
         });
     });
-
-    describe('parse legacy VariableQuery', () => {
-        it('give no error if dimensions are not specified', () => {
-            const {dimensions} = migrateLegacyQuery('');
-            expect(dimensions).toHaveLength(0);
+    describe('a query with no template variables for query options should', () => {
+        const query: MyQuery = {
+            queryType: QueryType.GetMetricAggregate,
+            refId: 'A',
+            metrics: [{metricId: 'foo'}], 
+            queryOptions: {
+              'view' : {label: '$view', value: '$view'},
+              'foo' : {label: 'the bar value', value: 'bar'},
+            }
+        };
+        const res = ds.applyTemplateVariables(query, {});
+        it('template variable should be replaced with the selected value', () => {
+            expect(res.queryOptions).toEqual({
+              'view' : {label: 'changes', value: 'changes'},
+              'foo' : {label: 'the bar value', value: 'bar'},
+            });
         });
-        it('migrates a normal VariableQuery', () => {
-            const query = {
-                queryType: VariableQueryType.metric,
-                dimensions: [
-                    {id: '', key: 'machine', value: 'foo'},
-                    {id: '', key: 'sensor_type', value: 'discrete'},
-                ],
-            };
-            const res = migrateLegacyQuery(query);
-            expect(res).toEqual(query);
-        });
-        it('parses a dimension string to dimensions', () => {
-            const {dimensions} = migrateLegacyQuery('machine=foo;sensor_type=discrete');
-            expect(dimensions).toHaveLength(2);
-            const expected: Dimensions = [
-                {id: 'machine', key: 'machine', value: 'foo'},
-                {id: 'sensor_type', key: 'sensor_type', value: 'discrete'},
-            ];
-            expect(dimensions).toEqual(expected);
-        });
-    });
+    })
 
     describe('query display text should', () => {
         const input: MyQuery = {

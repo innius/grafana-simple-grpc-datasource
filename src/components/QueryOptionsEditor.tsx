@@ -35,13 +35,9 @@ const QueryOptionsEditor = (props: Props) => {
         const currentValue = props.queryOptions[opt.id] || {};
         return (
           <>
-            <InlineField labelWidth={20} label={opt.label} tooltip={opt.description} required={opt.required}>
+            <InlineField labelWidth={24} label={opt.label} tooltip={opt.description} required={opt.required}>
               {opt.type === 'Enum' ? (
-                <EnumOptionField
-                  currentValue={currentValue}
-                  option={opt}
-                  onChange={(v) => props.onChange(opt.id, v)}
-                />
+                <EnumOptionField currentValue={currentValue} option={opt} onChange={(v) => props.onChange(opt.id, v)} />
               ) : opt.type === 'Boolean' ? (
                 <Checkbox
                   value={currentValue.value === 'true'}
@@ -77,16 +73,26 @@ const EnumOptionField = (props: EnumOptionProps) => {
       value: value.id,
     }));
   }
+  const onCreateOption = (value: string) => {
+    if (!value) {
+      return;
+    }
 
+    onChange({ value: value, label: value });
+  };
+
+  const value = options.find((x) => x.value === currentValue?.value) || currentValue || null;
   return (
     <>
       <Select
-        value={options.find((x) => x.value === currentValue?.value) || null}
+        value={value}
         options={options}
-        onChange={(x) => onChange({value: x.value, label: x.label})}
+        onChange={(x) => onChange({ value: x.value, label: x.label })}
         menuPlacement="bottom"
+        onCreateOption={onCreateOption}
         isSearchable={true}
-        width={16}
+        allowCustomValue={true}
+        width={32}
       />
     </>
   );
