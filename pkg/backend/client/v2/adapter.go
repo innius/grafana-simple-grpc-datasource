@@ -204,6 +204,7 @@ func (adapter *adapter) GetMetricAggregate(ctx context.Context, in *v3.GetMetric
 		TimeOrdering:  v2.TimeOrdering(in.TimeOrdering),
 		StartingToken: in.StartingToken,
 		AggregateType: aggregateType,
+		IntervalMs:    in.IntervalMs,
 	}
 	res, err := adapter.v2Client.GetMetricAggregate(ctx, inv1, opts...)
 	if err != nil {
