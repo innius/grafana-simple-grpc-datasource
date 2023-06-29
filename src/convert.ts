@@ -25,7 +25,7 @@ export function convertQuery(query: MyQuery): MyQuery {
         break;
     }
     options = {
-      aggregateType: { value: aggregateTypeEnumValue.toString(), label: aggregateType.toLowerCase() },
+      "0" : { value: aggregateTypeEnumValue.toString(), label: aggregateType.toLowerCase() },
     };
   }
   return {

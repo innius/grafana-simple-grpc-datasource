@@ -11,8 +11,8 @@ describe('query-conversion', () => {
       const query = convertQuery(legacyQuery);
       it('should convert to query with query options', () => {
         expect(query).toHaveProperty('queryOptions');
-        expect(query.queryOptions).toHaveProperty('aggregateType');
-        expect(query.queryOptions!.aggregateType).toEqual({ label: 'average', value: '0' });
+        expect(query.queryOptions).toHaveProperty('0');
+        expect(query.queryOptions!['0']).toEqual({ label: 'average', value: '0' });
       });
     });
     describe('min', () => {
@@ -24,8 +24,8 @@ describe('query-conversion', () => {
       const query = convertQuery(legacyQuery);
       it('should convert to query with query options', () => {
         expect(query).toHaveProperty('queryOptions');
-        expect(query.queryOptions).toHaveProperty('aggregateType');
-        expect(query.queryOptions!.aggregateType).toEqual({ label: 'min', value: '2' });
+        expect(query.queryOptions).toHaveProperty('0');
+        expect(query.queryOptions!['0']).toEqual({ label: 'min', value: '2' });
       });
     });
     describe('max', () => {
@@ -37,8 +37,8 @@ describe('query-conversion', () => {
       const query = convertQuery(legacyQuery);
       it('should convert to query with query options', () => {
         expect(query).toHaveProperty('queryOptions');
-        expect(query.queryOptions).toHaveProperty('aggregateType');
-        expect(query.queryOptions!.aggregateType).toEqual({ label: 'max', value: '1' });
+        expect(query.queryOptions).toHaveProperty('0');
+        expect(query.queryOptions!['0']).toEqual({ label: 'max', value: '1' });
       });
     });
     describe('count', () => {
@@ -50,8 +50,8 @@ describe('query-conversion', () => {
       const query = convertQuery(legacyQuery);
       it('should convert to query with query options', () => {
         expect(query).toHaveProperty('queryOptions');
-        expect(query.queryOptions).toHaveProperty('aggregateType');
-        expect(query.queryOptions!.aggregateType).toEqual({ label: 'count', value: '3' });
+        expect(query.queryOptions).toHaveProperty('0');
+        expect(query.queryOptions!['0']).toEqual({ label: 'count', value: '3' });
       });
     });
   });

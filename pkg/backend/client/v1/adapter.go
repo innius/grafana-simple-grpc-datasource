@@ -21,7 +21,7 @@ func (adapter *adapter) GetQueryOptions(ctx context.Context, in *v3.GetOptionsRe
 		return &v3.GetOptionsResponse{
 			Options: []*v3.Option{
 				{
-					Id:          "Aggregate",
+					Id:          aggregateTypeOptionID,
 					Label:       "Aggregate",
 					Type:        v3.Option_Enum,
 					Description: "Selects the aggregate for metric values",
@@ -198,7 +198,7 @@ func (b *adapter) GetMetricHistory(ctx context.Context, in *v3.GetMetricHistoryR
 	}, nil
 }
 
-const aggregateTypeOptionKey = "aggregateType"
+const aggregateTypeOptionID = "0"
 
 func (b *adapter) GetMetricAggregate(ctx context.Context, in *v3.GetMetricAggregateRequest, opts ...grpc.CallOption) (*v3.GetMetricAggregateResponse, error) {
 	if len(in.Metrics) == 0 {
@@ -207,7 +207,7 @@ func (b *adapter) GetMetricAggregate(ctx context.Context, in *v3.GetMetricAggreg
 	metricId := in.Metrics[0]
 
 	var aggregateType v1.AggregateType
-	switch in.GetOptions()[aggregateTypeOptionKey] {
+	switch in.GetOptions()[aggregateTypeOptionID] {
 	case "0":
 		aggregateType = v1.AggregateType_AVERAGE
 	case "1":
