@@ -141,6 +141,7 @@ func (adapter *adapter) GetMetricValue(ctx context.Context, in *v3.GetMetricValu
 					Labels: lo.Map(f.Labels, func(l *v2.Label, _ int) *v3.Label {
 						return &v3.Label{Key: l.Key, Value: l.Value}
 					}),
+					Value:  f.Value,
 					Config: toV3Config(f.GetConfig()),
 				}
 			}),

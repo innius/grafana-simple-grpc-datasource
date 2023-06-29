@@ -62,6 +62,7 @@ func mustParseTime(s string) *timestamppb.Timestamp {
 	}
 	return timestamppb.New(t)
 }
+
 func TestAdapter_GetMetricValue(t *testing.T) {
 	ts := mustParseTime("2022-07-20T12:26:06Z")
 
@@ -118,6 +119,7 @@ func TestAdapter_GetMetricValue(t *testing.T) {
 				{
 					Name:   "value",
 					Labels: []*v3.Label{{Key: "foo", Value: "bar"}},
+					Value:  12.42,
 					Config: &v3.Config{
 						Unit: "mm",
 						Mappings: []*v3.ValueMapping{
