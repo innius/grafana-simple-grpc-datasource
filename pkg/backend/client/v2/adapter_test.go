@@ -252,7 +252,7 @@ func TestAdapter_GetMetricAggregate(t *testing.T) {
 		TimeOrdering:  v3.TimeOrdering_DESCENDING,
 		StartingToken: "start-here",
 		IntervalMs:    999,
-		Options:       map[string]string{aggregateTypeOptionKey: "3"},
+		Options:       map[string]string{aggregateTypeOptionID: "3"},
 	}
 
 	v2Frame := &v2.Frame{
