@@ -1,6 +1,6 @@
 import defaults from 'lodash/defaults';
 import { lastValueFrom } from 'rxjs';
-import React, { ChangeEvent, PureComponent } from 'react';
+import React, { ChangeEvent, useState, useEffect } from 'react';
 import { Select, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 
@@ -13,112 +13,107 @@ import { convertQuery } from './convert';
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
-export class QueryEditor extends PureComponent<Props> {
-  constructor(props: Props) {
-    super(props);
-  }
+const QueryEditor = (props: Props) => {
+  const [query, setQuery] = useState(props.query);
+  const {datasource} = props;
 
-  onQueryTypeChange = (sel: SelectableValue<QueryType>) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...changeQueryType(query, sel as QueryTypeInfo), queryOptions: undefined });
+  useEffect(() => {
+    setQuery(convertQuery(defaults(props.query, defaultQuery)));
+  }, [props.query]);
+
+  const updateAndRunQuery = (q: MyQuery) => {
+    const { onChange, onRunQuery } = props;
+    onChange(q);
+    setQuery(q);
     onRunQuery();
   };
 
-  onMetricChange(evt: Array<SelectableValue<string>>) {
-    const { onChange, query, onRunQuery } = this.props;
+  const onQueryTypeChange = (sel: SelectableValue<QueryType>) => {
+    updateAndRunQuery({ ...changeQueryType(query, sel as QueryTypeInfo), queryOptions: undefined });
+  };
 
+  const onMetricChange = (evt: Array<SelectableValue<string>>) => {
     const m = evt.map((x) => ({ metricId: x.value }));
-    onChange({ ...query, metrics: m });
-    onRunQuery();
-  }
+    updateAndRunQuery({ ...query, metrics: m });
+  };
 
-  onAddMetric(metric?: string) {
+  const onAddMetric = (metric?: string) => {
     if (!metric) {
       return;
     }
-    const { onChange, query, onRunQuery } = this.props;
     const { metrics } = query;
-    onChange({ ...query, metrics: metrics?.concat({ metricId: metric }) || [{ metricId: metric }] });
-    onRunQuery();
-  }
-
-  onDisplayNameChange = (item: ChangeEvent<HTMLInputElement>) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, displayName: item && item.target.value });
-    onRunQuery();
+    updateAndRunQuery({ ...query, metrics: metrics?.concat({ metricId: metric }) || [{ metricId: metric }] });
   };
 
-  onDimensionsChange = (dimensions: Dimension[]) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, dimensions: dimensions });
-    onRunQuery();
+  const onDisplayNameChange = (item: ChangeEvent<HTMLInputElement>) => {
+    updateAndRunQuery({ ...query, displayName: item && item.target.value });
   };
 
-  onQueryOptionsChange = (key: string, value?: OptionValue) => {
-    const { onChange, query, onRunQuery } = this.props;
+  const onDimensionsChange = (dimensions: Dimension[]) => {
+    updateAndRunQuery({ ...query, dimensions: dimensions });
+  };
+
+  const onQueryOptionsChange = (key: string, value?: OptionValue) => {
     const { queryOptions } = query;
-    onChange({ ...query, queryOptions: { ...queryOptions, [key]: value || {} } });
-    onRunQuery();
+    updateAndRunQuery({ ...query, queryOptions: { ...queryOptions, [key]: value || {} } });
   };
 
-  loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
-    const { datasource } = this.props;
-    const { dimensions } = this.props.query;
+  const loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
+    const { dimensions } = query;
     return lastValueFrom(datasource.listMetrics(dimensions || [], value));
   };
 
   // fields which can be used in display name expression
-  displayNameFields = (dimensions?: Dimension[]) =>
+  const displayNameFields = (dimensions?: Dimension[]) =>
     dimensions
       ?.map((x) => x.key)
       .concat(['metric', 'aggregate'])
       .map((x) => '{{' + x + '}}')
       .join();
 
-  render() {
-    const query = convertQuery(defaults(this.props.query, defaultQuery));
-    const currentQueryType = queryTypeInfos.find((v) => v.value === query.queryType);
-    const key = this.props.query.dimensions?.map((x) => x.key + x.value).join();
+  const currentQueryType = queryTypeInfos.find((v) => v.value === query.queryType);
+  const key = query.dimensions?.map((x) => x.key + x.value).join();
 
-    const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
-    // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
-    return (
-      <>
-        <InlineField labelWidth={24} label="Query Type">
-          <Select options={queryTypeInfos} value={currentQueryType} onChange={this.onQueryTypeChange} width={32} />
-        </InlineField>
-        <DimensionSettings
-          initState={query.dimensions || []}
-          datasource={this.props.datasource}
-          onChange={this.onDimensionsChange}
+  const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
+  // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
+  return (
+    <>
+      <InlineField labelWidth={24} label="Query Type">
+        <Select options={queryTypeInfos} value={currentQueryType} onChange={onQueryTypeChange} width={32} />
+      </InlineField>
+      <DimensionSettings
+        initState={query.dimensions || []}
+        datasource={datasource}
+        onChange={onDimensionsChange}
+      />
+      <InlineField labelWidth={24} label="Metric">
+        <AsyncMultiSelect
+          width={32}
+          key={key}
+          defaultOptions={true}
+          value={selectedMetrics}
+          loadOptions={loadMetrics}
+          onChange={(evt) => onMetricChange(evt)}
+          onCreateOption={(x) => onAddMetric(x)}
+          allowCustomValue={true}
+          isSearchable={true}
         />
-        <InlineField labelWidth={24} label="Metric">
-          <AsyncMultiSelect
-            width={32}
-            key={key}
-            defaultOptions={true}
-            value={selectedMetrics}
-            loadOptions={this.loadMetrics}
-            onChange={(evt) => this.onMetricChange(evt)}
-            onCreateOption={(x) => this.onAddMetric(x)}
-            allowCustomValue={true}
-            isSearchable={true}
-          />
-        </InlineField>
-        <InlineField
-          labelWidth={24}
-          label="Display Name"
-          tooltip={`use ${this.displayNameFields(query.dimensions)} for dynamic expressions`}
-        >
-          <Input value={query.displayName} type="text" width={32} onChange={this.onDisplayNameChange} />
-        </InlineField>
-            <QueryOptionsEditor
-              onChange={this.onQueryOptionsChange}
-              datasource={this.props.datasource}
-              queryType={query.queryType}
-              queryOptions={query.queryOptions || {}}
-            />
-        </>
-    );
-  }
-}
+      </InlineField>
+      <InlineField
+        labelWidth={24}
+        label="Display Name"
+        tooltip={`use ${displayNameFields(query.dimensions)} for dynamic expressions`}
+      >
+        <Input value={query.displayName} type="text" width={32} onChange={onDisplayNameChange} />
+      </InlineField>
+      <QueryOptionsEditor
+        onChange={onQueryOptionsChange}
+        datasource={datasource}
+        queryType={query.queryType}
+        queryOptions={query.queryOptions || {}}
+      />
+    </>
+  );
+};
+
+export default QueryEditor;
