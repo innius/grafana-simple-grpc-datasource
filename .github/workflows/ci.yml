@@ -15,32 +15,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - name: Setup Node.js environment
         uses: actions/setup-node@v3
         with:
           node-version: '16'
-          cache: 'yarn'
+          cache: 'npm'
+
       - name: Install dependencies
-        run: yarn install --immutable --prefer-offline
+        run: npm ci
 
       - name: Check types
-        run: yarn typecheck
+        run: npm run typecheck
       - name: Lint
-        run: yarn lint
+        run: npm run lint
       - name: Unit tests
-        run: yarn test:ci
+        run: npm run test:ci
       - name: Build frontend
-        run: yarn build
-
-      - name: Start grafana docker
-        run: yarn server -d
-
-      - name: Run e2e tests
-        run: yarn e2e
-
-      - name: Stop grafana docker
-        run: docker-compose down
+        run: npm run build
 
       - name: Check for backend
         id: check-for-backend
@@ -54,7 +45,7 @@ jobs:
         if: steps.check-for-backend.outputs.has-backend == 'true'
         uses: actions/setup-go@v3
         with:
-          go-version: '1.19'
+          go-version: '1.20'
 
       - name: Test backend
         if: steps.check-for-backend.outputs.has-backend == 'true'
@@ -69,3 +60,31 @@ jobs:
         with:
           version: latest
           args: buildAll
+
+      - name: Check for E2E
+        id: check-for-e2e
+        run: |
+          if [ -d "cypress" ]
+          then
+            echo "has-e2e=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Start grafana docker
+        if: steps.check-for-e2e.outputs.has-e2e == 'true'
+        run: docker-compose up -d
+
+      - name: Run e2e tests
+        if: steps.check-for-e2e.outputs.has-e2e == 'true'
+        run: npm run e2e
+
+      - name: Stop grafana docker
+        if: steps.check-for-e2e.outputs.has-e2e == 'true'
+        run: docker-compose down
+
+      - name: Archive E2E output
+        uses: actions/upload-artifact@v3
+        if: steps.check-for-e2e.outputs.has-e2e == 'true' && steps.run-e2e-tests.outcome != 'success'
+        with:
+          name: cypress-videos
+          path: cypress/videos
+          retention-days: 5

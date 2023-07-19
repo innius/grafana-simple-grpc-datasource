@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
-          cache: 'yarn'
+          cache: 'npm'
 
       - name: Setup Go environment
         uses: actions/setup-go@v3
@@ -25,10 +25,10 @@ jobs:
           go-version: '1.19'
 
       - name: Install dependencies
-        run: yarn install --immutable --prefer-offline
+        run: npm ci
 
       - name: Build and test frontend
-        run: yarn build
+        run: npm run build
 
       - name: Check for backend
         id: check-for-backend
@@ -59,7 +59,7 @@ jobs:
         if: ${{ env.GRAFANA_API_KEY == '' }}
 
       - name: Sign plugin
-        run: yarn sign
+        run: npm run sign
         if: ${{ env.GRAFANA_API_KEY != '' }}
 
       - name: Get plugin metadata
