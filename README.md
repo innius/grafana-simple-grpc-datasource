@@ -84,7 +84,7 @@ This API has some limitations:
 - it does not support enhanced metadata for metrics (like unit, etc.)
 - it does not support flexible query options 
 
-### The Advanced API ([GrafanaQueryAPIV3][2])
+### The Advanced API ([GrafanaQueryAPIV3][3])
 
 This API provides almost the same operations as the Simple API but with one major difference: it supports multiple metrics 
 for the same query. As a result this API integrates seamlessly with grafana templating capabilities. 
@@ -108,13 +108,59 @@ A sample implementation can be found [here](https://bitbucket.org/innius/sample-
 
 #### Example Use Cases: 
 - different time series for the same metric with different labels. For example: the temperature measure is a room. The room has four zones: north, south, east and west. The V1 API does not support this unless there are four different metrics defined for each temperature / zone combination. 
-The V2 API does support this scenario by returning multiple time series for the same metric `temperature`, each annotated with different label `zone`. 
+The Advanced API does support this scenario by returning multiple time series for the same metric `temperature`, each annotated with different label `zone`. 
 - different time series for different metrics. For example: a room has multiple temperature sensors. The V1 API supports this by defining multiple queries for each metric. 
-The V2 API can do this with a single query. 
+The Advanced API can do this with a single query. 
 
-Important Note: in order to use the V2 API the backend server needs to support [gRPC Reflection][3]. The plugin uses this to determine if a backend supports the V2 protocol. If V2 is not supported it falls back on the Simple API implementation. 
+Important Note: in order to use the Advanced API the backend server needs to support [gRPC Reflection][3]. The plugin uses this to determine if a backend supports the V2 or V3 protocol. If not supported it falls back on the Simple API implementation. 
 
 Please note gRPC is programming language agnostic which makes it possible to implement a backend in the language of your choice. Checkout the gRPC [documentation](https://grpc.io/docs/languages/) of your language.
+
+#### Changes between ([GrafanaQueryAPIV2][2]) and ([GravanaQueryAPIV3][3]) 
+The most important difference is that the Aggregate types of the V2 API are not available by the V3 API unless they are defined in the backend. 
+
+The backend code has to implement something like this: 
+
+```
+const (
+    // this id is important because it matches the current v2 aggregate type option 
+	AggregationTypeOptionID = iota
+    // these enum values are important because they match the values of the V2 options 
+	AggregationTypeAverage = 0
+	AggregationTypeMax     = 1
+	AggregationTypeMin     = 2
+	AggregationTypeCount   = 3
+)
+
+
+func (backend *BackendServerV3) GetQueryOptions(ctx context.Context, in *v3.GetOptionsRequest) (*v3.GetOptionsResponse, error) {
+	var Options []*v3.Option
+	switch in.GetQueryType() {
+	case v3.GetOptionsRequest_GetMetricAggregate:
+		Options = append(Options, []*v3.Option{
+			{
+				Id:          strconv.Itoa(AggregationTypeOptionID),
+				Label:       "Aggregate",
+				Description: "Aggregate the query results",
+				Type:        v3.Option_Enum,
+				EnumValues: []*v3.EnumValue{
+					{Label: "Average", Description: "Calculate the average of the values", Id: strconv.Itoa(AggregationTypeAverage)},
+					{Label: "Min", Description: "Calculate the minimum of the values", Id: strconv.Itoa(AggregationTypeMin)},
+					{Label: "Max", Description: "Calculate the maximum of the values", Id: strconv.Itoa(AggregationTypeMax)},
+					{Label: "Count", Description: "Calculate the sum of the values", Id: strconv.Itoa(AggregationTypeCount)},
+				},
+			},
+		}...)
+	case v3.GetOptionsRequest_GetMetricValue:
+        return &v3.GetOptionsResponse{}, nil
+	case v3.GetOptionsRequest_GetMetricHistory:
+        return &v3.GetOptionsResponse{}, nil
+	}
+	return &v3.GetOptionsResponse{Options: Options}, nil
+}
+```
+
+A sample implementation of the V3 backend can be found [here](https://bitbucket.org/innius/sample-grpc-server/src/4dc9fd798eee92eb67c44085532e89518551a74d/server/v3/server.go#lines-44)
 
 ## Features 
 * select multiple metrics in one query 
@@ -131,5 +177,6 @@ Please note gRPC is programming language agnostic which makes it possible to imp
 - support streaming queries 
 
 [1]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v1/api.proto
-[2]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v3/apiv3.proto
-[3]: https://github.com/grpc/grpc/blob/master/doc/server-reflection.md
+[2]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v2/apiv2.proto
+[3]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v3/apiv3.proto
+[4]: https://github.com/grpc/grpc/blob/master/doc/server-reflection.md
