@@ -1,4 +1,6 @@
 # Changelog
+## 1.1.1. 
+* docs: explain differences between API versions 
 
 ## 1.1.0 
 * feature: add new v3 API which allows backend to define query options 
