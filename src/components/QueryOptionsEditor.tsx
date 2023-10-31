@@ -1,44 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { DataSource } from '../datasource';
+import React from 'react';
 
 import { Checkbox, Select, InlineField } from '@grafana/ui';
 import { SelectableValue } from '@grafana/data';
 
-import { QueryOption, QueryOptions, QueryType, OptionValue } from '../types';
+import { QueryOptionDefinition, QueryOptionDefinitions, QueryOptions, QueryOptionValue, OptionType } from '../types';
 
 interface Props {
-  queryOptions: { [key: string]: OptionValue | undefined };
-  queryType: QueryType;
-  onChange: (key: string, value?: OptionValue) => void;
-  datasource: DataSource;
+  // the configured options of a query
+  options: QueryOptions;
+  // the definition of the options
+  optionDefinitions: QueryOptionDefinitions;
+  onChange: (key: string, value?: QueryOptionValue) => void;
 }
 
 const QueryOptionsEditor = (props: Props) => {
-  const { queryType, datasource } = props;
-  const [resourceData, setResourceData] = useState<QueryOptions>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const opts = await datasource.getQueryOptions(queryType);
-        setResourceData(opts);
-      } catch (error) {
-        console.error('Error fetching resource data', error);
-      }
-    };
-    fetchData();
-  }, [datasource, queryType]);
-
+  const { optionDefinitions } = props;
   return (
     <>
-      {resourceData.map((opt) => {
-        const currentValue = props.queryOptions[opt.id] || {};
+      {optionDefinitions.map((opt) => {
+        const currentValue = props.options[opt.id] || {};
         return (
           <>
             <InlineField labelWidth={24} label={opt.label} tooltip={opt.description} required={opt.required}>
-              {opt.type === 'Enum' ? (
+              {opt.type === OptionType.Enum ? (
                 <EnumOptionField currentValue={currentValue} option={opt} onChange={(v) => props.onChange(opt.id, v)} />
-              ) : opt.type === 'Boolean' ? (
+              ) : opt.type === OptionType.Boolean ? (
                 <Checkbox
                   value={currentValue.value === 'true'}
                   onChange={(v) => {
@@ -58,19 +44,18 @@ const QueryOptionsEditor = (props: Props) => {
 };
 
 interface EnumOptionProps {
-  option: QueryOption;
-  currentValue?: OptionValue;
-  onChange: (opt?: OptionValue) => void;
+  option: QueryOptionDefinition;
+  currentValue?: QueryOptionValue;
+  onChange: (opt?: QueryOptionValue) => void;
 }
 
 const EnumOptionField = (props: EnumOptionProps) => {
   const { option, currentValue, onChange } = props;
-  let options: Array<SelectableValue<string>> = [];
+  let enumOptions: Array<SelectableValue<string>> = [];
   if (option.enumValues) {
-    options = option.enumValues.map((value) => ({
-      label: value.label,
-      description: value.description,
+    enumOptions = option.enumValues.map((value) => ({
       value: value.id,
+      ...value,
     }));
   }
   const onCreateOption = (value: string) => {
@@ -81,17 +66,17 @@ const EnumOptionField = (props: EnumOptionProps) => {
     onChange({ value: value, label: value });
   };
 
-  const value = options.find((x) => x.value === currentValue?.value) || currentValue || null;
+  const value = enumOptions.find((x) => x.value === currentValue?.value) || {};
   return (
     <>
       <Select
         value={value}
-        options={options}
+        options={enumOptions}
         onChange={(x) => onChange({ value: x.value, label: x.label })}
-        menuPlacement="bottom"
         onCreateOption={onCreateOption}
         isSearchable={true}
         allowCustomValue={true}
+        invalid={option.required && !currentValue?.value}
         width={32}
       />
     </>

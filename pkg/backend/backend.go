@@ -6,19 +6,10 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/connector"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"google.golang.org/grpc"
 )
-
-type GetQueryOptionsRequest struct {
-	QueryType string
-}
-
-type GetQueryOptionsResponse struct {
-	Options models.Options
-}
 
 type Backend interface {
 	HandleGetMetricValueQuery(ctx context.Context, query *models.MetricValueQuery) (data.Frames, error)
@@ -27,7 +18,7 @@ type Backend interface {
 	HandleListDimensionsQuery(ctx context.Context, query *models.DimensionKeysQuery) (data.Frames, error)
 	HandleListDimensionValuesQuery(ctx context.Context, query *models.DimensionValueQuery) (data.Frames, error)
 	HandleListMetricsQuery(ctx context.Context, query *models.MetricsQuery) (data.Frames, error)
-	GetQueryOptions(ctx context.Context, input GetQueryOptionsRequest) (*GetQueryOptionsResponse, error)
+	GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error)
 	Dispose()
 }
 
@@ -105,21 +96,12 @@ func (ds *backendImpl) HandleListMetricsQuery(ctx context.Context, query *models
 	return res.Frames()
 }
 
-func (backendimpl *backendImpl) GetQueryOptions(ctx context.Context, input GetQueryOptionsRequest) (*GetQueryOptionsResponse, error) {
-	var qt v3.GetOptionsRequest_QueryType
-	switch input.QueryType {
-	case models.QueryMetricValue:
-		qt = v3.GetOptionsRequest_GetMetricValue
-	case models.QueryMetricHistory:
-		qt = v3.GetOptionsRequest_GetMetricHistory
-	default:
-		qt = v3.GetOptionsRequest_GetMetricAggregate
-	}
-	res, err := connector.GetQueryOptions(ctx, backendimpl.client, qt)
+func (backendimpl *backendImpl) GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
+	res, err := connector.GetQueryOptions(ctx, backendimpl.client, input)
 	if err != nil {
 		return nil, err
 	}
-	return &GetQueryOptionsResponse{Options: res}, nil
+	return &models.GetQueryOptionsResponse{Options: res}, nil
 }
 
 func (ds *backendImpl) Dispose() {

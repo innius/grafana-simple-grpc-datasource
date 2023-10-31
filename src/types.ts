@@ -1,4 +1,4 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataQuery, DataSourceJsonData } from '@grafana/schema';
 
 export enum QueryType {
   ListDimensionKeys = 'ListDimensionKeys',
@@ -21,10 +21,15 @@ export interface Metric {
   metricId?: string;
 }
 
-export interface OptionValue {
+// OptionValue is the selected value for a backend define query option  
+export interface QueryOptionValue {
   value?: string
-  label?: string 
+  label?: string
 }
+
+// OptionValues are the query options which originate from the backend 
+// and are sent along with the query request
+export type QueryOptions = { [key: string]: QueryOptionValue }
 
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
@@ -42,7 +47,7 @@ export interface MyQuery extends DataQuery {
    */
   metricId?: string;
 
-  queryOptions?: { [key: string]: OptionValue };
+  queryOptions?: QueryOptions;
 }
 
 export interface NextQuery extends MyQuery {
@@ -61,18 +66,24 @@ export interface EnumValue {
   label: string;
   description: string;
   id: string;
+  default: boolean;
 }
 
-export interface QueryOption {
+export enum OptionType {
+  Enum = "Enum",
+  Boolean = "Boolean"
+}
+
+export interface QueryOptionDefinition {
   label: string;
   id: string;
   description: string;
-  type: string;
+  type: OptionType;
   enumValues: EnumValue[];
   required: boolean;
 }
 
-export type QueryOptions = QueryOption[];
+export type QueryOptionDefinitions = QueryOptionDefinition[];
 
 export interface Dimension {
   id: string;
@@ -84,7 +95,8 @@ export type Dimensions = Dimension[];
 
 export const defaultQuery: Partial<MyQuery> = {
   dimensions: [],
-  queryType: QueryType.GetMetricAggregate,
+  queryType: QueryType.GetMetricHistory,
+  queryOptions: {},
 };
 
 export const defaultDataSourceOptions: Partial<MyDataSourceOptions> = {
@@ -145,7 +157,7 @@ export enum VariableQueryType {
   dimensionValue = 'dimension Value',
 }
 
-export interface VariableQuery extends DataQuery{
+export interface VariableQuery extends DataQuery {
   queryType: VariableQueryType;
   dimensionKey?: string;
   dimensions: Dimension[];

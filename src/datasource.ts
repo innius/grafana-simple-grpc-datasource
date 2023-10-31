@@ -23,7 +23,8 @@ import {
   NextQuery,
   QueryType,
   QueryOptions,
-  OptionValue,
+  QueryOptionDefinitions,
+  QueryOptionValue,
   VariableQuery,
   VariableQueryType,
 } from './types';
@@ -74,7 +75,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       /**
        * Process the results
        */
-      process: (t: MultiRequestTracker, data: DataFrame[], isLast: boolean) => {
+      process: (t: MultiRequestTracker, data: DataFrame[], _: boolean) => {
         if (t.data) {
           // append rows to fields with the same structure
           t.data = appendMatchingFrames(t.data, data);
@@ -87,7 +88,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       /**
        * Callback that gets executed when unsubscribed
        */
-      onCancel: (tracker: MultiRequestTracker) => {},
+      onCancel: (_: MultiRequestTracker) => { },
     });
   }
 
@@ -125,7 +126,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   /**
    * Supports lists of metrics
    */
-  async metricFindQuery(query: VariableQuery, options?: any): Promise<MetricFindValue[]> {
+  async metricFindQuery(query: VariableQuery, _?: any): Promise<MetricFindValue[]> {
     const q = query;
 
     if (q.queryType === VariableQueryType.dimensionValue) {
@@ -197,7 +198,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
           const dimensions = new DataFrameView<SelectableValue<string>>(res.data[0]);
           return dimensions.toArray();
         }
-        throw `no dimensions found ${res.error}`;
+        throw `no dimensions found ${res.errors}`;
       })
     );
     return lastValueFrom(dimKeys);
@@ -247,20 +248,24 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     );
   }
 
-  async getQueryOptions(qt: QueryType): Promise<QueryOptions> {
-    return this.getResource<QueryOptions>('/options', { query_type: qt });
+  async getQueryOptionDefinitions(qt: QueryType, opts: QueryOptions): Promise<QueryOptionDefinitions> {
+    let selected: { [key: string]: string | undefined } = {}
+    Object.keys(opts).forEach((k) => {
+      selected[k] = opts[k].value
+    })
+    return this.postResource<QueryOptionDefinitions>('/options', { selected_options: selected }, { params: { query_type: qt } });
   }
 }
 
 function cloneQueryOptionsWithModifiedValues(
-  queryOptions: { [key: string]: OptionValue },
+  queryOptionValues: { [key: string]: QueryOptionValue },
   replace: (x: string) => string
 ) {
-  const clonedOptions = queryOptions || {};
+  const clonedOptions = queryOptionValues || {};
 
-  for (const key in queryOptions) {
-    if (queryOptions.hasOwnProperty(key)) {
-      const {label, value} = queryOptions[key];
+  for (const key in queryOptionValues) {
+    if (queryOptionValues.hasOwnProperty(key)) {
+      const { label, value } = queryOptionValues[key];
       clonedOptions[key] = { label: replace(label!), value: replace(value!) };
     }
   }
