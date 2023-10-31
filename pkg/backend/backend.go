@@ -18,7 +18,7 @@ type Backend interface {
 	HandleListDimensionsQuery(ctx context.Context, query *models.DimensionKeysQuery) (data.Frames, error)
 	HandleListDimensionValuesQuery(ctx context.Context, query *models.DimensionValueQuery) (data.Frames, error)
 	HandleListMetricsQuery(ctx context.Context, query *models.MetricsQuery) (data.Frames, error)
-	GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error)
+	GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionDefinitionsRequest) (*models.GetQueryOptionDefinitionsResponse, error)
 	Dispose()
 }
 
@@ -96,12 +96,12 @@ func (ds *backendImpl) HandleListMetricsQuery(ctx context.Context, query *models
 	return res.Frames()
 }
 
-func (backendimpl *backendImpl) GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
-	res, err := connector.GetQueryOptions(ctx, backendimpl.client, input)
+func (backendimpl *backendImpl) GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionDefinitionsRequest) (*models.GetQueryOptionDefinitionsResponse, error) {
+	res, err := connector.GetQueryOptionDefinitions(ctx, backendimpl.client, input)
 	if err != nil {
 		return nil, err
 	}
-	return &models.GetQueryOptionsResponse{Options: res}, nil
+	return &models.GetQueryOptionDefinitionsResponse{Options: res}, nil
 }
 
 func (ds *backendImpl) Dispose() {

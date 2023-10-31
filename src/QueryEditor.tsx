@@ -5,7 +5,7 @@ import { Select, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 
 import { DataSource } from './datasource';
-import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, QueryOptionValue, QueryOptionDefinitions, OptionType } from './types';
+import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, QueryOptionValue, QueryOptionDefinitions, OptionType, QueryOptions } from './types';
 import { queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './components/DimensionSettings';
 import QueryOptionsEditor from './components/QueryOptionsEditor';
@@ -13,10 +13,6 @@ import { convertQuery } from './convert';
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
-// while loading the page: 
-// 1. convert (a possible) legacy query to MyQuery type
-// 2. async load the options for the current query type 
-// 3. set the default values for the query based on the backend query options 
 const QueryEditor = (props: Props) => {
   const [query, setQuery] = useState(convertQuery(defaults(props.query, defaultQuery)));
   const { datasource } = props;
@@ -25,37 +21,36 @@ const QueryEditor = (props: Props) => {
   const [queryOptionDefinitions, setQueryOptionDefinitions] = useState<QueryOptionDefinitions>([])
   const [queryOptions, setQueryOptions] = useState(query.queryOptions)
 
-  type queryOptionsType = { [key: string]: QueryOptionValue }
+  const applyDefaultValues = (q: MyQuery, opts: QueryOptionDefinitions): QueryOptions => {
+    const enums = opts.filter(opt => opt.type === OptionType.Enum);
+    let defaultOptions = q.queryOptions || {}
 
+    for (const opt of enums) {
+      if (!defaultOptions[opt.id]) {
+        const defaultValue = opt.enumValues.find(v => v.default);
+
+        if (defaultValue) {
+          defaultOptions[opt.id] = { value: defaultValue.id, label: defaultValue.label };
+        }
+      }
+    }
+    return defaultOptions
+  }
+
+  // set the default query option values for the current backend query options
   // load the query options from the backend for the current query type
   useEffect(() => {
     const fetchData = async () => {
       try {
         const opts = await datasource.getQueryOptionDefinitions(queryType, queryOptions!);
         setQueryOptionDefinitions(opts);
+        setQuery(x => ({ ...x, queryOptions: applyDefaultValues(x, opts) }))
       } catch (error) {
         console.error('Error fetching resource data', error);
       }
     };
     fetchData();
   }, [datasource, queryType, queryOptions]);
-
-  // set the default query option values for the current backend query options
-  useEffect(() => {
-    const applyDefaultValues = (q: MyQuery, opts: QueryOptionDefinitions): queryOptionsType => {
-      const enums = opts.filter(opt => opt.type === OptionType.Enum);
-
-      let defaultOptions = q.queryOptions || {}
-      enums.forEach(opt => {
-        const defaultValue = opt.enumValues.find(v => v.default)
-        if (!defaultOptions[opt.id] && defaultValue) {
-          defaultOptions[opt.id] = { value: defaultValue.id, label: defaultValue.label }
-        }
-      })
-      return defaultOptions
-    }
-    setQuery(x => ({ ...x, queryOptions: applyDefaultValues(x, queryOptionDefinitions) }))
-  }, [queryOptionDefinitions])
 
   const updateAndRunQuery = (q: MyQuery) => {
     const { onChange, onRunQuery } = props;
@@ -91,8 +86,11 @@ const QueryEditor = (props: Props) => {
   };
 
   const onQueryOptionsChange = (key: string, value?: QueryOptionValue) => {
-    setQueryOptions({ ...queryOptions, [key]: value || {} });
-    updateAndRunQuery({ ...query, queryOptions: { ...queryOptions, [key]: value || {} } });
+    const updatedQueryOptions = { ...queryOptions, [key]: value || {} };
+
+    setQueryOptions(updatedQueryOptions);
+
+    updateAndRunQuery({ ...query, queryOptions: updatedQueryOptions });
   };
 
   const loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
