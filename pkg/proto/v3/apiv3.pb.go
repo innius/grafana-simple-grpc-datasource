@@ -611,8 +611,9 @@ type GetOptionsRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	// the query type for which options are requested
-	QueryType       GetOptionsRequest_QueryType `protobuf:"varint,1,opt,name=queryType,proto3,enum=grafanav3.GetOptionsRequest_QueryType" json:"queryType,omitempty"`
-	SelectedOptions map[string]string           `protobuf:"bytes,2,rep,name=selectedOptions,proto3" json:"selectedOptions,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	QueryType GetOptionsRequest_QueryType `protobuf:"varint,1,opt,name=queryType,proto3,enum=grafanav3.GetOptionsRequest_QueryType" json:"queryType,omitempty"`
+	// the query options which are currently selected
+	SelectedOptions map[string]string `protobuf:"bytes,2,rep,name=selectedOptions,proto3" json:"selectedOptions,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *GetOptionsRequest) Reset() {
