@@ -57,6 +57,9 @@ message GetMetricValueRequest {
   repeated string metrics = 2;
 
   map<string,string> options = 3 ;
+
+  google.protobuf.Timestamp startDate = 4;
+  google.protobuf.Timestamp endDate = 5;
 }
 
 message GetMetricValueResponse {
@@ -110,8 +113,6 @@ message Option {
   bool required = 5; 
   // the label of the option 
   string label = 6;
-  // is the option visible or not
-  bool visible = 7;
 }
 
 message GetOptionsResponse {
