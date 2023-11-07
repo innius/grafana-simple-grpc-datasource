@@ -5,14 +5,23 @@ import (
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"github.com/samber/lo"
 )
 
-func GetQueryOptions(ctx context.Context, client client.BackendAPIClient, qt pb.GetOptionsRequest_QueryType) (models.Options, error) {
-	resp, err := client.GetQueryOptions(ctx, &pb.GetOptionsRequest{
-		QueryType: qt,
+func GetQueryOptionDefinitions(ctx context.Context, client client.BackendAPIClient, input models.GetQueryOptionDefinitionsRequest) (models.Options, error) {
+	var qt v3.GetOptionsRequest_QueryType
+	switch input.QueryType {
+	case models.QueryMetricValue:
+		qt = v3.GetOptionsRequest_GetMetricValue
+	case models.QueryMetricHistory:
+		qt = v3.GetOptionsRequest_GetMetricHistory
+	default:
+		qt = v3.GetOptionsRequest_GetMetricAggregate
+	}
+	resp, err := client.GetQueryOptions(ctx, &v3.GetOptionsRequest{
+		QueryType:       qt,
+		SelectedOptions: input.SelectedOptions,
 	})
 
 	if err != nil {
@@ -30,6 +39,7 @@ func GetQueryOptions(ctx context.Context, client client.BackendAPIClient, qt pb.
 					Label:       v.Label,
 					ID:          v.Id,
 					Description: v.Description,
+					Default:     v.Default,
 				}
 			}),
 			Required: o.Required,

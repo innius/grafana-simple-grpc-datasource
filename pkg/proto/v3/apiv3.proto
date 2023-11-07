@@ -81,6 +81,9 @@ message GetOptionsRequest {
   }
   // the query type for which options are requested
   QueryType queryType = 1;
+
+  // the query options which are currently selected 
+  map<string,string> selectedOptions = 2 ;
 }
 
 message EnumValue {
@@ -90,6 +93,8 @@ message EnumValue {
   string description = 2;
   // the label of the option 
   string label = 3;
+  // the default enum value
+  bool default = 4;
 }
 
 message Option {
@@ -105,6 +110,8 @@ message Option {
   bool required = 5; 
   // the label of the option 
   string label = 6;
+  // is the option visible or not
+  bool visible = 7;
 }
 
 message GetOptionsResponse {

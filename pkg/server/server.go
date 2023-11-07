@@ -92,7 +92,16 @@ func (s *Server) CallResource(ctx context.Context, req *backend.CallResourceRequ
 	if err != nil {
 		return err
 	}
-	res, err := s.backendAPI.GetQueryOptions(ctx, backendapi.GetQueryOptionsRequest{QueryType: pu.Query().Get("query_type")})
+	var body = struct {
+		SelectedOptions map[string]string `json:"selected_options"`
+	}{}
+	if err := json.Unmarshal(req.Body, &body); err != nil {
+		return err
+	}
+	res, err := s.backendAPI.GetQueryOptionDefinitions(ctx, models.GetQueryOptionDefinitionsRequest{
+		SelectedOptions: body.SelectedOptions,
+		QueryType:       pu.Query().Get("query_type"),
+	})
 	if err != nil {
 		return err
 	}

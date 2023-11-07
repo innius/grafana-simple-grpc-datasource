@@ -1,12 +1,12 @@
 import defaults from 'lodash/defaults';
 import { lastValueFrom } from 'rxjs';
-import React, { ChangeEvent, useState, useEffect } from 'react';
+import React, { ChangeEvent, useState, useEffect, } from 'react';
 import { Select, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 
 import { DataSource } from './datasource';
-import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, OptionValue } from './types';
-import { changeQueryType, QueryTypeInfo, queryTypeInfos } from 'queryInfo';
+import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, QueryOptionValue, QueryOptionDefinitions, OptionType, QueryOptions } from './types';
+import { queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './components/DimensionSettings';
 import QueryOptionsEditor from './components/QueryOptionsEditor';
 import { convertQuery } from './convert';
@@ -14,12 +14,43 @@ import { convertQuery } from './convert';
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 const QueryEditor = (props: Props) => {
-  const [query, setQuery] = useState(props.query);
-  const {datasource} = props;
+  const [query, setQuery] = useState(convertQuery(defaults(props.query, defaultQuery)));
+  const { datasource } = props;
 
+  const [queryType, setQueryType] = useState(query.queryType)
+  const [queryOptionDefinitions, setQueryOptionDefinitions] = useState<QueryOptionDefinitions>([])
+  const [queryOptions, setQueryOptions] = useState(query.queryOptions)
+
+  const applyDefaultValues = (q: MyQuery, opts: QueryOptionDefinitions): QueryOptions => {
+    const enums = opts.filter(opt => opt.type === OptionType.Enum);
+    let defaultOptions = q.queryOptions || {}
+
+    for (const opt of enums) {
+      if (!defaultOptions[opt.id]) {
+        const defaultValue = opt.enumValues.find(v => v.default);
+
+        if (defaultValue) {
+          defaultOptions[opt.id] = { value: defaultValue.id, label: defaultValue.label };
+        }
+      }
+    }
+    return defaultOptions
+  }
+
+  // set the default query option values for the current backend query options
+  // load the query options from the backend for the current query type
   useEffect(() => {
-    setQuery(convertQuery(defaults(props.query, defaultQuery)));
-  }, [props.query]);
+    const fetchData = async () => {
+      try {
+        const opts = await datasource.getQueryOptionDefinitions(queryType, queryOptions!);
+        setQueryOptionDefinitions(opts);
+        setQuery(x => ({ ...x, queryOptions: applyDefaultValues(x, opts) }))
+      } catch (error) {
+        console.error('Error fetching resource data', error);
+      }
+    };
+    fetchData();
+  }, [datasource, queryType, queryOptions]);
 
   const updateAndRunQuery = (q: MyQuery) => {
     const { onChange, onRunQuery } = props;
@@ -28,8 +59,9 @@ const QueryEditor = (props: Props) => {
     onRunQuery();
   };
 
-  const onQueryTypeChange = (sel: SelectableValue<QueryType>) => {
-    updateAndRunQuery({ ...changeQueryType(query, sel as QueryTypeInfo), queryOptions: undefined });
+  const onQueryTypeChange = async (queryType: QueryType) => {
+    setQueryType(queryType);
+    updateAndRunQuery({ ...query, queryType: queryType });
   };
 
   const onMetricChange = (evt: Array<SelectableValue<string>>) => {
@@ -53,9 +85,12 @@ const QueryEditor = (props: Props) => {
     updateAndRunQuery({ ...query, dimensions: dimensions });
   };
 
-  const onQueryOptionsChange = (key: string, value?: OptionValue) => {
-    const { queryOptions } = query;
-    updateAndRunQuery({ ...query, queryOptions: { ...queryOptions, [key]: value || {} } });
+  const onQueryOptionsChange = (key: string, value?: QueryOptionValue) => {
+    const updatedQueryOptions = { ...queryOptions, [key]: value || {} };
+
+    setQueryOptions(updatedQueryOptions);
+
+    updateAndRunQuery({ ...query, queryOptions: updatedQueryOptions });
   };
 
   const loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
@@ -68,7 +103,7 @@ const QueryEditor = (props: Props) => {
     dimensions
       ?.map((x) => x.key)
       .concat(['metric', 'aggregate'])
-      .map((x) => '{{' + x + '}}')
+      .map((x) => '{{ ' + x + '}}')
       .join();
 
   const currentQueryType = queryTypeInfos.find((v) => v.value === query.queryType);
@@ -79,7 +114,7 @@ const QueryEditor = (props: Props) => {
   return (
     <>
       <InlineField labelWidth={24} label="Query Type">
-        <Select options={queryTypeInfos} value={currentQueryType} onChange={onQueryTypeChange} width={32} />
+        <Select options={queryTypeInfos} value={currentQueryType} onChange={x => onQueryTypeChange(x.value || QueryType.GetMetricAggregate)} width={32} />
       </InlineField>
       <DimensionSettings
         initState={query.dimensions || []}
@@ -108,9 +143,8 @@ const QueryEditor = (props: Props) => {
       </InlineField>
       <QueryOptionsEditor
         onChange={onQueryOptionsChange}
-        datasource={datasource}
-        queryType={query.queryType}
-        queryOptions={query.queryOptions || {}}
+        options={query.queryOptions || {}}
+        optionDefinitions={queryOptionDefinitions}
       />
     </>
   );
