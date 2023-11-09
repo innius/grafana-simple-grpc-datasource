@@ -8,6 +8,7 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"github.com/samber/lo"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func valueQueryToInput(query models.MetricValueQuery) *pb.GetMetricValueRequest {
@@ -26,6 +27,8 @@ func valueQueryToInput(query models.MetricValueQuery) *pb.GetMetricValueRequest 
 		Options:    lo.MapValues(query.Options, func(value models.OptionValue, key string) string { return value.Value }),
 		Dimensions: dimensions,
 		Metrics:    metrics,
+		StartDate:  timestamppb.New(query.TimeRange.From),
+		EndDate:    timestamppb.New(query.TimeRange.To),
 	}
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Checkbox, Select, InlineField } from '@grafana/ui';
+import { Switch, Select, InlineField } from '@grafana/ui';
 import { SelectableValue } from '@grafana/data';
 
 import { QueryOptionDefinition, QueryOptionDefinitions, QueryOptions, QueryOptionValue, OptionType } from '../types';
@@ -25,7 +25,7 @@ const QueryOptionsEditor = (props: Props) => {
               {opt.type === OptionType.Enum ? (
                 <EnumOptionField currentValue={currentValue} option={opt} onChange={(v) => props.onChange(opt.id, v)} />
               ) : opt.type === OptionType.Boolean ? (
-                <Checkbox
+                <Switch
                   value={currentValue.value === 'true'}
                   onChange={(v) => {
                     const curr = v.currentTarget.checked.toString();
