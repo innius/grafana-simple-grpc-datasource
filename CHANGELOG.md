@@ -1,5 +1,5 @@
 # Changelog
-## 1.2.0 
+## 1.2.1 
 * feature: provide backend query options with default values 
 * feature: send currently selected query options to the backend while retrieving query options 
 * feature: include grafana time range in GetMetricQuery 
