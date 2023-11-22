@@ -253,7 +253,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     Object.keys(opts).forEach((k) => {
       selected[k] = opts[k].value
     })
-    return this.postResource<QueryOptionDefinitions>('/options', { selected_options: selected }, { params: { query_type: qt } });
+    return this.postResource<QueryOptionDefinitions>('options', { selected_options: selected }, { params: { query_type: qt } });
   }
 }
 
