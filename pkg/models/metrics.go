@@ -1,20 +1,16 @@
 package models
 
-import (
-	"encoding/json"
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
-)
-
-type MetricsQuery struct{
+type GetMetricsRequest struct {
 	Dimensions []Dimension `json:"dimensions"`
-	Filter string `json:"filter"`
+	Filter     string      `json:"filter"`
 }
 
-func UnmarshalToMetricsQuery(dq *backend.DataQuery) (*MetricsQuery, error) {
-	query := &MetricsQuery{}
-	if err := json.Unmarshal(dq.JSON, query); err != nil {
-		return nil, err
-	}
+type MetricDefinition struct {
+	Value       string `json:"value"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+}
 
-	return query, nil
+type GetMetricsResponse struct {
+	Metrics []MetricDefinition `json:"metrics"`
 }

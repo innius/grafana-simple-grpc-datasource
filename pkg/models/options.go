@@ -21,13 +21,13 @@ type Option struct {
 // GetQueryOptionDefinitionsRequest defines the request for the GetQueryOptions endpoint.
 type GetQueryOptionDefinitionsRequest struct {
 	// QueryType is the selected query type
-	QueryType string
+	QueryType string `json:"query_type,omitempty"`
 
 	// SelectedOptions are the options which are currently selected for the query
-	SelectedOptions map[string]string
+	SelectedOptions map[string]string `json:"selected_options,omitempty"`
 }
 
 // GetQueryOptionDefinitionsResponse defines the response for the GetQueryOptions[Definitions] endpoint
 type GetQueryOptionDefinitionsResponse struct {
-	Options Options
+	Options Options `json:"options,omitempty"`
 }

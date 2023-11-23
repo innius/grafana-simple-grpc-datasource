@@ -1,6 +1,6 @@
 package models
 
-type GetDimensionValueRequest struct {
+type GetDimensionValuesRequest struct {
 	DimensionKey       string      `json:"dimensionKey"`
 	Filter             string      `json:"filter"`
 	SelectedDimensions []Dimension `json:"selected_dimensions"`

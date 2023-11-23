@@ -8,7 +8,7 @@ import (
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 )
 
-func ListDimensionValues(ctx context.Context, client client.BackendAPIClient, query models.GetDimensionValueRequest) (*models.GetDimensionValueResponse, error) {
+func ListDimensionValues(ctx context.Context, client client.BackendAPIClient, query models.GetDimensionValuesRequest) (*models.GetDimensionValueResponse, error) {
 	resp, err := client.ListDimensionValues(ctx, &pb.ListDimensionValuesRequest{
 		DimensionKey: query.DimensionKey,
 		Filter:       query.Filter,

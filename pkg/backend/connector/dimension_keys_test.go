@@ -24,11 +24,6 @@ func (clientmock *clientMock) ListDimensionKeys(ctx context.Context, in *v3.List
 	return nil, args.Error(1)
 }
 
-// Returns all metrics from the system
-func (clientmock *clientMock) ListMetrics(ctx context.Context, in *v3.ListMetricsRequest, opts ...grpc.CallOption) (*v3.ListMetricsResponse, error) {
-	panic("not implemented") // TODO: Implement
-}
-
 // Gets the options for the specified query type
 func (clientmock *clientMock) GetQueryOptions(ctx context.Context, in *v3.GetOptionsRequest, opts ...grpc.CallOption) (*v3.GetOptionsResponse, error) {
 	panic("not implemented") // TODO: Implement

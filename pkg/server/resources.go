@@ -101,16 +101,14 @@ func (s *Server) handleListDimensionValues(w http.ResponseWriter, r *http.Reques
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
-	req := models.GetDimensionValueRequest{}
+	req := models.GetDimensionValuesRequest{}
 	// Use the decoder to decode the JSON into the User struct
 	if err := decoder.Decode(&req); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
 	}
 
-	//TODO: validate if request should be sent to backend
 	res, err := s.backendAPI.HandleListDimensionValuesQuery(r.Context(), req)
-
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -131,7 +129,44 @@ func (s *Server) handleListDimensionValues(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) handleListMetrics(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) handleListMetrics(w http.ResponseWriter, r *http.Request) {
+	logger := log.DefaultLogger.With("method", "handleListMetrics")
+
+	if r.Body == nil {
+		http.Error(w, "request does not have a body", http.StatusBadRequest)
+		return
+	}
+	// Create a JSON decoder from the request body
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	req := models.GetMetricsRequest{}
+	// Use the decoder to decode the JSON into the User struct
+	if err := decoder.Decode(&req); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+
+	res, err := s.backendAPI.HandleListMetricsQuery(r.Context(), req)
+	if err != nil {
+		logger.Error("backend returned an error", "error", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	values := []models.MetricDefinition{}
+	if res != nil && res.Metrics != nil {
+		values = res.Metrics
+	}
+
+	logger.Debug("returning values", "values", values)
+
+	w.Header().Add("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(values); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
 
 func (a *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/options", a.handleGetQueryOptions)

@@ -1,19 +1,9 @@
 import { DataQuery, DataSourceJsonData } from '@grafana/schema';
 
 export enum QueryType {
-  ListDimensionValues = 'ListDimensionValues',
-  ListMetrics = 'ListMetrics',
   GetMetricValue = 'GetMetricValue',
   GetMetricHistory = 'GetMetricHistory',
   GetMetricAggregate = 'GetMetricAggregate',
-}
-
-export function isMetricQuery(queryType: QueryType): boolean {
-  return (
-    queryType === QueryType.GetMetricValue ||
-    queryType === QueryType.GetMetricHistory ||
-    queryType === QueryType.GetMetricAggregate
-  );
 }
 
 export interface Metric {
@@ -143,8 +133,7 @@ export interface ListDimensionValuesQuery {
   filter: string;
 }
 
-export interface ListMetricsQuery extends MyQuery {
-  queryType: QueryType.ListMetrics;
+export interface ListMetricsQuery {
   dimensions: Dimensions;
   filter: string;
 }

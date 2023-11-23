@@ -50,7 +50,7 @@ func (stub *backendAPIStub) HandleListDimensionsQuery(ctx context.Context, query
 		},
 	}, nil
 }
-func (stub *backendAPIStub) HandleListDimensionValuesQuery(ctx context.Context, query models.GetDimensionValueRequest) (*models.GetDimensionValueResponse, error) {
+func (stub *backendAPIStub) HandleListDimensionValuesQuery(ctx context.Context, query models.GetDimensionValuesRequest) (*models.GetDimensionValueResponse, error) {
 	if query.Filter != "filter" {
 		return nil, errors.New("invalid filter")
 	}
@@ -64,8 +64,19 @@ func (stub *backendAPIStub) HandleListDimensionValuesQuery(ctx context.Context, 
 		},
 	}, nil
 }
-func (stub *backendAPIStub) HandleListMetricsQuery(ctx context.Context, query *models.MetricsQuery) (data.Frames, error) {
-	panic("not implemented") // TODO: Implement
+func (stub *backendAPIStub) HandleListMetricsQuery(ctx context.Context, query models.GetMetricsRequest) (*models.GetMetricsResponse, error) {
+	if query.Filter != "filter" {
+		return nil, errors.New("invalid filter")
+	}
+	if len(query.Dimensions) == 0 {
+		return nil, nil
+	}
+
+	return &models.GetMetricsResponse{
+		Metrics: []models.MetricDefinition{
+			{Value: "foo", Label: "bar", Description: "bar"},
+		},
+	}, nil
 }
 
 func (stub *backendAPIStub) GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionDefinitionsRequest) (*models.GetQueryOptionDefinitionsResponse, error) {
@@ -199,6 +210,36 @@ func TestCallResource(t *testing.T) {
 			method:    http.MethodPost,
 			path:      "dimensions/values",
 			body:      []byte(`{"filter": "filter", "selected_dimensions": []}`),
+			expBody:   []byte(`[]`),
+			expStatus: http.StatusOK,
+		},
+		{
+			name:      "list metrics",
+			method:    http.MethodPost,
+			path:      "metrics",
+			body:      []byte(`{"filter": "filter", "dimensions": [{ "key": "foo" , "value" : "bar"}]}`),
+			expStatus: http.StatusOK,
+			expBody:   []byte(`[{"value":"foo","label":"bar","description":"bar"}]`),
+		},
+		{
+			name:      "list metrics with invalid payload",
+			method:    http.MethodPost,
+			path:      "metrics",
+			body:      []byte(`{"filter": "filter", "dimensions": "invalid json string"}`),
+			expStatus: http.StatusBadRequest,
+		},
+		{
+			name:      "list metrics with a backend error",
+			method:    http.MethodPost,
+			path:      "metrics",
+			body:      []byte(`{"filter": "with a backend error", "dimensions": [{ "key": "foo" , "value" : "bar"}]}`),
+			expStatus: http.StatusInternalServerError,
+		},
+		{
+			name:      "list metrics no backend metrics found",
+			method:    http.MethodPost,
+			path:      "metrics",
+			body:      []byte(`{"filter": "filter", "dimensions": []}`),
 			expBody:   []byte(`[]`),
 			expStatus: http.StatusOK,
 		},

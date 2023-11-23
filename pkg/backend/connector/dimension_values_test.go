@@ -22,7 +22,7 @@ func (clientmock *clientMock) ListDimensionValues(ctx context.Context, in *v3.Li
 
 func TestListDimensionValues(t *testing.T) {
 	m := &clientMock{}
-	req := models.GetDimensionValueRequest{
+	req := models.GetDimensionValuesRequest{
 		Filter:       "filter",
 		DimensionKey: "foo",
 		SelectedDimensions: []models.Dimension{
