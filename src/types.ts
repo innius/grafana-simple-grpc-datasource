@@ -1,7 +1,6 @@
 import { DataQuery, DataSourceJsonData } from '@grafana/schema';
 
 export enum QueryType {
-  ListDimensionKeys = 'ListDimensionKeys',
   ListDimensionValues = 'ListDimensionValues',
   ListMetrics = 'ListMetrics',
   GetMetricValue = 'GetMetricValue',
@@ -133,8 +132,7 @@ export interface GetMetricAggregateQuery extends MyQuery {
   queryType: QueryType.GetMetricAggregate;
 }
 
-export interface ListDimensionsQuery extends MyQuery {
-  queryType: QueryType.ListDimensionKeys;
+export interface ListDimensionsQuery {
   selected_dimensions: Dimensions;
   filter: string;
 }

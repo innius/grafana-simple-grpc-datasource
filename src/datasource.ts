@@ -35,12 +35,17 @@ import { appendMatchingFrames } from './appendFrames';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
 
+interface DimensionKeyDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
     this.variables = new DatasourceVariableSupport(this);
   }
-
   query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
     return getRequestLooper(request, {
       // Check for a "nextToken" in the response
@@ -185,23 +190,12 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     } as DataQueryRequest<MyQuery>);
   }
 
-  async listDimensionKeys(filter: string, selected_dimensions: Dimensions): Promise<Array<SelectableValue<string>>> {
+  async listDimensionKeys(filter: string, selected_dimensions: Dimensions): Promise<DimensionKeyDefinition[]> {
     const query: ListDimensionsQuery = {
-      refId: 'listDimensionKeys',
-      queryType: QueryType.ListDimensionKeys,
       selected_dimensions,
       filter: filter,
     };
-    const dimKeys = this.runQuery(query).pipe(
-      map((res) => {
-        if (res.data.length) {
-          const dimensions = new DataFrameView<SelectableValue<string>>(res.data[0]);
-          return dimensions.toArray();
-        }
-        throw `no dimensions found ${res.errors}`;
-      })
-    );
-    return lastValueFrom(dimKeys);
+    return this.postResource<DimensionKeyDefinition[]>('dimensions', query);
   }
 
   async listDimensionsValues(
