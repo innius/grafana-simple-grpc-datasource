@@ -16,7 +16,7 @@ type Backend interface {
 	HandleGetMetricHistoryQuery(ctx context.Context, query *models.MetricHistoryQuery) (data.Frames, error)
 	HandleGetMetricAggregateQuery(ctx context.Context, query *models.MetricAggregateQuery) (data.Frames, error)
 	HandleListDimensionsQuery(ctx context.Context, query models.GetDimensionKeysRequest) (*models.GetDimensionKeysResponse, error)
-	HandleListDimensionValuesQuery(ctx context.Context, query *models.DimensionValueQuery) (data.Frames, error)
+	HandleListDimensionValuesQuery(ctx context.Context, query models.GetDimensionValueRequest) (*models.GetDimensionValueResponse, error)
 	HandleListMetricsQuery(ctx context.Context, query *models.MetricsQuery) (data.Frames, error)
 	GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionDefinitionsRequest) (*models.GetQueryOptionDefinitionsResponse, error)
 	Dispose()
@@ -77,13 +77,12 @@ func (ds *backendImpl) HandleListDimensionsQuery(ctx context.Context, query mode
 	return res, nil
 }
 
-func (ds *backendImpl) HandleListDimensionValuesQuery(ctx context.Context, query *models.DimensionValueQuery) (data.Frames, error) {
-	//TODO: remove pointer dereference
-	res, err := connector.ListDimensionValues(ctx, ds.client, *query)
+func (ds *backendImpl) HandleListDimensionValuesQuery(ctx context.Context, query models.GetDimensionValueRequest) (*models.GetDimensionValueResponse, error) {
+	res, err := connector.ListDimensionValues(ctx, ds.client, query)
 	if err != nil {
-		return backendErrorResponse(err)
+		return nil, err
 	}
-	return res.Frames()
+	return res, nil
 }
 
 func (ds *backendImpl) HandleListMetricsQuery(ctx context.Context, query *models.MetricsQuery) (data.Frames, error) {

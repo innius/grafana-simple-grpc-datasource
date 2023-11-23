@@ -137,8 +137,7 @@ export interface ListDimensionsQuery {
   filter: string;
 }
 
-export interface ListDimensionValuesQuery extends MyQuery {
-  queryType: QueryType.ListDimensionValues;
+export interface ListDimensionValuesQuery {
   selected_dimensions: Dimensions;
   dimensionKey: string;
   filter: string;

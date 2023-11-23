@@ -4,31 +4,36 @@ import (
 	"context"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 )
 
-func ListDimensionValues(ctx context.Context, client client.BackendAPIClient, query models.DimensionValueQuery) (*framer.DimensionValues, error) {
-	selectedDimensions := make([]*pb.Dimension, len(query.SelectedDimensions))
-	for _, dimension := range query.SelectedDimensions {
-		selectedDimensions = append(selectedDimensions, &pb.Dimension{
-			Key:   dimension.Key,
-			Value: dimension.Value,
-		})
-	}
+func ListDimensionValues(ctx context.Context, client client.BackendAPIClient, query models.GetDimensionValueRequest) (*models.GetDimensionValueResponse, error) {
 	resp, err := client.ListDimensionValues(ctx, &pb.ListDimensionValuesRequest{
-		DimensionKey:       query.DimensionKey,
-		Filter:             query.Filter,
-		SelectedDimensions: selectedDimensions,
+		DimensionKey: query.DimensionKey,
+		Filter:       query.Filter,
+		SelectedDimensions: Map(query.SelectedDimensions, func(dimension models.Dimension) *pb.Dimension {
+			return &pb.Dimension{
+				Key:   dimension.Key,
+				Value: dimension.Value,
+			}
+		}),
 	})
 
 	if err != nil {
 		return nil, err
 	}
-	return &framer.DimensionValues{
-		ListDimensionValuesResponse: pb.ListDimensionValuesResponse{
-			Results: resp.Results,
-		},
+	if resp == nil {
+		return nil, nil
+	}
+
+	return &models.GetDimensionValueResponse{
+		Values: Map(resp.GetResults(), func(dimension *pb.ListDimensionValuesResponse_Result) models.DimensionValueDefinition {
+			return models.DimensionValueDefinition{
+				Value:       dimension.Value,
+				Label:       dimension.Value,
+				Description: dimension.Description,
+			}
+		}),
 	}, nil
 }

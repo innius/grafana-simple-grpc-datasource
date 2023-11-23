@@ -50,8 +50,19 @@ func (stub *backendAPIStub) HandleListDimensionsQuery(ctx context.Context, query
 		},
 	}, nil
 }
-func (stub *backendAPIStub) HandleListDimensionValuesQuery(ctx context.Context, query *models.DimensionValueQuery) (data.Frames, error) {
-	panic("not implemented") // TODO: Implement
+func (stub *backendAPIStub) HandleListDimensionValuesQuery(ctx context.Context, query models.GetDimensionValueRequest) (*models.GetDimensionValueResponse, error) {
+	if query.Filter != "filter" {
+		return nil, errors.New("invalid filter")
+	}
+	if len(query.SelectedDimensions) == 0 {
+		return nil, nil
+	}
+
+	return &models.GetDimensionValueResponse{
+		Values: []models.DimensionValueDefinition{
+			{Value: "foo", Label: "bar", Description: "bar"},
+		},
+	}, nil
 }
 func (stub *backendAPIStub) HandleListMetricsQuery(ctx context.Context, query *models.MetricsQuery) (data.Frames, error) {
 	panic("not implemented") // TODO: Implement
@@ -157,6 +168,36 @@ func TestCallResource(t *testing.T) {
 			name:      "list dimensions no backend dimensions found",
 			method:    http.MethodPost,
 			path:      "dimensions",
+			body:      []byte(`{"filter": "filter", "selected_dimensions": []}`),
+			expBody:   []byte(`[]`),
+			expStatus: http.StatusOK,
+		},
+		{
+			name:      "list dimension values",
+			method:    http.MethodPost,
+			path:      "dimensions/values",
+			body:      []byte(`{"filter": "filter", "selected_dimensions": [{ "key": "foo" , "value" : "bar"}]}`),
+			expStatus: http.StatusOK,
+			expBody:   []byte(`[{"value":"foo","label":"bar","description":"bar"}]`),
+		},
+		{
+			name:      "list dimension values with invalid payload",
+			method:    http.MethodPost,
+			path:      "dimensions/values",
+			body:      []byte(`{"filter": "filter", "selected_dimensions": "invalid json string"}`),
+			expStatus: http.StatusBadRequest,
+		},
+		{
+			name:      "list dimensions with a backend error",
+			method:    http.MethodPost,
+			path:      "dimensions/values",
+			body:      []byte(`{"filter": "with a backend error", "selected_dimensions": [{ "key": "foo" , "value" : "bar"}]}`),
+			expStatus: http.StatusInternalServerError,
+		},
+		{
+			name:      "list dimensions no backend dimensions found",
+			method:    http.MethodPost,
+			path:      "dimensions/values",
 			body:      []byte(`{"filter": "filter", "selected_dimensions": []}`),
 			expBody:   []byte(`[]`),
 			expStatus: http.StatusOK,

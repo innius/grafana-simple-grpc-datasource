@@ -86,27 +86,6 @@ func (s *Server) handleGetMetricAggregateQuery(ctx context.Context, req backend.
 	}
 }
 
-func (s *Server) HandleListDimensionValuesQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	return processQueries(ctx, req, s.handleListDimensionValuesQuery), nil
-}
-
-func (s *Server) handleListDimensionValuesQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
-	query, err := models.UnmarshalToDimensionValueQuery(&q)
-	if err != nil {
-		return DataResponseErrorUnmarshal(err)
-	}
-
-	frames, err := s.backendAPI.HandleListDimensionValuesQuery(ctx, query)
-	if err != nil {
-		return DataResponseErrorRequestFailed(err)
-	}
-
-	return backend.DataResponse{
-		Frames: frames,
-		Error:  nil,
-	}
-}
-
 func (s *Server) HandleListMetricsQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	return processQueries(ctx, req, s.handleListMetricsQuery), nil
 }

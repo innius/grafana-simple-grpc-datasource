@@ -41,6 +41,12 @@ interface DimensionKeyDefinition {
   description?: string;
 }
 
+interface DimensionValueDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
@@ -198,29 +204,13 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return this.postResource<DimensionKeyDefinition[]>('dimensions', query);
   }
 
-  async listDimensionsValues(
-    key: string,
-    filter: string,
-    selected_dimensions: Dimensions
-  ): Promise<Array<SelectableValue<string>>> {
+  async listDimensionsValues(key: string, filter: string, selected_dimensions: Dimensions): Promise<DimensionValueDefinition[]> {
     const query: ListDimensionValuesQuery = {
-      refId: 'listDimensionsValues',
-      queryType: QueryType.ListDimensionValues,
       dimensionKey: key,
       selected_dimensions,
       filter: filter,
     };
-
-    const dimValues = this.runQuery(query).pipe(
-      map((res) => {
-        if (res.data.length) {
-          const dimensionValues = new DataFrameView<SelectableValue<string>>(res.data[0]);
-          return dimensionValues.toArray();
-        }
-        throw 'no dimension values found';
-      })
-    );
-    return lastValueFrom(dimValues);
+    return this.postResource<DimensionValueDefinition[]>('dimensions/values', query);
   }
 
   listMetrics(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
