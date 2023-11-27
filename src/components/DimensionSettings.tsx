@@ -21,7 +21,7 @@ const DimensionSettings = (props: Props) => {
     onChange(newState);
   };
   const addDimension = () => {
-    const newDim = { id: uniqueId(), key: '', value: '', configured: false };
+    const newDim = { id: uniqueId(), key: '', value: '' };
     update([...state, newDim]);
   };
 

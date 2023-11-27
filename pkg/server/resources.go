@@ -19,14 +19,14 @@ func (s *Server) handleGetQueryOptions(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
-	req := models.GetQueryOptionDefinitionsRequest{}
+	req := models.GetQueryOptionsRequest{}
 	// Use the decoder to decode the JSON into the User struct
 	if err := decoder.Decode(&req); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
 	}
 
-	res, err := s.backendAPI.GetQueryOptionDefinitions(r.Context(), req)
+	res, err := s.backendAPI.GetQueryOptions(r.Context(), req)
 
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
@@ -50,8 +50,8 @@ func (s *Server) handleGetQueryOptions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) handleListDimensionKeys(w http.ResponseWriter, r *http.Request) {
-	logger := log.DefaultLogger.With("method", "handleListDimensionKeys")
+func (s *Server) handleGetDimensionKeys(w http.ResponseWriter, r *http.Request) {
+	logger := log.DefaultLogger.With("method", "handleGetDimensionKeys")
 
 	if r.Body == nil {
 		http.Error(w, "request does not have a body", http.StatusBadRequest)
@@ -68,7 +68,7 @@ func (s *Server) handleListDimensionKeys(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	res, err := s.backendAPI.HandleListDimensionsQuery(r.Context(), req)
+	res, err := s.backendAPI.GetDimensionKeys(r.Context(), req)
 
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
@@ -90,8 +90,8 @@ func (s *Server) handleListDimensionKeys(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) handleListDimensionValues(w http.ResponseWriter, r *http.Request) {
-	logger := log.DefaultLogger.With("method", "handleListDimensionValues")
+func (s *Server) handleGetDimensionValues(w http.ResponseWriter, r *http.Request) {
+	logger := log.DefaultLogger.With("method", "handleGetDimensionValues")
 
 	if r.Body == nil {
 		http.Error(w, "request does not have a body", http.StatusBadRequest)
@@ -108,7 +108,7 @@ func (s *Server) handleListDimensionValues(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	res, err := s.backendAPI.HandleListDimensionValuesQuery(r.Context(), req)
+	res, err := s.backendAPI.GetDimensionValues(r.Context(), req)
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -129,8 +129,8 @@ func (s *Server) handleListDimensionValues(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) handleListMetrics(w http.ResponseWriter, r *http.Request) {
-	logger := log.DefaultLogger.With("method", "handleListMetrics")
+func (s *Server) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
+	logger := log.DefaultLogger.With("method", "handleGetMetrics")
 
 	if r.Body == nil {
 		http.Error(w, "request does not have a body", http.StatusBadRequest)
@@ -147,7 +147,7 @@ func (s *Server) handleListMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.backendAPI.HandleListMetricsQuery(r.Context(), req)
+	res, err := s.backendAPI.GetMetrics(r.Context(), req)
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -170,7 +170,7 @@ func (s *Server) handleListMetrics(w http.ResponseWriter, r *http.Request) {
 
 func (a *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/options", a.handleGetQueryOptions)
-	mux.HandleFunc("/dimensions", a.handleListDimensionKeys)
-	mux.HandleFunc("/dimensions/values", a.handleListDimensionValues)
-	mux.HandleFunc("/metrics", a.handleListMetrics)
+	mux.HandleFunc("/dimensions", a.handleGetDimensionKeys)
+	mux.HandleFunc("/dimensions/values", a.handleGetDimensionValues)
+	mux.HandleFunc("/metrics", a.handleGetMetrics)
 }

@@ -24,30 +24,15 @@ import {
   QueryOptionValue,
   VariableQuery,
   VariableQueryType,
+  DimensionKeyDefinition,
+  DimensionValueDefinition,
+  MetricDefinition,
 } from './types';
 import { Observable } from 'rxjs';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
-
-interface DimensionKeyDefinition {
-  value?: string;
-  label?: string;
-  description?: string;
-}
-
-interface DimensionValueDefinition {
-  value?: string;
-  label?: string;
-  description?: string;
-}
-
-interface MetricDefinition {
-  value?: string;
-  label?: string;
-  description?: string;
-}
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -205,6 +190,9 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   async listDimensionsValues(key: string, filter: string, selected_dimensions: Dimensions): Promise<DimensionValueDefinition[]> {
+    if (key === "") {
+      return Promise.resolve([])
+    }
     const query: ListDimensionValuesQuery = {
       dimensionKey: key,
       selected_dimensions,
@@ -213,13 +201,33 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return this.postResource<DimensionValueDefinition[]>('dimensions/values', query);
   }
 
-  listMetrics(dimensions: Dimensions, filter: string): Promise<MetricDefinition[]> {
+  async listMetrics(dimensions: Dimensions, filter: string): Promise<MetricDefinition[]> {
+    // Checking if 'dimensions' is undefined
+    if (!dimensions || !dimensions.length) {
+      return Promise.resolve([]);
+    }
+    // Filtering out empty dimensions (where Key is empty or undefined)
+    const validDimensions = dimensions.filter(dim => dim.value && dim.value !== '');
+
+    // Checking if there are no valid dimensions, returning an empty array
+    if (validDimensions.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    // Accessing the template service
     const templateSrv = getTemplateSrv();
+
+    // Transforming dimensions by replacing their values
     const query: ListMetricsQuery = {
-      dimensions: dimensions.map(x => ({ ...x, value: templateSrv.replace(x.value, {}) })),
+      dimensions: validDimensions.map(dim => ({
+        ...dim,
+        value: templateSrv.replace(dim.value, {}),
+      })),
       filter: filter,
     };
-    return this.postResource<DimensionValueDefinition[]>('metrics', query);
+
+    // Making a POST request to 'metrics' endpoint with the constructed query
+    return this.postResource('metrics', query);
   }
 
   async getQueryOptionDefinitions(qt: QueryType, opts: QueryOptions): Promise<QueryOptionDefinitions> {

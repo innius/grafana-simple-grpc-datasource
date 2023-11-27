@@ -82,6 +82,24 @@ export interface Dimension {
 
 export type Dimensions = Dimension[];
 
+export interface DimensionKeyDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
+export interface DimensionValueDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
+export interface MetricDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
 export const defaultQuery: Partial<MyQuery> = {
   dimensions: [],
   queryType: QueryType.GetMetricHistory,

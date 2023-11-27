@@ -36,7 +36,7 @@ func (stub *backendAPIStub) HandleGetMetricHistoryQuery(ctx context.Context, que
 func (stub *backendAPIStub) HandleGetMetricAggregateQuery(ctx context.Context, query *models.MetricAggregateQuery) (data.Frames, error) {
 	panic("not implemented") // TODO: Implement
 }
-func (stub *backendAPIStub) HandleListDimensionsQuery(ctx context.Context, query models.GetDimensionKeysRequest) (*models.GetDimensionKeysResponse, error) {
+func (stub *backendAPIStub) GetDimensionKeys(ctx context.Context, query models.GetDimensionKeysRequest) (*models.GetDimensionKeysResponse, error) {
 	if query.Filter != "filter" {
 		return nil, errors.New("invalid filter")
 	}
@@ -50,7 +50,7 @@ func (stub *backendAPIStub) HandleListDimensionsQuery(ctx context.Context, query
 		},
 	}, nil
 }
-func (stub *backendAPIStub) HandleListDimensionValuesQuery(ctx context.Context, query models.GetDimensionValuesRequest) (*models.GetDimensionValueResponse, error) {
+func (stub *backendAPIStub) GetDimensionValues(ctx context.Context, query models.GetDimensionValuesRequest) (*models.GetDimensionValueResponse, error) {
 	if query.Filter != "filter" {
 		return nil, errors.New("invalid filter")
 	}
@@ -64,7 +64,7 @@ func (stub *backendAPIStub) HandleListDimensionValuesQuery(ctx context.Context, 
 		},
 	}, nil
 }
-func (stub *backendAPIStub) HandleListMetricsQuery(ctx context.Context, query models.GetMetricsRequest) (*models.GetMetricsResponse, error) {
+func (stub *backendAPIStub) GetMetrics(ctx context.Context, query models.GetMetricsRequest) (*models.GetMetricsResponse, error) {
 	if query.Filter != "filter" {
 		return nil, errors.New("invalid filter")
 	}
@@ -79,8 +79,8 @@ func (stub *backendAPIStub) HandleListMetricsQuery(ctx context.Context, query mo
 	}, nil
 }
 
-func (stub *backendAPIStub) GetQueryOptionDefinitions(ctx context.Context, input models.GetQueryOptionDefinitionsRequest) (*models.GetQueryOptionDefinitionsResponse, error) {
-	return &models.GetQueryOptionDefinitionsResponse{
+func (stub *backendAPIStub) GetQueryOptions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
+	return &models.GetQueryOptionsResponse{
 		Options: []models.Option{
 			{
 				ID:          "foo",

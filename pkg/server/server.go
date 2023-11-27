@@ -95,7 +95,7 @@ func (s *Server) QueryData(ctx context.Context, req *backend.QueryDataRequest) (
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
 func (s *Server) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	_, err := s.backendAPI.HandleListDimensionsQuery(ctx, models.GetDimensionKeysRequest{})
+	_, err := s.backendAPI.GetDimensionKeys(ctx, models.GetDimensionKeysRequest{})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unauthenticated:
