@@ -1,4 +1,4 @@
-package server
+package plugin
 
 import (
 	"encoding/json"
@@ -8,49 +8,44 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 )
 
-func (s *Server) handleGetQueryOptions(w http.ResponseWriter, r *http.Request) {
+func (s *Datasource) handleGetQueryOptions(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "getQueryOptionDefinitions")
 
 	if r.Body == nil {
 		http.Error(w, "request does not have a body", http.StatusBadRequest)
 		return
 	}
-	// Create a JSON decoder from the request body
-	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
-	req := models.GetQueryOptionsRequest{}
-	// Use the decoder to decode the JSON into the User struct
-	if err := decoder.Decode(&req); err != nil {
+	var req models.GetQueryOptionsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
 	}
 
 	res, err := s.backendAPI.GetQueryOptions(r.Context(), req)
-
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if res == nil {
-		logger.Error("got no content")
-		w.WriteHeader(http.StatusNoContent)
-		return
+	options := []models.Option{}
+	if res != nil && res.Options != nil {
+		options = res.Options
 	}
 
 	logger.Debug("returning options", "options", res.Options)
 
-	w.Header().Add("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(res.Options); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(options); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) handleGetDimensionKeys(w http.ResponseWriter, r *http.Request) {
+func (s *Datasource) handleGetDimensionKeys(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "handleGetDimensionKeys")
 
 	if r.Body == nil {
@@ -90,7 +85,7 @@ func (s *Server) handleGetDimensionKeys(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) handleGetDimensionValues(w http.ResponseWriter, r *http.Request) {
+func (s *Datasource) handleGetDimensionValues(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "handleGetDimensionValues")
 
 	if r.Body == nil {
@@ -129,7 +124,7 @@ func (s *Server) handleGetDimensionValues(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
+func (s *Datasource) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "handleGetMetrics")
 
 	if r.Body == nil {
@@ -168,7 +163,7 @@ func (s *Server) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *Server) registerRoutes(mux *http.ServeMux) {
+func (a *Datasource) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/options", a.handleGetQueryOptions)
 	mux.HandleFunc("/dimensions", a.handleGetDimensionKeys)
 	mux.HandleFunc("/dimensions/values", a.handleGetDimensionValues)

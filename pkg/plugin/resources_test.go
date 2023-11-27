@@ -1,4 +1,4 @@
-package server
+package plugin
 
 import (
 	"bytes"
@@ -109,14 +109,14 @@ func (stub *backendAPIStub) Dispose() {
 func TestCallResource(t *testing.T) {
 	// Initialize app
 	m := &backendAPIStub{}
-	inst, err := newServerInstance(m)
+	inst, err := newDatasourceWithBackendAPI(m)
 	if err != nil {
 		t.Fatalf("new app: %s", err)
 	}
 	if inst == nil {
 		t.Fatal("inst must not be nil")
 	}
-	app, ok := inst.(*Server)
+	app, ok := inst.(*Datasource)
 	if !ok {
 		t.Fatal("inst must be of type *App")
 	}

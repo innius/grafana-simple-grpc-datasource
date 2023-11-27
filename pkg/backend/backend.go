@@ -88,7 +88,6 @@ func (ds *backendImpl) GetDimensionValues(ctx context.Context, query models.GetD
 }
 
 func (ds *backendImpl) GetMetrics(ctx context.Context, query models.GetMetricsRequest) (*models.GetMetricsResponse, error) {
-	//TODO: remove pointer dereference
 	res, err := connector.ListMetrics(ctx, ds.client, query)
 	if err != nil {
 		return nil, err

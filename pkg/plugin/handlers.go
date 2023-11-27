@@ -1,4 +1,4 @@
-package server
+package plugin
 
 import (
 	"context"
@@ -23,11 +23,11 @@ func processQueries(ctx context.Context, req *backend.QueryDataRequest, handler 
 	}
 }
 
-func (s *Server) HandleGetMetricValueQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+func (s *Datasource) HandleGetMetricValueQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	return processQueries(ctx, req, s.handleGetMetricValueQuery), nil
 }
 
-func (s *Server) handleGetMetricValueQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Datasource) handleGetMetricValueQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricValueQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
@@ -44,11 +44,11 @@ func (s *Server) handleGetMetricValueQuery(ctx context.Context, req backend.Quer
 	}
 }
 
-func (s *Server) HandleGetMetricHistoryQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+func (s *Datasource) HandleGetMetricHistoryQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	return processQueries(ctx, req, s.handleGetMetricHistoryQuery), nil
 }
 
-func (s *Server) handleGetMetricHistoryQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Datasource) handleGetMetricHistoryQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricHistoryQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
@@ -65,11 +65,11 @@ func (s *Server) handleGetMetricHistoryQuery(ctx context.Context, req backend.Qu
 	}
 }
 
-func (s *Server) HandleGetMetricAggregate(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+func (s *Datasource) HandleGetMetricAggregate(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	return processQueries(ctx, req, s.handleGetMetricAggregateQuery), nil
 }
 
-func (s *Server) handleGetMetricAggregateQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (s *Datasource) handleGetMetricAggregateQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricAggregateQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
