@@ -22,6 +22,7 @@ const QueryEditor = (props: Props) => {
 
   const applyDefaultValues = (q: MyQuery, opts: QueryOptionDefinitions): QueryOptions => {
     const enums = opts.filter(opt => opt.type === OptionType.Enum);
+
     let defaultOptions = q.queryOptions || {}
 
     for (const opt of enums) {
@@ -60,7 +61,7 @@ const QueryEditor = (props: Props) => {
 
   const onQueryTypeChange = async (queryType: QueryType) => {
     setQueryType(queryType);
-    updateAndRunQuery({ ...query, queryType: queryType });
+    updateAndRunQuery({ ...query, queryType: queryType, queryOptions: {} });
   };
 
   const onMetricChange = (evt: Array<SelectableValue<string>>) => {
