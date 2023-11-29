@@ -4,14 +4,17 @@ import (
 	"context"
 	"testing"
 
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
 )
 
 type clientMock struct {
+	client.BackendAPIClient
 	mock.Mock
 }
 
@@ -22,29 +25,6 @@ func (clientmock *clientMock) ListDimensionKeys(ctx context.Context, in *v3.List
 		return v, args.Error(1)
 	}
 	return nil, args.Error(1)
-}
-
-// Gets the options for the specified query type
-func (clientmock *clientMock) GetQueryOptions(ctx context.Context, in *v3.GetOptionsRequest, opts ...grpc.CallOption) (*v3.GetOptionsResponse, error) {
-	panic("not implemented") // TODO: Implement
-}
-
-// Gets the last known value for one or more metrics
-func (clientmock *clientMock) GetMetricValue(ctx context.Context, in *v3.GetMetricValueRequest, opts ...grpc.CallOption) (*v3.GetMetricValueResponse, error) {
-	panic("not implemented") // TODO: Implement
-}
-
-// Gets the history for one or more metrics
-func (clientmock *clientMock) GetMetricHistory(ctx context.Context, in *v3.GetMetricHistoryRequest, opts ...grpc.CallOption) (*v3.GetMetricHistoryResponse, error) {
-	panic("not implemented") // TODO: Implement
-}
-
-// Gets the history for one or more metrics
-func (clientmock *clientMock) GetMetricAggregate(ctx context.Context, in *v3.GetMetricAggregateRequest, opts ...grpc.CallOption) (*v3.GetMetricAggregateResponse, error) {
-	panic("not implemented") // TODO: Implement
-}
-func (clientmock *clientMock) Dispose() {
-	panic("not implemented") // TODO: Implement
 }
 
 func TestListDimensionKeys(t *testing.T) {

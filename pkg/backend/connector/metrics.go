@@ -6,6 +6,7 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	"github.com/samber/lo"
 )
 
 func ListMetrics(ctx context.Context, client client.BackendAPIClient, query models.GetMetricsRequest) (*models.GetMetricsResponse, error) {
@@ -28,7 +29,7 @@ func ListMetrics(ctx context.Context, client client.BackendAPIClient, query mode
 		return nil, err
 	}
 	return &models.GetMetricsResponse{
-		Metrics: Map(resp.GetMetrics(), func(m *pb.ListMetricsResponse_Metric) models.MetricDefinition {
+		Metrics: lo.Map(resp.GetMetrics(), func(m *pb.ListMetricsResponse_Metric, _ int) models.MetricDefinition {
 			return models.MetricDefinition{
 				Value:       m.Name,
 				Label:       m.Name,

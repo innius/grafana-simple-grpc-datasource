@@ -97,11 +97,7 @@ func (ds *backendImpl) GetMetrics(ctx context.Context, query models.GetMetricsRe
 }
 
 func (backendimpl *backendImpl) GetQueryOptions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
-	res, err := connector.GetQueryOptionDefinitions(ctx, backendimpl.client, input)
-	if err != nil {
-		return nil, err
-	}
-	return &models.GetQueryOptionsResponse{Options: res}, nil
+	return connector.GetQueryOptionDefinitions(ctx, backendimpl.client, input)
 }
 
 func (ds *backendImpl) Dispose() {
