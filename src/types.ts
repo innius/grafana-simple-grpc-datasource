@@ -95,7 +95,7 @@ export type Dimensions = Dimension[];
 
 export const defaultQuery: Partial<MyQuery> = {
   dimensions: [],
-  queryType: QueryType.GetMetricHistory,
+  queryType: QueryType.GetMetricAggregate,
   queryOptions: {},
 };
 
