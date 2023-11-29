@@ -1,12 +1,75 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
-	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 )
+
+// httpStatusFromCode translates the given GRPC code into an HTTP
+// response. This is used to set the HTTP status code for unary RPCs.
+// (Streaming RPCs cannot convey a GRPC status code until the stream
+// completes, so they use a 200 HTTP status code and then encode the
+// actual status, along with any trailer metadata, at the end of the
+// response stream.)
+func httpStatusFromCode(code codes.Code) int {
+	switch code {
+	case codes.OK:
+		return http.StatusOK
+	case codes.Canceled:
+		return http.StatusBadGateway
+	case codes.Unknown:
+		return http.StatusInternalServerError
+	case codes.InvalidArgument:
+		return http.StatusBadRequest
+	case codes.DeadlineExceeded:
+		return http.StatusGatewayTimeout
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.AlreadyExists:
+		return http.StatusConflict
+	case codes.PermissionDenied:
+		return http.StatusForbidden
+	case codes.Unauthenticated:
+		return http.StatusUnauthorized
+	case codes.ResourceExhausted:
+		return http.StatusTooManyRequests
+	case codes.FailedPrecondition:
+		return http.StatusPreconditionFailed
+	case codes.Aborted:
+		return http.StatusConflict
+	case codes.OutOfRange:
+		return http.StatusUnprocessableEntity
+	case codes.Unimplemented:
+		return http.StatusNotImplemented
+	case codes.Internal:
+		return http.StatusInternalServerError
+	case codes.Unavailable:
+		return http.StatusServiceUnavailable
+	case codes.DataLoss:
+		return http.StatusInternalServerError
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+func renderError(ctx context.Context, st *status.Status, w http.ResponseWriter) {
+	// return context cancellation error as a 499 if the grpc server returned a
+	// Canceled or DeadlineExceeded error and the current context is canceled
+	if (st.Code() == codes.Canceled || st.Code() == codes.DeadlineExceeded) && ctx.Err() != nil {
+		http.Error(w, "Client Closed Request", 499)
+		return
+	}
+	code := httpStatusFromCode(st.Code())
+
+	http.Error(w, st.Message(), code)
+}
 
 func (s *Datasource) handleGetQueryOptions(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "getQueryOptionDefinitions")
@@ -26,7 +89,7 @@ func (s *Datasource) handleGetQueryOptions(w http.ResponseWriter, r *http.Reques
 	res, err := s.backendAPI.GetQueryOptions(r.Context(), req)
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(r.Context(), status.Convert(err), w)
 		return
 	}
 
@@ -67,9 +130,10 @@ func (s *Datasource) handleGetDimensionKeys(w http.ResponseWriter, r *http.Reque
 
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(r.Context(), status.Convert(err), w)
 		return
 	}
+
 	keys := []models.DimensionKeyDefinition{}
 	if res != nil && res.Keys != nil {
 		keys = res.Keys
@@ -104,11 +168,13 @@ func (s *Datasource) handleGetDimensionValues(w http.ResponseWriter, r *http.Req
 	}
 
 	res, err := s.backendAPI.GetDimensionValues(r.Context(), req)
+
 	if err != nil {
+		renderError(r.Context(), status.Convert(err), w)
 		logger.Error("backend returned an error", "error", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	values := []models.DimensionValueDefinition{}
 	if res != nil && res.Values != nil {
 		values = res.Values
@@ -145,9 +211,10 @@ func (s *Datasource) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	res, err := s.backendAPI.GetMetrics(r.Context(), req)
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError(r.Context(), status.Convert(err), w)
 		return
 	}
+
 	values := []models.MetricDefinition{}
 	if res != nil && res.Metrics != nil {
 		values = res.Metrics

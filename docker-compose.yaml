@@ -1,12 +1,14 @@
-version: '3.0'
+version: "3.0"
 
 services:
   grafana:
-    container_name: 'innius-grpc-datasource'
+    container_name: "innius-grpc-datasource"
     build:
       context: ./.config
       args:
         grafana_version: ${GRAFANA_VERSION:-9.5.2}
+    environment:
+      GF_LOG_LEVEL: debug
     ports:
       - 3000:3000/tcp
     volumes:
