@@ -231,7 +231,9 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   async getQueryOptionDefinitions(qt: QueryType, opts: QueryOptions): Promise<QueryOptionDefinitions> {
-    let selected: { [key: string]: string | undefined } = {}
+    let selected: {
+      [key: string]: string | undefined
+    } = {}
     Object.keys(opts).forEach((k) => {
       selected[k] = opts[k].value
     })

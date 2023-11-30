@@ -1,7 +1,7 @@
 import defaults from 'lodash/defaults';
 import React, { ChangeEvent, useState, useEffect, } from 'react';
 import { Select, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
-import { QueryEditorProps, SelectableValue } from '@grafana/data';
+import { QueryEditorProps, SelectableValue, } from '@grafana/data';
 
 import { DataSource } from './datasource';
 import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, QueryOptionValue, QueryOptionDefinitions, OptionType, QueryOptions } from './types';
@@ -41,13 +41,9 @@ const QueryEditor = (props: Props) => {
   // load the query options from the backend for the current query type
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const opts = await datasource.getQueryOptionDefinitions(queryType, queryOptions!);
-        setQueryOptionDefinitions(opts);
-        setQuery(x => ({ ...x, queryOptions: applyDefaultValues(x, opts) }))
-      } catch (error) {
-        console.error('Error fetching resource data', error);
-      }
+      const opts = await datasource.getQueryOptionDefinitions(queryType, queryOptions!);
+      setQueryOptionDefinitions(opts);
+      setQuery(x => ({ ...x, queryOptions: applyDefaultValues(x, opts) }))
     };
     fetchData();
   }, [datasource, queryType, queryOptions]);
