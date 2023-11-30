@@ -9,7 +9,7 @@ import (
 	"github.com/samber/lo"
 )
 
-func GetQueryOptionDefinitions(ctx context.Context, client client.BackendAPIClient, input models.GetQueryOptionDefinitionsRequest) (models.Options, error) {
+func GetQueryOptionDefinitions(ctx context.Context, client client.BackendAPIClient, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
 	var qt v3.GetOptionsRequest_QueryType
 	switch input.QueryType {
 	case models.QueryMetricValue:
@@ -45,5 +45,7 @@ func GetQueryOptionDefinitions(ctx context.Context, client client.BackendAPIClie
 			Required: o.Required,
 		}
 	})
-	return options, nil
+	return &models.GetQueryOptionsResponse{
+		Options: options,
+	}, nil
 }

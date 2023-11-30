@@ -2,16 +2,14 @@ package server
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/url"
 
 	backendapi "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 
@@ -21,9 +19,9 @@ import (
 )
 
 type Server struct {
-	backendAPI    backendapi.Backend
-	channelPrefix string
-	queryMux      *datasource.QueryTypeMux
+	backendAPI backendapi.Backend
+	queryMux   *datasource.QueryTypeMux
+	backend.CallResourceHandler
 }
 
 // Make sure SampleDatasource implements required interfaces.
@@ -31,6 +29,7 @@ type Server struct {
 // not implemented error response from plugin in runtime.
 var (
 	_ backend.QueryDataHandler      = (*Server)(nil)
+	_ backend.CallResourceHandler   = (*Server)(nil)
 	_ backend.CheckHealthHandler    = (*Server)(nil)
 	_ instancemgmt.InstanceDisposer = (*Server)(nil)
 )
@@ -53,29 +52,33 @@ func DataResponseErrorRequestFailed(err error) backend.DataResponse {
 }
 
 // GetQueryHandlers creates the QueryTypeMux type for handling queries
-func getQueryHandlers(s *Server) *datasource.QueryTypeMux {
+func (s *Server) registerQueryHandlers() {
 	mux := datasource.NewQueryTypeMux()
 
 	mux.HandleFunc(models.QueryMetricValue, s.HandleGetMetricValueQuery)
 	mux.HandleFunc(models.QueryMetricHistory, s.HandleGetMetricHistoryQuery)
 	mux.HandleFunc(models.QueryMetricAggregate, s.HandleGetMetricAggregate)
-	mux.HandleFunc(models.QueryDimensions, s.HandleListDimensionKeysQuery)
-	mux.HandleFunc(models.QueryDimensionValues, s.HandleListDimensionValuesQuery)
-	mux.HandleFunc(models.QueryMetrics, s.HandleListMetricsQuery)
 
-	return mux
+	s.queryMux = mux
 }
 
 func NewServerInstance(settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-	ds, err := backendapi.New(settings)
+	backendAPI, err := backendapi.New(settings)
 	if err != nil {
 		return nil, err
 	}
+
+	return newServerInstance(backendAPI)
+}
+
+func newServerInstance(backendAPI backendapi.Backend) (instancemgmt.Instance, error) {
 	srvr := &Server{
-		backendAPI:    ds,
-		channelPrefix: fmt.Sprintf("ds/%d/", settings.ID),
+		backendAPI: backendAPI,
 	}
-	srvr.queryMux = getQueryHandlers(srvr) // init once
+	mux := http.NewServeMux()
+	srvr.registerRoutes(mux)
+	srvr.CallResourceHandler = httpadapter.New(mux)
+	srvr.registerQueryHandlers() // init once
 	return srvr, nil
 }
 
@@ -87,46 +90,12 @@ func (s *Server) QueryData(ctx context.Context, req *backend.QueryDataRequest) (
 	return s.queryMux.QueryData(ctx, req)
 }
 
-func (s *Server) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
-	pu, err := url.Parse(req.URL)
-	if err != nil {
-		return err
-	}
-	var body = struct {
-		SelectedOptions map[string]string `json:"selected_options"`
-	}{}
-	if err := json.Unmarshal(req.Body, &body); err != nil {
-		return err
-	}
-	res, err := s.backendAPI.GetQueryOptionDefinitions(ctx, models.GetQueryOptionDefinitionsRequest{
-		SelectedOptions: body.SelectedOptions,
-		QueryType:       pu.Query().Get("query_type"),
-	})
-	if err != nil {
-		return err
-	}
-	if res == nil {
-		return nil
-	}
-	b, err := json.Marshal(res.Options)
-	if err != nil {
-		return err
-	}
-	resp := &backend.CallResourceResponse{
-		Status:  http.StatusOK,
-		Headers: map[string][]string{},
-		Body:    b,
-	}
-	sender.Send(resp)
-	return nil
-}
-
 // CheckHealth handles health checks sent from Grafana to the plugin.
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
 func (s *Server) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	_, err := s.backendAPI.HandleListDimensionsQuery(ctx, &models.DimensionKeysQuery{})
+	_, err := s.backendAPI.GetDimensionKeys(ctx, models.GetDimensionKeysRequest{})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unauthenticated:

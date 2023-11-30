@@ -25,7 +25,7 @@ export function convertQuery(query: MyQuery): MyQuery {
         break;
     }
     options = {
-      "0" : { value: aggregateTypeEnumValue.toString(), label: aggregateType.toLowerCase() },
+      "0": { value: aggregateTypeEnumValue.toString(), label: aggregateType.toLowerCase() },
     };
   }
   return {
@@ -45,8 +45,10 @@ export function convertMetrics(query: MyQuery): Metric[] | undefined {
   if (query.metrics) {
     return query.metrics;
   }
-  if (query.metricId) {
-    return [{ metricId: query.metricId }];
+
+  if ('metricId' in query) {
+    console.warn('The "metricId" field is deprecated. Please use "metrics" instead.');
+    return query.metricId ? [{ metricId: query.metricId }] : undefined;
   }
   return undefined;
 }

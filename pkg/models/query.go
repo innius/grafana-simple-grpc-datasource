@@ -10,9 +10,6 @@ const (
 	QueryMetricValue     = "GetMetricValue"
 	QueryMetricHistory   = "GetMetricHistory"
 	QueryMetricAggregate = "GetMetricAggregate"
-	QueryDimensions      = "ListDimensionKeys"
-	QueryDimensionValues = "ListDimensionValues"
-	QueryMetrics         = "ListMetrics"
 )
 
 type Dimension struct {

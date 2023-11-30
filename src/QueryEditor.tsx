@@ -1,5 +1,4 @@
 import defaults from 'lodash/defaults';
-import { lastValueFrom } from 'rxjs';
 import React, { ChangeEvent, useState, useEffect, } from 'react';
 import { Select, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
@@ -95,7 +94,7 @@ const QueryEditor = (props: Props) => {
 
   const loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
     const { dimensions } = query;
-    return lastValueFrom(datasource.listMetrics(dimensions || [], value));
+    return datasource.listMetrics(dimensions || [], value);
   };
 
   // fields which can be used in display name expression

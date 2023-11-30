@@ -1,20 +1,9 @@
 import { DataQuery, DataSourceJsonData } from '@grafana/schema';
 
 export enum QueryType {
-  ListDimensionKeys = 'ListDimensionKeys',
-  ListDimensionValues = 'ListDimensionValues',
-  ListMetrics = 'ListMetrics',
   GetMetricValue = 'GetMetricValue',
   GetMetricHistory = 'GetMetricHistory',
   GetMetricAggregate = 'GetMetricAggregate',
-}
-
-export function isMetricQuery(queryType: QueryType): boolean {
-  return (
-    queryType === QueryType.GetMetricValue ||
-    queryType === QueryType.GetMetricHistory ||
-    queryType === QueryType.GetMetricAggregate
-  );
 }
 
 export interface Metric {
@@ -93,6 +82,24 @@ export interface Dimension {
 
 export type Dimensions = Dimension[];
 
+export interface DimensionKeyDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
+export interface DimensionValueDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
+export interface MetricDefinition {
+  value?: string;
+  label?: string;
+  description?: string;
+}
+
 export const defaultQuery: Partial<MyQuery> = {
   dimensions: [],
   queryType: QueryType.GetMetricAggregate,
@@ -133,21 +140,18 @@ export interface GetMetricAggregateQuery extends MyQuery {
   queryType: QueryType.GetMetricAggregate;
 }
 
-export interface ListDimensionsQuery extends MyQuery {
-  queryType: QueryType.ListDimensionKeys;
+export interface ListDimensionsQuery {
   selected_dimensions: Dimensions;
   filter: string;
 }
 
-export interface ListDimensionValuesQuery extends MyQuery {
-  queryType: QueryType.ListDimensionValues;
+export interface ListDimensionValuesQuery {
   selected_dimensions: Dimensions;
   dimensionKey: string;
   filter: string;
 }
 
-export interface ListMetricsQuery extends MyQuery {
-  queryType: QueryType.ListMetrics;
+export interface ListMetricsQuery {
   dimensions: Dimensions;
   filter: string;
 }

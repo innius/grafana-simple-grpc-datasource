@@ -1,21 +1,16 @@
 package models
 
-import (
-	"encoding/json"
-
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
-)
-
-type DimensionKeysQuery struct {
+type GetDimensionKeysRequest struct {
 	Filter             string      `json:"filter"`
 	SelectedDimensions []Dimension `json:"selected_dimensions"`
 }
 
-func UnmarshalToDimensionKeysQuery(dq *backend.DataQuery) (*DimensionKeysQuery, error) {
-	query := &DimensionKeysQuery{}
-	if err := json.Unmarshal(dq.JSON, query); err != nil {
-		return nil, err
-	}
+type DimensionKeyDefinition struct {
+	Value       string `json:"value"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+}
 
-	return query, nil
+type GetDimensionKeysResponse struct {
+	Keys []DimensionKeyDefinition `json:"keys"`
 }

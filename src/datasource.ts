@@ -1,18 +1,15 @@
 import {
   DataFrame,
-  DataFrameView,
   DataQueryRequest,
   DataQueryResponse,
   DataSourceInstanceSettings,
   ScopedVars,
-  SelectableValue,
   MetricFindValue,
 } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import {
   Dimension,
   Dimensions,
-  isMetricQuery,
   ListDimensionsQuery,
   ListDimensionValuesQuery,
   ListMetricsQuery,
@@ -27,9 +24,11 @@ import {
   QueryOptionValue,
   VariableQuery,
   VariableQueryType,
+  DimensionKeyDefinition,
+  DimensionValueDefinition,
+  MetricDefinition,
 } from './types';
-import { lastValueFrom, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { getRequestLooper, MultiRequestTracker } from './requestLooper';
 import { appendMatchingFrames } from './appendFrames';
 import { convertMetrics, convertQuery } from './convert';
@@ -40,7 +39,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     super(instanceSettings);
     this.variables = new DatasourceVariableSupport(this);
   }
-
   query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
     return getRequestLooper(request, {
       // Check for a "nextToken" in the response
@@ -99,9 +97,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     if (!query.queryType) {
       return false;
     }
-    if (!isMetricQuery(query.queryType)) {
-      return true;
-    }
     const metrics = convertMetrics(query);
     return metrics !== undefined && metrics.length > 0;
   }
@@ -137,8 +132,9 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       return values.map((x) => ({ text: x.value || '' }));
     }
 
-    const metrics = this.listMetrics(q.dimensions, '').pipe(map((x) => x.map((x) => ({ text: x.value || '' }))));
-    return lastValueFrom(metrics);
+    const metrics = await this.listMetrics(q.dimensions, '')
+
+    return metrics.map((x) => ({ text: x.value || '' }));
   }
 
   /**
@@ -185,67 +181,53 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     } as DataQueryRequest<MyQuery>);
   }
 
-  async listDimensionKeys(filter: string, selected_dimensions: Dimensions): Promise<Array<SelectableValue<string>>> {
+  async listDimensionKeys(filter: string, selected_dimensions: Dimensions): Promise<DimensionKeyDefinition[]> {
     const query: ListDimensionsQuery = {
-      refId: 'listDimensionKeys',
-      queryType: QueryType.ListDimensionKeys,
       selected_dimensions,
       filter: filter,
     };
-    const dimKeys = this.runQuery(query).pipe(
-      map((res) => {
-        if (res.data.length) {
-          const dimensions = new DataFrameView<SelectableValue<string>>(res.data[0]);
-          return dimensions.toArray();
-        }
-        throw `no dimensions found ${res.errors}`;
-      })
-    );
-    return lastValueFrom(dimKeys);
+    return this.postResource<DimensionKeyDefinition[]>('dimensions', query);
   }
 
-  async listDimensionsValues(
-    key: string,
-    filter: string,
-    selected_dimensions: Dimensions
-  ): Promise<Array<SelectableValue<string>>> {
+  async listDimensionsValues(key: string, filter: string, selected_dimensions: Dimensions): Promise<DimensionValueDefinition[]> {
+    if (key === "") {
+      return Promise.resolve([])
+    }
     const query: ListDimensionValuesQuery = {
-      refId: 'listDimensionsValues',
-      queryType: QueryType.ListDimensionValues,
       dimensionKey: key,
       selected_dimensions,
       filter: filter,
     };
-
-    const dimValues = this.runQuery(query).pipe(
-      map((res) => {
-        if (res.data.length) {
-          const dimensionValues = new DataFrameView<SelectableValue<string>>(res.data[0]);
-          return dimensionValues.toArray();
-        }
-        throw 'no dimension values found';
-      })
-    );
-    return lastValueFrom(dimValues);
+    return this.postResource<DimensionValueDefinition[]>('dimensions/values', query);
   }
 
-  listMetrics(dimensions: Dimensions, filter: string): Observable<Array<SelectableValue<string>>> {
+  async listMetrics(dimensions: Dimensions, filter: string): Promise<MetricDefinition[]> {
+    // Checking if 'dimensions' is undefined
+    if (!dimensions || !dimensions.length) {
+      return Promise.resolve([]);
+    }
+    // Filtering out empty dimensions (where Key is empty or undefined)
+    const validDimensions = dimensions.filter(dim => dim.value && dim.value !== '');
+
+    // Checking if there are no valid dimensions, returning an empty array
+    if (validDimensions.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    // Accessing the template service
+    const templateSrv = getTemplateSrv();
+
+    // Transforming dimensions by replacing their values
     const query: ListMetricsQuery = {
-      refId: 'listMetrics',
-      queryType: QueryType.ListMetrics,
-      dimensions: dimensions,
+      dimensions: validDimensions.map(dim => ({
+        ...dim,
+        value: templateSrv.replace(dim.value, {}),
+      })),
       filter: filter,
     };
 
-    return this.runQuery(query).pipe(
-      map((res) => {
-        if (res.data.length) {
-          const metrics = new DataFrameView<SelectableValue<string>>(res.data[0]);
-          return metrics.toArray();
-        }
-        throw 'no metrics found';
-      })
-    );
+    // Making a POST request to 'metrics' endpoint with the constructed query
+    return this.postResource('metrics', query);
   }
 
   async getQueryOptionDefinitions(qt: QueryType, opts: QueryOptions): Promise<QueryOptionDefinitions> {
@@ -253,7 +235,11 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     Object.keys(opts).forEach((k) => {
       selected[k] = opts[k].value
     })
-    return this.postResource<QueryOptionDefinitions>('options', { selected_options: selected }, { params: { query_type: qt } });
+    const query = {
+      selected_options: selected,
+      query_type: qt,
+    }
+    return this.postResource<QueryOptionDefinitions>('options', query)
   }
 }
 

@@ -42,8 +42,9 @@ const VariableQueryEditor = (props: {
   };
 
   const loadDimensionKeys = (query: string): Promise<Array<SelectableValue<string>>> => {
-    return datasource.listDimensionKeys(query, []);
+    return datasource.listDimensionKeys(query, [])
   };
+
   const options: Array<SelectableValue<VariableQueryType>> = [
     {
       value: VariableQueryType.metric,
