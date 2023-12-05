@@ -1,4 +1,4 @@
-package server
+package plugin
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Server struct {
+type Datasource struct {
 	backendAPI backendapi.Backend
 	queryMux   *datasource.QueryTypeMux
 	backend.CallResourceHandler
@@ -28,10 +28,10 @@ type Server struct {
 // This is important to do since otherwise we will only get a
 // not implemented error response from plugin in runtime.
 var (
-	_ backend.QueryDataHandler      = (*Server)(nil)
-	_ backend.CallResourceHandler   = (*Server)(nil)
-	_ backend.CheckHealthHandler    = (*Server)(nil)
-	_ instancemgmt.InstanceDisposer = (*Server)(nil)
+	_ backend.QueryDataHandler      = (*Datasource)(nil)
+	_ backend.CallResourceHandler   = (*Datasource)(nil)
+	_ backend.CheckHealthHandler    = (*Datasource)(nil)
+	_ instancemgmt.InstanceDisposer = (*Datasource)(nil)
 )
 
 // QueryHandlerFunc is the function signature used for mux.HandleFunc
@@ -52,27 +52,27 @@ func DataResponseErrorRequestFailed(err error) backend.DataResponse {
 }
 
 // GetQueryHandlers creates the QueryTypeMux type for handling queries
-func (s *Server) registerQueryHandlers() {
+func (d *Datasource) registerQueryHandlers() {
 	mux := datasource.NewQueryTypeMux()
 
-	mux.HandleFunc(models.QueryMetricValue, s.HandleGetMetricValueQuery)
-	mux.HandleFunc(models.QueryMetricHistory, s.HandleGetMetricHistoryQuery)
-	mux.HandleFunc(models.QueryMetricAggregate, s.HandleGetMetricAggregate)
+	mux.HandleFunc(models.QueryMetricValue, d.HandleGetMetricValueQuery)
+	mux.HandleFunc(models.QueryMetricHistory, d.HandleGetMetricHistoryQuery)
+	mux.HandleFunc(models.QueryMetricAggregate, d.HandleGetMetricAggregate)
 
-	s.queryMux = mux
+	d.queryMux = mux
 }
 
-func NewServerInstance(settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
+func NewDatasource(_ context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	backendAPI, err := backendapi.New(settings)
 	if err != nil {
 		return nil, err
 	}
 
-	return newServerInstance(backendAPI)
+	return newDatasourceWithBackendAPI(backendAPI)
 }
 
-func newServerInstance(backendAPI backendapi.Backend) (instancemgmt.Instance, error) {
-	srvr := &Server{
+func newDatasourceWithBackendAPI(backendAPI backendapi.Backend) (instancemgmt.Instance, error) {
+	srvr := &Datasource{
 		backendAPI: backendAPI,
 	}
 	mux := http.NewServeMux()
@@ -86,16 +86,16 @@ func newServerInstance(backendAPI backendapi.Backend) (instancemgmt.Instance, er
 // req contains the queries []DataQuery (where each query contains RefID as a unique identifer).
 // The QueryDataResponse contains a map of RefID to the response for each query, and each response
 // contains Frames ([]*Frame).
-func (s *Server) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	return s.queryMux.QueryData(ctx, req)
+func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+	return d.queryMux.QueryData(ctx, req)
 }
 
 // CheckHealth handles health checks sent from Grafana to the plugin.
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
-func (s *Server) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	_, err := s.backendAPI.GetDimensionKeys(ctx, models.GetDimensionKeysRequest{})
+func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+	_, err := d.backendAPI.GetDimensionKeys(ctx, models.GetDimensionKeysRequest{})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unauthenticated:
@@ -122,6 +122,6 @@ func (s *Server) CheckHealth(ctx context.Context, req *backend.CheckHealthReques
 	}, nil
 }
 
-func (s *Server) Dispose() {
-	s.backendAPI.Dispose()
+func (d *Datasource) Dispose() {
+	d.backendAPI.Dispose()
 }
