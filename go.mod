@@ -1,6 +1,6 @@
 module bitbucket.org/innius/grafana-simple-grpc-datasource
 
-go 1.21
+go 1.21.4
 
 toolchain go1.21.4
 
