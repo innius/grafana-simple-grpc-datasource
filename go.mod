@@ -2,8 +2,6 @@ module bitbucket.org/innius/grafana-simple-grpc-datasource
 
 go 1.21.4
 
-toolchain go1.21.4
-
 require (
 	github.com/grafana/grafana-plugin-sdk-go v0.193.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
