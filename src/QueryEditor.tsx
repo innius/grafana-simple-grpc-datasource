@@ -119,7 +119,7 @@ const QueryEditor = (props: Props) => {
       />
       <InlineField labelWidth={24} label="Metric">
         <AsyncMultiSelect
-          width={32}
+          width={96}
           key={key}
           defaultOptions={true}
           value={selectedMetrics}
