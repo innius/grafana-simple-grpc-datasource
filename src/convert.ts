@@ -47,7 +47,6 @@ export function convertMetrics(query: MyQuery): Metric[] | undefined {
   }
 
   if ('metricId' in query) {
-    console.warn('The "metricId" field is deprecated. Please use "metrics" instead.');
     return query.metricId ? [{ metricId: query.metricId }] : undefined;
   }
   return undefined;

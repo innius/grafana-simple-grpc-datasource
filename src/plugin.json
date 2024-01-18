@@ -8,8 +8,6 @@
   "executable": "gpx_my-plugin",
   "alerting": true,
   "queryOptions": {
-    "cacheTimeout": true,
-    "maxDataPoints": true,
     "minInterval": true
   },
   "info": {
@@ -45,7 +43,7 @@
     "updated": "%TODAY%"
   },
   "dependencies": {
-    "grafanaDependency": ">=8.3.0",
+    "grafanaDependency": ">=10.0.0",
     "plugins": []
   }
 }
