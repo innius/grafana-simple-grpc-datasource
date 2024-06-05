@@ -1,10 +1,11 @@
 package framer
 
 import (
+	"github.com/grafana/grafana-plugin-sdk-go/data"
+
 	fields2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
-	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
 func convertToDataField(fld *pb.Field) *data.Field {
@@ -62,6 +63,9 @@ func convertToDataFieldLabels(labels []*pb.Label) data.Labels {
 }
 
 func convertValues(fld *pb.Field) interface{} {
+	if len(fld.StringValues) > 0 {
+		return fld.StringValues
+	}
 	return fld.Values
 }
 

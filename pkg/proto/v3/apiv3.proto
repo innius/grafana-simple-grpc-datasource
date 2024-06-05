@@ -171,6 +171,7 @@ message Field {
   config config = 3;
 
   repeated double values = 4;
+  repeated string stringValues = 5;
 }
 
 message ValueMapping {
@@ -195,6 +196,8 @@ message SingleValueField {
   config config = 3;
 
   double value = 4;
+
+  string stringValue = 5;
 }
 
 // The data frame for each metric
