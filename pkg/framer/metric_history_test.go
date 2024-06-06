@@ -21,6 +21,10 @@ func TestGetHistoryResponseFrameConversion(t *testing.T) {
 				Labels: nil,
 				Values: []float64{10, 20, 30},
 			},
+			{
+				Name:         "s1",
+				StringValues: []string{"foo", "bar", "baz"},
+			},
 		},
 	}
 
@@ -37,6 +41,7 @@ func TestGetHistoryResponseFrameConversion(t *testing.T) {
 
 	assert.Len(t, res, 1)
 
+	assert.Len(t, res[0].Fields, 3)
 }
 
 func TestMetricHistory_Frames(t *testing.T) {

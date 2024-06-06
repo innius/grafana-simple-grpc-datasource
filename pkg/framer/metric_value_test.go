@@ -42,6 +42,15 @@ func TestMetricValue_Frames(t *testing.T) {
 					},
 					Timestamp: timestamppb.New(ts),
 				},
+				{
+					Metric: "string_value",
+					Fields: []*pb.SingleValueField{
+						{
+							StringValue: "string_value",
+						},
+					},
+					Timestamp: timestamppb.New(ts),
+				},
 			},
 		},
 		Query: models.MetricValueQuery{
@@ -62,7 +71,7 @@ func TestMetricValue_Frames(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("the result should contain two frames", func(t *testing.T) {
-		assert.Len(t, res, 2)
+		assert.Len(t, res, 3)
 	})
 	t.Run("the data frame should have a name", func(t *testing.T) {
 		assert.Equal(t, "foo", res[0].Name)
@@ -71,4 +80,39 @@ func TestMetricValue_Frames(t *testing.T) {
 	t.Run("the format name expression should be applied", func(t *testing.T) {
 		assert.Equal(t, "m1-foo-a-field_1", res[0].Fields[1].Config.DisplayNameFromDS)
 	})
+}
+
+func TestMetricValue_StringValue(t *testing.T) {
+	sut := &MetricValue{
+		GetMetricValueResponse: &pb.GetMetricValueResponse{
+			Frames: []*pb.GetMetricValueResponse_Frame{
+				{
+					Metric: "string_value",
+					Fields: []*pb.SingleValueField{
+						{
+							StringValue: "string_value",
+						},
+					},
+					Timestamp: timestamppb.New(time.Now()),
+				},
+			},
+		},
+		Query: models.MetricValueQuery{
+			MetricBaseQuery: models.MetricBaseQuery{
+				Dimensions: []models.Dimension{
+					{
+						Key:   "machine",
+						Value: "m1",
+					},
+				},
+			},
+		},
+	}
+
+	res, err := sut.Frames()
+
+	assert.NoError(t, err)
+
+	assert.Len(t, res, 1)
+
 }
