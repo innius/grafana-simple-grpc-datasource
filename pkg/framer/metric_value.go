@@ -32,7 +32,7 @@ func (f MetricValue) Frames() (data.Frames, error) {
 		for idx := range metricFrame.Fields {
 			fld := metricFrame.Fields[idx]
 
-			dataField := data.NewField(fld.Name, convertToDataFieldLabels(fld.Labels), []float64{fld.Value})
+			dataField := convertToSingleDataField(fld)
 			dataField.SetConfig(convertToDataFieldConfig(fld.Config, f.FormatDisplayName(metricFrame, fld)))
 
 			fields = append(fields, dataField)
@@ -47,6 +47,19 @@ func (f MetricValue) Frames() (data.Frames, error) {
 	}
 
 	return res, nil
+}
+
+func convertToSingleDataField(fld *pb.SingleValueField) *data.Field {
+	newField := data.NewField(fld.Name, convertToDataFieldLabels(fld.Labels), convertValue(fld))
+
+	return newField
+}
+
+func convertValue(fld *pb.SingleValueField) interface{} {
+	if fld.StringValue != "" {
+		return []string{fld.StringValue}
+	}
+	return []float64{fld.Value}
 }
 
 func (f MetricValue) FormatDisplayName(frame *pb.GetMetricValueResponse_Frame, fld *pb.SingleValueField) string {
