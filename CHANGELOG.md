@@ -1,14 +1,19 @@
 # Changelog
 
+## 1.2.6
+
+- fix: ensure the single stat query accommodates string values.
+
 ## 1.2.5
 
 - feature: allow backend system to return string values
 
 ## 1.2.3
 
-refactor: improved backend error messages feat: enhance width of metric
-selection control in query editor chore: update to latest grafana framework fix:
-reset query options after changing query type
+- refactor: improved backend error messages feat: enhance width of metric
+  selection control in query editor
+- chore: update to latest grafana framework fix: reset query options after
+  changing query type
 
 ## 1.2.2
 
