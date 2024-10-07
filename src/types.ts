@@ -10,15 +10,15 @@ export interface Metric {
   metricId?: string;
 }
 
-// OptionValue is the selected value for a backend define query option  
+// OptionValue is the selected value for a backend define query option
 export interface QueryOptionValue {
-  value?: string
-  label?: string
+  value?: string;
+  label?: string;
 }
 
-// OptionValues are the query options which originate from the backend 
+// OptionValues are the query options which originate from the backend
 // and are sent along with the query request
-export type QueryOptions = { [key: string]: QueryOptionValue }
+export type QueryOptions = { [key: string]: QueryOptionValue };
 
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
@@ -59,8 +59,8 @@ export interface EnumValue {
 }
 
 export enum OptionType {
-  Enum = "Enum",
-  Boolean = "Boolean"
+  Enum = 'Enum',
+  Boolean = 'Boolean',
 }
 
 export interface QueryOptionDefinition {
@@ -167,4 +167,3 @@ export interface VariableQuery extends DataQuery {
   dimensions: Dimension[];
   dimensionValueFilter?: string;
 }
-
