@@ -24,6 +24,8 @@ export interface MyQuery extends DataQuery {
   queryType: QueryType;
   dimensions?: Dimensions;
   metrics?: Metric[];
+  lastObservation?: boolean;
+  clientCache?: boolean;
 
   /**
    * @deprecated use queryOptions instead
@@ -104,6 +106,7 @@ export const defaultQuery: Partial<MyQuery> = {
   dimensions: [],
   queryType: QueryType.GetMetricAggregate,
   queryOptions: {},
+  clientCache: true,
 };
 
 export const defaultDataSourceOptions: Partial<MyDataSourceOptions> = {
@@ -132,8 +135,14 @@ export interface GetMetricValueQuery extends MyQuery {
   queryType: QueryType.GetMetricValue;
 }
 
+export enum SiteWiseTimeOrder {
+  ASCENDING = 'ASCENDING',
+  DESCENDING = 'DESCENDING',
+}
+
 export interface GetMetricHistoryQuery extends MyQuery {
   queryType: QueryType.GetMetricHistory;
+  timeOrdering: SiteWiseTimeOrder;
 }
 
 export interface GetMetricAggregateQuery extends MyQuery {

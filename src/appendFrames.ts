@@ -1,4 +1,4 @@
-import { DataFrame, formatLabels, MutableDataFrame } from '@grafana/data';
+import { ArrayVector, DataFrame, formatLabels, MutableDataFrame } from '@grafana/data';
 
 export function getSchemaKey(frame: DataFrame): string {
   let key = frame.refId + '/' + frame.name + '/' + frame.fields.length;
@@ -12,7 +12,7 @@ export function getSchemaKey(frame: DataFrame): string {
   return key;
 }
 
-// TODO: this could likley use the builtin merge transformer, however it was behaving weirdly
+// TODO: this could likely use the builtin merge transformer, however it was behaving weirdly
 // with arrow time fields ;(
 export function appendMatchingFrames(prev: DataFrame[], b: DataFrame[]): DataFrame[] {
   const byKey = new Map<string, MutableDataFrame>();
@@ -40,7 +40,9 @@ export function appendMatchingFrames(prev: DataFrame[], b: DataFrame[]): DataFra
         }
         frame.addField({
           ...field,
-          values: buffer,
+          //TODO: fix replace ArrayVector by appropriate type
+          // @ts-ignore: Suppress TypeScript error for the subsequent line
+          values: new ArrayVector(buffer),
         });
       }
 

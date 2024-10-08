@@ -1,4 +1,4 @@
-import { DataQueryRequest, DataQueryResponse, DataQueryResponseData, LoadingState } from '@grafana/data';
+import { DataQueryRequest, DataQueryResponse, LoadingState } from '@grafana/data';
 import { appendMatchingFrames } from 'appendFrames';
 import { getNextQueries } from 'getNextQueries';
 import { Subject } from 'rxjs';
@@ -12,6 +12,12 @@ export interface MyQueryPaginatorOptions {
   request: DataQueryRequest<MyQuery>;
   // The function to call to execute the query.
   queryFn: (request: DataQueryRequest<MyQuery>) => Promise<DataQueryResponse>;
+
+  // The cached response to set as the initial response.
+  cachedResponse?: {
+    start?: DataQueryResponse;
+    end?: DataQueryResponse;
+  };
 }
 
 /**
@@ -34,7 +40,15 @@ export class MyQueryPaginator {
    * @returns An observable that emits the paginated query responses.
    */
   toObservable() {
+    const {
+      request: { requestId },
+      cachedResponse,
+    } = this.options;
     const subject = new Subject<DataQueryResponse>();
+
+    if (cachedResponse?.start) {
+      subject.next({ ...cachedResponse.start, state: LoadingState.Streaming, key: requestId });
+    }
 
     this.paginateQuery(subject);
 
@@ -46,12 +60,13 @@ export class MyQueryPaginator {
    * @param subject The subject to emit the query responses to.
    */
   private async paginateQuery(subject: Subject<DataQueryResponse>) {
-    const { request: initialRequest, queryFn } = this.options;
+    const { request: initialRequest, queryFn, cachedResponse } = this.options;
     const { requestId } = initialRequest;
 
     try {
-      let retrievedData: DataQueryResponseData[] | undefined;
+      let retrievedData = cachedResponse?.start?.data;
       let nextQueries: NextQuery[] | undefined;
+      const errorEncountered = false; // whether there's a error response
       let count = 1;
 
       do {
@@ -77,11 +92,15 @@ export class MyQueryPaginator {
         }
 
         nextQueries = getNextQueries(request, response);
-        const loadingState = nextQueries ? LoadingState.Streaming : LoadingState.Done;
+        const loadingState = nextQueries || cachedResponse?.end != null ? LoadingState.Streaming : LoadingState.Done;
 
         subject.next({ ...response, data: retrievedData, state: loadingState, key: requestId });
       } while (nextQueries != null && !subject.closed);
 
+      if (cachedResponse?.end != null && !errorEncountered) {
+        retrievedData = appendMatchingFrames(retrievedData, cachedResponse.end.data);
+        subject.next({ ...cachedResponse.end, data: retrievedData, state: LoadingState.Done, key: requestId });
+      }
       subject.complete();
     } catch (err) {
       subject.error(err);

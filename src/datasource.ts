@@ -4,6 +4,7 @@ import {
   DataSourceInstanceSettings,
   ScopedVars,
   MetricFindValue,
+  LoadingState,
 } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import {
@@ -25,24 +26,41 @@ import {
   DimensionValueDefinition,
   MetricDefinition,
 } from './types';
-import { Observable, lastValueFrom } from 'rxjs';
+import { Observable, tap, lastValueFrom } from 'rxjs';
 import { MyQueryPaginator } from 'queryPaginator';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
+import { RelativeRangeCache } from 'RelativeRangeRequestCache/RelativeRangeCache';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
+  private relativeRangeCache = new RelativeRangeCache();
+
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
     this.variables = new DatasourceVariableSupport(this);
   }
 
   query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
+    const cachedInfo = request.range != null ? this.relativeRangeCache.get(request) : undefined;
+
     return new MyQueryPaginator({
-      request,
+      request: cachedInfo?.refreshingRequest || request,
       queryFn: (request: DataQueryRequest<MyQuery>) => {
         return lastValueFrom(super.query(request));
       },
-    }).toObservable();
+      cachedResponse: cachedInfo?.cachedResponse,
+    })
+      .toObservable()
+      .pipe(
+        // Cache the last (done) response
+        tap({
+          next: (response) => {
+            if (response.state === LoadingState.Done) {
+              this.relativeRangeCache.set(request, response);
+            }
+          },
+        })
+      );
   }
 
   filterQuery(query: MyQuery): boolean {
