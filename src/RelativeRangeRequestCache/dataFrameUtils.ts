@@ -1,4 +1,4 @@
-import { ArrayVector, FieldType, AbsoluteTimeRange, DataFrame } from '@grafana/data';
+import { FieldType, AbsoluteTimeRange, DataFrame } from '@grafana/data';
 import { CachedQueryInfo, SitewiseQueriesUnion, isTimeOrderingQueryType, isTimeSeriesQueryType } from './types';
 import { SiteWiseTimeOrder } from 'types';
 
@@ -121,7 +121,7 @@ export function trimTimeSeriesDataFrame({
     return dataFrame;
   }
 
-  const timeValues = timeField.values.toArray();
+  const timeValues = timeField.values;
 
   let fromIndex = timeValues.findIndex((time) => time > from); // from is exclusive
   if (fromIndex === -1) {
@@ -140,9 +140,7 @@ export function trimTimeSeriesDataFrame({
 
   const trimmedFields = fields.map((field) => ({
     ...field,
-    //TODO: fix replace ArrayVector by appropriate type
-    // @ts-ignore: Suppress TypeScript error for the subsequent line
-    values: new ArrayVector(field.values.toArray().slice(fromIndex, toIndex)),
+    values: field.values.slice(fromIndex, toIndex),
   }));
 
   return {
@@ -181,7 +179,7 @@ export function trimTimeSeriesDataFrameReversedTime({
   }
 
   // Copy before reverse in place
-  const timeValues = [...timeField.values.toArray()].reverse();
+  const timeValues = [...timeField.values].reverse();
 
   let fromIndex = timeValues.findIndex((time) => time > from); // from is exclusive
   if (fromIndex === -1) {
@@ -199,7 +197,7 @@ export function trimTimeSeriesDataFrameReversedTime({
   }
 
   const trimmedFields = fields.map((field) => {
-    const dataValues = [...field.values.toArray()].reverse().slice(fromIndex, toIndex);
+    const dataValues = [...field.values].reverse().slice(fromIndex, toIndex);
 
     return {
       ...field,
