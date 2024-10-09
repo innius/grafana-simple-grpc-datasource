@@ -1,10 +1,9 @@
 import { DataFrame, DataQueryRequest, DataQueryResponse, LoadingState, TimeRange } from '@grafana/data';
-import { isTimeRangeCoveringStart } from 'timeRangeUtils';
 import { MyQuery } from 'types';
 import { RequestCacheId, generateSiteWiseRequestCacheId } from './cacheIdUtils';
 import { CachedQueryInfo, isTimeSeriesQueryType } from './types';
 import { trimCachedQueryDataFramesAtStart, trimCachedQueryDataFramesEnding } from './dataFrameUtils';
-import { getRefreshRequestRange, isCacheableTimeRange } from './timeRangeUtils';
+import { isTimeRangeCoveringStart, getRefreshRequestRange, isCacheableTimeRange } from './timeRangeUtils';
 
 interface DataFrameCacheInfo {
   queries: CachedQueryInfo[];
