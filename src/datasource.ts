@@ -1,10 +1,10 @@
 import {
-  DataFrame,
   DataQueryRequest,
   DataQueryResponse,
   DataSourceInstanceSettings,
   ScopedVars,
   MetricFindValue,
+  LoadingState,
 } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import {
@@ -13,11 +13,9 @@ import {
   ListDimensionsQuery,
   ListDimensionValuesQuery,
   ListMetricsQuery,
-  Metadata,
   Metric,
   MyDataSourceOptions,
   MyQuery,
-  NextQuery,
   QueryType,
   QueryOptions,
   QueryOptionDefinitions,
@@ -28,66 +26,41 @@ import {
   DimensionValueDefinition,
   MetricDefinition,
 } from './types';
-import { Observable } from 'rxjs';
-import { getRequestLooper, MultiRequestTracker } from './requestLooper';
-import { appendMatchingFrames } from './appendFrames';
+import { Observable, tap, lastValueFrom } from 'rxjs';
+import { MyQueryPaginator } from 'queryPaginator';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
+import { RelativeRangeCache } from 'RelativeRangeRequestCache/RelativeRangeCache';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
+  private relativeRangeCache = new RelativeRangeCache();
+
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
     this.variables = new DatasourceVariableSupport(this);
   }
+
   query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
-    return getRequestLooper(request, {
-      // Check for a "nextToken" in the response
-      getNextQueries: (rsp: DataQueryResponse) => {
-        if (rsp.data?.length) {
-          const next: NextQuery[] = [];
-          for (const frame of rsp.data as DataFrame[]) {
-            const meta = frame.meta?.custom as Metadata;
-            if (meta && meta.nextToken) {
-              const query = request.targets.find((t) => t.refId === frame.refId);
-              if (query) {
-                next.push({
-                  ...query,
-                  nextToken: meta.nextToken,
-                });
-              }
+    const cachedInfo = request.range != null ? this.relativeRangeCache.get(request) : undefined;
+
+    return new MyQueryPaginator({
+      request: cachedInfo?.refreshingRequest || request,
+      queryFn: (request: DataQueryRequest<MyQuery>) => {
+        return lastValueFrom(super.query(request));
+      },
+      cachedResponse: cachedInfo?.cachedResponse,
+    })
+      .toObservable()
+      .pipe(
+        // Cache the last (done) response
+        tap({
+          next: (response) => {
+            if (response.state === LoadingState.Done) {
+              this.relativeRangeCache.set(request, response);
             }
-          }
-          if (next.length) {
-            return next;
-          }
-        }
-        return undefined;
-      },
-      /**
-       * The original request
-       */
-      query: (request: DataQueryRequest<MyQuery>) => {
-        return super.query(request);
-      },
-
-      /**
-       * Process the results
-       */
-      process: (t: MultiRequestTracker, data: DataFrame[], _: boolean) => {
-        if (t.data) {
-          // append rows to fields with the same structure
-          t.data = appendMatchingFrames(t.data, data);
-        } else {
-          t.data = data; // hang on to the results from the last query
-        }
-        return t.data;
-      },
-
-      /**
-       * Callback that gets executed when unsubscribed
-       */
-      onCancel: (_: MultiRequestTracker) => { },
-    });
+          },
+        })
+      );
   }
 
   filterQuery(query: MyQuery): boolean {
@@ -132,7 +105,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       return values.map((x) => ({ text: x.value || '' }));
     }
 
-    const metrics = await this.listMetrics(q.dimensions, '')
+    const metrics = await this.listMetrics(q.dimensions, '');
 
     return metrics.map((x) => ({ text: x.value || '' }));
   }
@@ -189,9 +162,13 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return this.postResource<DimensionKeyDefinition[]>('dimensions', query);
   }
 
-  async listDimensionsValues(key: string, filter: string, selected_dimensions: Dimensions): Promise<DimensionValueDefinition[]> {
-    if (key === "") {
-      return Promise.resolve([])
+  async listDimensionsValues(
+    key: string,
+    filter: string,
+    selected_dimensions: Dimensions
+  ): Promise<DimensionValueDefinition[]> {
+    if (key === '') {
+      return Promise.resolve([]);
     }
     const query: ListDimensionValuesQuery = {
       dimensionKey: key,
@@ -207,7 +184,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       return Promise.resolve([]);
     }
     // Filtering out empty dimensions (where Key is empty or undefined)
-    const validDimensions = dimensions.filter(dim => dim.value && dim.value !== '');
+    const validDimensions = dimensions.filter((dim) => dim.value && dim.value !== '');
 
     // Checking if there are no valid dimensions, returning an empty array
     if (validDimensions.length === 0) {
@@ -219,7 +196,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
     // Transforming dimensions by replacing their values
     const query: ListMetricsQuery = {
-      dimensions: validDimensions.map(dim => ({
+      dimensions: validDimensions.map((dim) => ({
         ...dim,
         value: templateSrv.replace(dim.value, {}),
       })),
@@ -232,16 +209,16 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
   async getQueryOptionDefinitions(qt: QueryType, opts: QueryOptions): Promise<QueryOptionDefinitions> {
     let selected: {
-      [key: string]: string | undefined
-    } = {}
+      [key: string]: string | undefined;
+    } = {};
     Object.keys(opts).forEach((k) => {
-      selected[k] = opts[k].value
-    })
+      selected[k] = opts[k].value;
+    });
     const query = {
       selected_options: selected,
       query_type: qt,
-    }
-    return this.postResource<QueryOptionDefinitions>('options', query)
+    };
+    return this.postResource<QueryOptionDefinitions>('options', query);
   }
 }
 
