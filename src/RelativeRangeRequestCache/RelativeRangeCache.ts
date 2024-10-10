@@ -1,8 +1,8 @@
 import { DataFrame, DataQueryRequest, DataQueryResponse, LoadingState, TimeRange } from '@grafana/data';
 import { MyQuery } from 'types';
-import { RequestCacheId, generateSiteWiseRequestCacheId } from './cacheIdUtils';
+import { RequestCacheId, generateRequestCacheId } from './cacheIdUtils';
 import { CachedQueryInfo, isTimeSeriesQueryType } from './types';
-import { trimCachedQueryDataFramesAtStart, trimCachedQueryDataFramesEnding } from './dataFrameUtils';
+import { trimCachedQueryDataFramesAtStart } from './dataFrameUtils';
 import { isTimeRangeCoveringStart, getRefreshRequestRange, isCacheableTimeRange } from './timeRangeUtils';
 
 interface DataFrameCacheInfo {
@@ -53,7 +53,7 @@ export class RelativeRangeCache {
       return;
     }
 
-    const requestCacheId = generateSiteWiseRequestCacheId(request);
+    const requestCacheId = generateRequestCacheId(request);
 
     const queryIdMap = new Map(targets.map((q) => [q.refId, q]));
 
@@ -128,7 +128,7 @@ export class RelativeRangeCache {
    * @returns Cached data info if found, undefined otherwise
    */
   private lookupCachedData(request: DataQueryRequest<MyQuery>) {
-    const requestCacheId = generateSiteWiseRequestCacheId(request);
+    const requestCacheId = generateRequestCacheId(request);
     const cachedDataInfo = this.responseDataMap.get(requestCacheId);
 
     return cachedDataInfo;
@@ -145,7 +145,7 @@ export class RelativeRangeCache {
       to: refreshingRequestRange.from.valueOf(),
     };
     const cachedDataFrames = trimCachedQueryDataFramesAtStart(cachedDataInfo.queries, cacheRange);
-    const cachedDataFramesEnding = trimCachedQueryDataFramesEnding(cachedDataInfo.queries, cacheRange);
+    // const cachedDataFramesEnding = trimCachedQueryDataFramesEnding(cachedDataInfo.queries, cacheRange);
 
     return {
       cachedResponse: {
@@ -155,7 +155,7 @@ export class RelativeRangeCache {
           state: LoadingState.Streaming,
         },
         end: {
-          data: cachedDataFramesEnding,
+          data: [],
           key: requestId,
           state: LoadingState.Streaming,
         },

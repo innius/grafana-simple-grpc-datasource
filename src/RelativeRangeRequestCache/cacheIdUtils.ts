@@ -1,9 +1,9 @@
 import { DataQueryRequest } from '@grafana/data';
-import { SitewiseQueriesUnion } from './types';
+import { MyQuery } from 'types';
 
 export type RequestCacheId = string;
 
-export function generateSiteWiseRequestCacheId(request: DataQueryRequest<SitewiseQueriesUnion>): RequestCacheId {
+export function generateRequestCacheId(request: DataQueryRequest<MyQuery>): RequestCacheId {
   const {
     targets,
     range: {
@@ -11,13 +11,13 @@ export function generateSiteWiseRequestCacheId(request: DataQueryRequest<Sitewis
     },
   } = request;
 
-  return JSON.stringify([from, generateSiteWiseQueriesCacheId(targets)]);
+  return JSON.stringify([from, generateQueriesCacheId(targets)]);
 }
 
 type QueryCacheId = string;
 
-export function generateSiteWiseQueriesCacheId(queries: SitewiseQueriesUnion[]): QueryCacheId {
-  const cacheIds = queries.map(generateSiteWiseQueryCacheId).sort();
+export function generateQueriesCacheId(queries: MyQuery[]): QueryCacheId {
+  const cacheIds = queries.map(generateQueryCacheId).sort();
 
   return JSON.stringify(cacheIds);
 }
@@ -25,7 +25,7 @@ export function generateSiteWiseQueriesCacheId(queries: SitewiseQueriesUnion[]):
 /**
  * Parse query to cache id.
  */
-function generateSiteWiseQueryCacheId(query: SitewiseQueriesUnion): QueryCacheId {
+function generateQueryCacheId(query: MyQuery): QueryCacheId {
   const { datasource, queryType, metrics, dimensions, queryOptions, displayName } = query;
 
   /*

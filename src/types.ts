@@ -135,14 +135,8 @@ export interface GetMetricValueQuery extends MyQuery {
   queryType: QueryType.GetMetricValue;
 }
 
-export enum SiteWiseTimeOrder {
-  ASCENDING = 'ASCENDING',
-  DESCENDING = 'DESCENDING',
-}
-
 export interface GetMetricHistoryQuery extends MyQuery {
   queryType: QueryType.GetMetricHistory;
-  timeOrdering: SiteWiseTimeOrder;
 }
 
 export interface GetMetricAggregateQuery extends MyQuery {
