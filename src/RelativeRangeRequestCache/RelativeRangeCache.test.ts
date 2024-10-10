@@ -346,4 +346,33 @@ describe('RelativeRangeCache', () => {
       });
     });
   });
+
+  describe('isClientCacheEnabled', () => {
+    it('should return true when no targets explicitly disable cache', () => {
+      const targets = [{ clientCache: true, metrics: [] }];
+
+      // Access private method
+      const result = (RelativeRangeCache as any)['isClientCacheEnabled'](targets);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false if any target has clientCache set to false', () => {
+      const targets = [{ clientCache: false, metrics: [] }];
+
+      // Access private method
+      const result = (RelativeRangeCache as any)['isClientCacheEnabled'](targets);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false if any target has a metric template variable', () => {
+      const targets = [{ clientCache: true, metrics: [{ metricId: '$variable' }] }];
+
+      // Access private method
+      const result = (RelativeRangeCache as any)['isClientCacheEnabled'](targets);
+
+      expect(result).toBe(false);
+    });
+  });
 });

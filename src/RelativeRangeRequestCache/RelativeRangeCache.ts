@@ -118,8 +118,10 @@ export class RelativeRangeCache {
   }
 
   private static isClientCacheEnabled(targets: DataQueryRequest<MyQuery>['targets']) {
-    // default to enabled unless any query explicitly disables clientCache
-    return !targets.some((target) => target.clientCache === false);
+    // default to enabled unless any query explicitly disables clientCache and no variables are used in metrics
+    return !targets.some(
+      (target) => target.clientCache === false || target.metrics?.find((m) => m.metricId?.startsWith('$'))
+    );
   }
 
   /**
