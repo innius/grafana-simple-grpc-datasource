@@ -28,3 +28,9 @@ services:
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: innius-grpc-datasource
+
+  sample_grpc_server:
+    image: innius/sample-grpc-server
+    ports:
+      - "50051:50051"
+    hostname: sample-grpc-server
