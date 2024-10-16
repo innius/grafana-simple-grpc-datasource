@@ -51,7 +51,7 @@ func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, que
 			return nil, err
 		}
 
-		appendMatchinFrames(frames, resp.Frames)
+		appendMatchingFrames(frames, resp.Frames)
 
 		if resp != nil && resp.NextToken != "" {
 			clientReq.StartingToken = resp.NextToken

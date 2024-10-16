@@ -22,12 +22,12 @@ func TestAppendMatchingFrames(t *testing.T) {
 	frames := map[string]*pb.Frame{}
 
 	t.Run("append the first frame", func(t *testing.T) {
-		appendMatchinFrames(frames, res)
+		appendMatchingFrames(frames, res)
 
 		assert.Equal(t, map[string]*pb.Frame{"temperature": res[0]}, frames)
 	})
 	t.Run("append the second frame", func(t *testing.T) {
-		appendMatchinFrames(frames, res)
+		appendMatchingFrames(frames, res)
 		exp := &pb.Frame{
 			Metric: "temperature",
 			Timestamps: []*timestamppb.Timestamp{

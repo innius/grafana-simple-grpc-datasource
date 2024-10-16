@@ -5,7 +5,7 @@ import (
 	"github.com/samber/lo"
 )
 
-func appendMatchinFrames(frames map[string]*pb.Frame, newFrames []*pb.Frame) {
+func appendMatchingFrames(frames map[string]*pb.Frame, newFrames []*pb.Frame) {
 	for _, frame := range newFrames {
 		// Check if the metric already exists in the frames map
 		fr, exists := frames[frame.Metric]
