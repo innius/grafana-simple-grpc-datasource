@@ -43,13 +43,26 @@ func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, que
 		return nil, err
 	}
 
-	resp, err := client.GetMetricAggregate(ctx, clientReq)
+	frames := map[string]*pb.Frame{}
+	for {
+		resp, err := client.GetMetricAggregate(ctx, clientReq)
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+
+		appendMatchingFrames(frames, resp.Frames)
+
+		if resp != nil && resp.NextToken != "" {
+			clientReq.StartingToken = resp.NextToken
+			continue
+		}
+		break
 	}
 	return &framer.MetricAggregate{
-		GetMetricAggregateResponse: resp,
-		Query:                      query.MetricBaseQuery,
+		GetMetricAggregateResponse: &pb.GetMetricAggregateResponse{
+			Frames: lo.MapToSlice(frames, func(_ string, v *pb.Frame) *pb.Frame { return v }),
+		},
+		Query: query.MetricBaseQuery,
 	}, nil
 }

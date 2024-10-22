@@ -9,7 +9,6 @@ import { queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './DimensionSettings';
 import QueryOptionsEditor from './QueryOptionsEditor';
 import { convertQuery } from 'convert';
-import { ClientCacheRow } from './ClientCacheRow';
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
@@ -90,13 +89,6 @@ const QueryEditor = (props: Props) => {
         updateAndRunQuery({ ...query, queryOptions: updatedQueryOptions });
     };
 
-    const onClientCacheChange = (evt: React.SyntheticEvent<HTMLInputElement>) => {
-        const { onChange, query } = props;
-        const q = { ...query, clientCache: evt.currentTarget.checked };
-        onChange(q);
-        setQuery(q);
-    };
-
     const loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
         const { dimensions } = query;
         return datasource.listMetrics(dimensions || [], value);
@@ -116,9 +108,6 @@ const QueryEditor = (props: Props) => {
     const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
 
-    const clientCacheRow = (
-        <ClientCacheRow clientCache={query.clientCache} onClientCacheChange={onClientCacheChange}></ClientCacheRow>
-    );
     return (
         <>
             <InlineField labelWidth={24} label="Query Type">
@@ -154,7 +143,6 @@ const QueryEditor = (props: Props) => {
                 options={query.queryOptions || {}}
                 optionDefinitions={queryOptionDefinitions}
             />
-            {clientCacheRow}
         </>
     );
 };

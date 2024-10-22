@@ -1,11 +1,4 @@
-import {
-  DataQueryRequest,
-  DataQueryResponse,
-  DataSourceInstanceSettings,
-  ScopedVars,
-  MetricFindValue,
-  LoadingState,
-} from '@grafana/data';
+import { DataSourceInstanceSettings, ScopedVars, MetricFindValue } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import {
   Dimension,
@@ -26,41 +19,13 @@ import {
   DimensionValueDefinition,
   MetricDefinition,
 } from './types';
-import { Observable, tap, lastValueFrom } from 'rxjs';
-import { MyQueryPaginator } from 'queryPaginator';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
-import { RelativeRangeCache } from 'RelativeRangeRequestCache/RelativeRangeCache';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
-  private relativeRangeCache = new RelativeRangeCache();
-
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
     this.variables = new DatasourceVariableSupport(this);
-  }
-
-  query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
-    const cachedInfo = request.range != null ? this.relativeRangeCache.get(request) : undefined;
-
-    return new MyQueryPaginator({
-      request: cachedInfo?.refreshingRequest || request,
-      queryFn: (request: DataQueryRequest<MyQuery>) => {
-        return lastValueFrom(super.query(request));
-      },
-      cachedResponse: cachedInfo?.cachedResponse,
-    })
-      .toObservable()
-      .pipe(
-        // Cache the last (done) response
-        tap({
-          next: (response) => {
-            if (response.state === LoadingState.Done) {
-              this.relativeRangeCache.set(request, response);
-            }
-          },
-        })
-      );
   }
 
   filterQuery(query: MyQuery): boolean {
@@ -146,14 +111,6 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     };
   }
 
-  runQuery(query: MyQuery, maxDataPoints?: number): Observable<DataQueryResponse> {
-    return this.query({
-      targets: [query],
-      requestId: `iot.${counter++}`,
-      maxDataPoints,
-    } as DataQueryRequest<MyQuery>);
-  }
-
   async listDimensionKeys(filter: string, selected_dimensions: Dimensions): Promise<DimensionKeyDefinition[]> {
     const query: ListDimensionsQuery = {
       selected_dimensions,
@@ -237,5 +194,3 @@ function cloneQueryOptionsWithModifiedValues(
 
   return clonedOptions;
 }
-
-let counter = 1000;

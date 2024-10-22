@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.7
+
+- refactor: move pagination logic to plugin backend
+- chore: update dependencies
+- chore: update grafana version in `docker-compose.yml`
+- chore: add `sample-grpc-server` to `docker-compose.yml`
+
 ## 1.2.6
 
 - fix: ensure the single stat query accommodates string values.

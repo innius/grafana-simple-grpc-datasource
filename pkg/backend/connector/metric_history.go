@@ -3,12 +3,13 @@ package connector
 import (
 	"context"
 
+	"github.com/samber/lo"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
-	"github.com/samber/lo"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRequest {
@@ -36,13 +37,27 @@ func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRe
 func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query models.MetricHistoryQuery) (*framer.MetricHistory, error) {
 	clientReq := historyQueryToInput(query)
 
-	resp, err := client.GetMetricHistory(ctx, clientReq)
+	frames := map[string]*pb.Frame{}
+	for {
+		resp, err := client.GetMetricHistory(ctx, clientReq)
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+
+		appendMatchingFrames(frames, resp.Frames)
+
+		if resp != nil && resp.NextToken != "" {
+			clientReq.StartingToken = resp.NextToken
+			continue
+		}
+		break
 	}
+
 	return &framer.MetricHistory{
-		GetMetricHistoryResponse: resp,
-		Query:                    query,
+		GetMetricHistoryResponse: &pb.GetMetricHistoryResponse{
+			Frames: lo.MapToSlice(frames, func(_ string, v *pb.Frame) *pb.Frame { return v }),
+		},
+		Query: query,
 	}, nil
 }
