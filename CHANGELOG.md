@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.10
+
+- chore: update dependencies
+
 ## 1.2.7
 
 - refactor: move pagination logic to plugin backend
