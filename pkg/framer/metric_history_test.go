@@ -105,11 +105,12 @@ func TestMetricHistory_Frames(t *testing.T) {
 	t.Run("the result should contain two frames", func(t *testing.T) {
 		assert.Len(t, res, 2)
 	})
-	t.Run("the data frame should have a name", func(t *testing.T) {
-		assert.Equal(t, "foo", res[0].Name)
+	t.Run("the data frame is sorted by name", func(t *testing.T) {
+		assert.Equal(t, "bar", res[0].Name)
+		assert.Equal(t, "foo", res[1].Name)
 	})
 	t.Run("the data field", func(t *testing.T) {
-		dataField := res[0].Fields[1]
+		dataField := res[1].Fields[1]
 		t.Run("the format name expression should be applied", func(t *testing.T) {
 			assert.Equal(t, "m1-foo-a-field_1", dataField.Config.DisplayNameFromDS)
 		})

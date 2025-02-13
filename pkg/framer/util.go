@@ -1,6 +1,8 @@
 package framer
 
 import (
+	"sort"
+
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 
 	fields2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer/fields"
@@ -112,6 +114,11 @@ func convertToDataFrames(response framesResponse) data.Frames {
 
 		res = append(res, frame)
 	}
+
+	// Sort frames by the "Name" field
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Name < res[j].Name
+	})
 
 	// add metadata -> add next token to the first frame (this is how other datasource plugins are doing this)
 	if len(res) > 0 {
