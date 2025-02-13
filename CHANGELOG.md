@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.12
+
+- fix: sort frames by the Name field
+
 ## 1.2.10
 
 - chore: update dependencies
