@@ -1,6 +1,7 @@
 package framer
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -47,42 +48,48 @@ func TestGetHistoryResponseFrameConversion(t *testing.T) {
 func TestMetricHistory_Frames(t *testing.T) {
 	ts := time.Date(2022, 01, 19, 16, 03, 10, 00, time.Local)
 
-	sut := MetricHistory{
-		GetMetricHistoryResponse: &pb.GetMetricHistoryResponse{
-			Frames: []*pb.Frame{
-				{
-					Metric: "foo",
+	frames := []*pb.Frame{
+		{
+			Metric: "foo",
 
-					Fields: []*pb.Field{
-						{
-							Name: "field_1",
-							Labels: []*pb.Label{
-								{
-									Key:   "zone",
-									Value: "a",
-								},
-							},
-							Config: &pb.Config{
-								Unit: "℃",
-							},
-							Values: []float64{10},
-						},
-					},
-					Timestamps: []*timestamppb.Timestamp{timestamppb.New(ts)},
-				},
+			Fields: []*pb.Field{
 				{
-					Metric: "bar",
-					Fields: []*pb.Field{
+					Name: "field_1",
+					Labels: []*pb.Label{
 						{
-							Name:   "",
-							Labels: nil,
-							Config: nil,
-							Values: []float64{20},
+							Key:   "zone",
+							Value: "a",
 						},
 					},
-					Timestamps: []*timestamppb.Timestamp{timestamppb.New(ts)},
+					Config: &pb.Config{
+						Unit: "℃",
+					},
+					Values: []float64{10},
 				},
 			},
+			Timestamps: []*timestamppb.Timestamp{timestamppb.New(ts)},
+		},
+		{
+			Metric: "bar",
+			Fields: []*pb.Field{
+				{
+					Name:   "",
+					Labels: nil,
+					Config: nil,
+					Values: []float64{20},
+				},
+			},
+			Timestamps: []*timestamppb.Timestamp{timestamppb.New(ts)},
+		},
+	}
+	// Sort frames in descending order based on the Metric value.
+	sort.Slice(frames, func(i, j int) bool {
+		return frames[i].Metric > frames[j].Metric
+	})
+
+	sut := MetricHistory{
+		GetMetricHistoryResponse: &pb.GetMetricHistoryResponse{
+			Frames:    frames,
 			NextToken: "next-please",
 		},
 		Query: models.MetricHistoryQuery{
