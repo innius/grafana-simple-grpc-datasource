@@ -1,13 +1,15 @@
 import defaults from 'lodash/defaults';
 import React, { ChangeEvent, useState, useEffect, } from 'react';
-import { Combobox, AsyncMultiSelect, InlineField, Input, Switch } from '@grafana/ui';
+import { Combobox, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue, } from '@grafana/data';
 
 import { DataSource } from 'datasource';
-import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, QueryOptionValue, QueryOptionDefinitions, OptionType, QueryOptions } from 'types';
+import { defaultQuery, Dimension, MyDataSourceOptions, MyQuery, QueryType, QueryOptionValue, QueryOptionDefinitions, OptionType, QueryOptions, StreamingConfig } from 'types';
 import { queryTypeInfos } from 'queryInfo';
 import DimensionSettings from './DimensionSettings';
 import QueryOptionsEditor from './QueryOptionsEditor';
+import StreamingConfigEditor from './StreamingConfigEditor';
+import StreamingToggle from './StreamingToggle';
 import { convertQuery } from 'convert';
 
 export type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
@@ -89,9 +91,23 @@ const QueryEditor = (props: Props) => {
         updateAndRunQuery({ ...query, queryOptions: updatedQueryOptions });
     };
 
-    const onStreamingChange = (event: React.FormEvent<HTMLInputElement>) => {
-        const value = (event.target as HTMLInputElement).checked;
+    const onStreamingChange = (value: boolean | string) => {
         updateAndRunQuery({ ...query, isStreaming: value });
+    };
+
+    const onStreamingConfigChange = (streamingConfig: StreamingConfig) => {
+        updateAndRunQuery({ ...query, streamingConfig });
+    };
+
+    // Helper function to determine if streaming is enabled
+    const isStreamingEnabled = (): boolean => {
+        if (typeof query.isStreaming === 'boolean') return query.isStreaming;
+        if (typeof query.isStreaming === 'string') {
+            // For template variables, we can't evaluate them here, so assume enabled if it looks like a variable
+            if (query.isStreaming.includes('$')) return true;
+            return query.isStreaming.toLowerCase() === 'true';
+        }
+        return false;
     };
     const loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
         const { dimensions } = query;
@@ -122,10 +138,17 @@ const QueryEditor = (props: Props) => {
                         width={32}
                     />
                 </InlineField>
-                <InlineField label="Streaming" labelWidth={16} tooltip="Enable if the Grafana query should stream data">
-                    <Switch onChange={onStreamingChange} value={query.isStreaming} />
-                </InlineField>
+                <StreamingToggle
+                    value={query.isStreaming}
+                    onChange={onStreamingChange}
+                />
             </div>
+            {isStreamingEnabled() && (
+                <StreamingConfigEditor
+                    config={query.streamingConfig || defaultQuery.streamingConfig!}
+                    onChange={onStreamingConfigChange}
+                />
+            )}
             <DimensionSettings
                 initState={query.dimensions || []}
                 datasource={datasource}

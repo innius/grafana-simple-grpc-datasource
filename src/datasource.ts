@@ -101,11 +101,13 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     const streams: Array<Observable<DataQueryResponse>> = [];
     const backendQueries: MyQuery[] = [];
     for (let target of options.targets) {
-      if (target.isStreaming) {
-        target = this.applyTemplateVariables(target, options.scopedVars);
-        streams.push(this.runGrafanaLiveQuery(target, options));
+      // Apply template variables first to resolve streaming state
+      const resolvedTarget = this.applyTemplateVariables(target, options.scopedVars);
+      
+      if (this.isStreamingEnabled(resolvedTarget)) {
+        streams.push(this.runGrafanaLiveQuery(resolvedTarget, options));
       } else {
-        backendQueries.push(target);
+        backendQueries.push(resolvedTarget);
       }
     }
 
@@ -122,11 +124,25 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return merge(...streams);
   }
 
+  /**
+   * Helper method to determine if streaming is enabled for a query
+   */
+  private isStreamingEnabled(query: MyQuery): boolean {
+    if (typeof query.isStreaming === 'boolean') return query.isStreaming;
+    if (typeof query.isStreaming === 'string') {
+      const lowerValue = query.isStreaming.toLowerCase().trim();
+      return lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes';
+    }
+    return false;
+  }
+
   runGrafanaLiveQuery(target: MyQuery, req: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
     const path = this.createStreamingPath(target);
+    const streamingConfig = target.streamingConfig || { maxBufferSize: 3600, lookBackPeriod: 300 };
+    
     return getGrafanaLiveSrv().getDataStream({
       buffer: {
-        maxLength: 3600,
+        maxLength: streamingConfig.maxBufferSize || 3600,
       },
       addr: {
         scope: LiveChannelScope.DataSource,
@@ -136,6 +152,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
           range: req.range,
           intervalMs: req.intervalMs,
           maxDataPoints: req.maxDataPoints,
+          lookBackPeriod: streamingConfig.lookBackPeriod || 300,
           ...target,
         },
       },
@@ -188,11 +205,19 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
     const { queryOptions } = query2;
 
+    // Handle template variables in isStreaming field
+    let resolvedIsStreaming = query2.isStreaming;
+    if (typeof query2.isStreaming === 'string') {
+      resolvedIsStreaming = templateSrv.replace(query2.isStreaming, scopedVars);
+    }
+
     return {
       ...query2,
       dimensions: dimensions,
       metrics: metrics || [],
       queryOptions: cloneQueryOptionsWithModifiedValues(queryOptions!, (x) => templateSrv.replace(x, scopedVars)),
+      streamingConfig: query2.streamingConfig, // Preserve streaming configuration
+      isStreaming: resolvedIsStreaming,
     };
   }
 

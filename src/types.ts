@@ -20,6 +20,13 @@ export interface QueryOptionValue {
 // and are sent along with the query request
 export type QueryOptions = { [key: string]: QueryOptionValue };
 
+export interface StreamingConfig {
+  // Maximum number of datapoints to keep in buffer
+  maxBufferSize?: number;
+  // Look-back period in seconds for initial dataset
+  lookBackPeriod?: number;
+}
+
 export interface MyQuery extends DataQuery {
   queryType: QueryType;
   dimensions?: Dimensions;
@@ -38,8 +45,11 @@ export interface MyQuery extends DataQuery {
 
   queryOptions?: QueryOptions;
 
-  // the query is a streaming query
-  isStreaming?: boolean;
+  // the query is a streaming query - can be boolean or string (for variables)
+  isStreaming?: boolean | string;
+  
+  // streaming configuration
+  streamingConfig?: StreamingConfig;
 }
 
 export interface NextQuery extends MyQuery {
@@ -107,6 +117,10 @@ export const defaultQuery: Partial<MyQuery> = {
   dimensions: [],
   queryType: QueryType.GetMetricAggregate,
   queryOptions: {},
+  streamingConfig: {
+    maxBufferSize: 3600,
+    lookBackPeriod: 300, // 5 minutes default
+  },
 };
 
 export const defaultDataSourceOptions: Partial<MyDataSourceOptions> = {
