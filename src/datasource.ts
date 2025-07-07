@@ -28,7 +28,7 @@ import {
 } from './types';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
-import { Observable, merge } from 'rxjs';
+import { Observable, of, merge } from 'rxjs';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -64,29 +64,83 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return displayText || query.refId;
   }
 
-  query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
-    const observables = request.targets.map((query) => {
-      return getGrafanaLiveSrv().getDataStream({
-        buffer: {
-          maxLength: 3600,
-        },
-        addr: {
-          scope: LiveChannelScope.DataSource,
-          namespace: this.uid,
-          path: `my-ws/custom-${query.refId}`, // this will allow each new query to create a new connection
-          data: {
-            range: request.range,
-            intervalMs: request.intervalMs,
-            maxDataPoints: request.maxDataPoints,
-            ...query,
-          },
-        },
-      });
-    });
-
-    return merge(...observables);
+  /**
+   * Sanitizes a string to be used in streaming path by removing/replacing invalid characters
+   * Only allows letters, numbers and forward slashes
+   */
+  private sanitizePathComponent(input: string): string {
+    // Replace invalid characters with underscores, allow only alphanumeric and forward slashes (no spaces)
+    return input.replace(/[^a-zA-Z0-9\/]/g, '_');
   }
 
+  /**
+   * Creates a properly formatted path for streaming queries
+   * Format: /refId/metricId/dimensions
+   */
+  private createStreamingPath(query: MyQuery): string {
+    let path = `${this.sanitizePathComponent(query.refId)}`;
+
+    // Add first metric if available
+    if (query.metrics && query.metrics.length > 0 && query.metrics[0].metricId) {
+      const metricId = this.sanitizePathComponent(query.metrics[0].metricId);
+      path += `/${metricId}`;
+    }
+
+    // Add dimensions if available
+    if (query.dimensions && query.dimensions.length > 0) {
+      const dimensionsStr = query.dimensions
+        .map((dim) => `${this.sanitizePathComponent(dim.key || '')}/${this.sanitizePathComponent(dim.value || '')}`)
+        .join('/');
+      path += `/${dimensionsStr}`;
+    }
+
+    return path;
+  }
+
+  query(options: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
+    const streams: Array<Observable<DataQueryResponse>> = [];
+    const backendQueries: MyQuery[] = [];
+    for (let target of options.targets) {
+      if (target.isStreaming) {
+        target = this.applyTemplateVariables(target, options.scopedVars);
+        streams.push(this.runGrafanaLiveQuery(target, options));
+      } else {
+        backendQueries.push(target);
+      }
+    }
+
+    if (backendQueries.length) {
+      const backendOpts = {
+        ...options,
+        targets: backendQueries,
+      };
+      streams.push(super.query(backendOpts));
+    }
+    if (streams.length === 0) {
+      return of({ data: [] });
+    }
+    return merge(...streams);
+  }
+
+  runGrafanaLiveQuery(target: MyQuery, req: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
+    const path = this.createStreamingPath(target);
+    return getGrafanaLiveSrv().getDataStream({
+      buffer: {
+        maxLength: 3600,
+      },
+      addr: {
+        scope: LiveChannelScope.DataSource,
+        namespace: this.uid,
+        path: path,
+        data: {
+          range: req.range,
+          intervalMs: req.intervalMs,
+          maxDataPoints: req.maxDataPoints,
+          ...target,
+        },
+      },
+    });
+  }
   /**
    * Supports lists of metrics
    */

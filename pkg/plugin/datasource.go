@@ -93,8 +93,10 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 }
 
 func (d *Datasource) SubscribeStream(context.Context, *backend.SubscribeStreamRequest) (*backend.SubscribeStreamResponse, error) {
+	// validate the query
 	backend.Logger.Info("subscribe")
 	return &backend.SubscribeStreamResponse{
+		// InitialData: backend.NewInitialFrame(f, data.IncludeAll),
 		Status: backend.SubscribeStreamStatusOK,
 	}, nil
 }

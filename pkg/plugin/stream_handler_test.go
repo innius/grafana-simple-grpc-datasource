@@ -79,8 +79,8 @@ type MockStreamLogger struct {
 }
 
 type LogEntry struct {
-	Message        string
-	KeysAndValues  []interface{}
+	Message       string
+	KeysAndValues []interface{}
 }
 
 func (m *MockStreamLogger) Info(msg string, keysAndValues ...interface{}) {
@@ -102,6 +102,20 @@ func (m *MockQueryExecutor) ExecuteQuery(ctx context.Context, timeRange backend.
 	return args.Get(0).(data.Frames), args.Error(1)
 }
 
+type MockDynamicIntervalExecutor struct {
+	MockQueryExecutor
+}
+
+func (m *MockDynamicIntervalExecutor) SupportsDynamicInterval() bool {
+	args := m.Called()
+	return args.Bool(0)
+}
+
+func (m *MockDynamicIntervalExecutor) CalculateIntervalFromFrames(frames data.Frames) (time.Duration, error) {
+	args := m.Called(frames)
+	return args.Get(0).(time.Duration), args.Error(1)
+}
+
 // Test StreamQueryParser
 
 func TestStreamQueryParser_ParseStreamQuery(t *testing.T) {
@@ -116,12 +130,12 @@ func TestStreamQueryParser_ParseStreamQuery(t *testing.T) {
 				Metrics: []models.Metric{{MetricId: "test-metric"}},
 			},
 		}
-		
+
 		rawData, err := json.Marshal(queryData)
 		require.NoError(t, err)
 
 		result, err := parser.ParseStreamQuery(rawData)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, models.QueryMetricValue, result.QueryType)
 		assert.Equal(t, "test-metric", result.Metrics[0].MetricId)
@@ -130,9 +144,9 @@ func TestStreamQueryParser_ParseStreamQuery(t *testing.T) {
 
 	t.Run("invalid JSON", func(t *testing.T) {
 		rawData := []byte("invalid json")
-		
+
 		result, err := parser.ParseStreamQuery(rawData)
-		
+
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "failed to unmarshal stream query")
@@ -159,7 +173,7 @@ func TestStreamQueryParser_ValidateQuery(t *testing.T) {
 	t.Run("empty query type", func(t *testing.T) {
 		query := &Q{QueryType: ""}
 		err := parser.ValidateQuery(query)
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "query type is required")
 	})
@@ -167,7 +181,7 @@ func TestStreamQueryParser_ValidateQuery(t *testing.T) {
 	t.Run("unsupported query type", func(t *testing.T) {
 		query := &Q{QueryType: "unsupported"}
 		err := parser.ValidateQuery(query)
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported query type: unsupported")
 	})
@@ -181,36 +195,36 @@ func TestQueryExecutorFactory_CreateExecutor(t *testing.T) {
 
 	t.Run("metric aggregate executor", func(t *testing.T) {
 		query := &Q{QueryType: models.QueryMetricAggregate}
-		
+
 		executor, err := factory.CreateExecutor(query)
-		
+
 		assert.NoError(t, err)
 		assert.IsType(t, &MetricAggregateExecutor{}, executor)
 	})
 
 	t.Run("metric history executor", func(t *testing.T) {
 		query := &Q{QueryType: models.QueryMetricHistory}
-		
+
 		executor, err := factory.CreateExecutor(query)
-		
+
 		assert.NoError(t, err)
 		assert.IsType(t, &MetricHistoryExecutor{}, executor)
 	})
 
 	t.Run("metric value executor", func(t *testing.T) {
 		query := &Q{QueryType: models.QueryMetricValue}
-		
+
 		executor, err := factory.CreateExecutor(query)
-		
+
 		assert.NoError(t, err)
 		assert.IsType(t, &MetricValueExecutor{}, executor)
 	})
 
 	t.Run("unsupported query type", func(t *testing.T) {
 		query := &Q{QueryType: "unsupported"}
-		
+
 		executor, err := factory.CreateExecutor(query)
-		
+
 		assert.Error(t, err)
 		assert.Nil(t, executor)
 		assert.Contains(t, err.Error(), "unsupported query type: unsupported")
@@ -292,14 +306,14 @@ func TestStreamProcessor_ProcessStream(t *testing.T) {
 		mockExecutor := &MockQueryExecutor{}
 		mockSender := &MockFrameSender{}
 		mockLogger := &MockStreamLogger{}
-		
+
 		config := StreamConfig{
 			TickInterval:    100 * time.Millisecond,
 			InitialTimeSpan: 1 * time.Hour,
 		}
-		
+
 		processor := NewStreamProcessor(config, mockExecutor, mockSender, mockLogger)
-		
+
 		expectedFrames := data.Frames{data.NewFrame("test")}
 		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("backend.TimeRange")).Return(expectedFrames, nil).Once()
 		mockSender.On("SendFrame", mock.Anything, data.IncludeAll).Return(nil).Once()
@@ -311,11 +325,11 @@ func TestStreamProcessor_ProcessStream(t *testing.T) {
 		defer cancel()
 
 		err := processor.ProcessStream(ctx)
-		
+
 		// Should return context.DeadlineExceeded due to timeout
 		assert.Error(t, err)
 		assert.Equal(t, context.DeadlineExceeded, err)
-		
+
 		// Verify initial data was sent
 		assert.Len(t, mockSender.SentFrames, 1)
 		mockExecutor.AssertExpectations(t)
@@ -326,17 +340,17 @@ func TestStreamProcessor_ProcessStream(t *testing.T) {
 		mockExecutor := &MockQueryExecutor{}
 		mockSender := &MockFrameSender{}
 		mockLogger := &MockStreamLogger{}
-		
+
 		config := DefaultStreamConfig()
 		processor := NewStreamProcessor(config, mockExecutor, mockSender, mockLogger)
-		
+
 		expectedError := errors.New("query failed")
 		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("backend.TimeRange")).Return(data.Frames{}, expectedError)
 		mockLogger.On("Error", "Initial query failure", mock.Anything).Once()
 
 		ctx := context.Background()
 		err := processor.ProcessStream(ctx)
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to send initial data")
 		mockExecutor.AssertExpectations(t)
@@ -348,7 +362,7 @@ func TestStreamProcessor_sendFrames(t *testing.T) {
 	mockExecutor := &MockQueryExecutor{}
 	mockSender := &MockFrameSender{}
 	mockLogger := &MockStreamLogger{}
-	
+
 	processor := NewStreamProcessor(DefaultStreamConfig(), mockExecutor, mockSender, mockLogger)
 
 	t.Run("successful frame sending", func(t *testing.T) {
@@ -356,25 +370,28 @@ func TestStreamProcessor_sendFrames(t *testing.T) {
 			data.NewFrame("frame1"),
 			data.NewFrame("frame2"),
 		}
-		
+
 		mockSender.On("SendFrame", frames[0], data.IncludeAll).Return(nil).Once()
 		mockSender.On("SendFrame", frames[1], data.IncludeAll).Return(nil).Once()
+		mockLogger.On("Info", "Sending frame", mock.Anything).Return().Twice()
 
-		err := processor.sendFrames(frames)
-		
+		err := processor.sendFrames(frames, data.IncludeAll)
+
 		assert.NoError(t, err)
 		mockSender.AssertExpectations(t)
+		mockLogger.AssertExpectations(t)
 	})
 
 	t.Run("frame sending failure", func(t *testing.T) {
 		frames := data.Frames{data.NewFrame("frame1")}
 		expectedError := errors.New("send failed")
-		
+
 		mockSender.On("SendFrame", frames[0], data.IncludeAll).Return(expectedError).Once()
+		mockLogger.On("Info", "Sending frame", mock.Anything).Return().Once()
 		mockLogger.On("Error", "Failed to send frame", mock.Anything).Once()
 
-		err := processor.sendFrames(frames)
-		
+		err := processor.sendFrames(frames, data.IncludeAll)
+
 		assert.Error(t, err)
 		assert.Equal(t, expectedError, err)
 		mockSender.AssertExpectations(t)
@@ -386,7 +403,7 @@ func TestStreamProcessor_sendFrames(t *testing.T) {
 
 func TestDefaultStreamConfig(t *testing.T) {
 	config := DefaultStreamConfig()
-	
+
 	assert.Equal(t, 10*time.Second, config.TickInterval)
 	assert.Equal(t, 1*time.Hour, config.InitialTimeSpan)
 }
@@ -395,14 +412,271 @@ func TestDefaultStreamConfig(t *testing.T) {
 
 func TestGrafanaLogger(t *testing.T) {
 	logger := &GrafanaLogger{}
-	
+
 	// These tests just ensure the methods don't panic
 	// since we can't easily test the actual Grafana backend logger
 	assert.NotPanics(t, func() {
 		logger.Info("test message", "key", "value")
 	})
-	
+
 	assert.NotPanics(t, func() {
 		logger.Error("test error", "error", "test")
+	})
+}
+
+// Test Dynamic Interval Functionality
+
+func TestMetricAggregateExecutor_DynamicInterval(t *testing.T) {
+	mockBackend := &MockBackendAPI{}
+	executor := &MetricAggregateExecutor{
+		backendAPI: mockBackend,
+		metricBaseQuery: models.MetricBaseQuery{
+			Metrics: []models.Metric{{MetricId: "test-metric"}},
+		},
+	}
+
+	t.Run("supports dynamic interval", func(t *testing.T) {
+		assert.True(t, executor.SupportsDynamicInterval())
+	})
+
+	t.Run("calculate interval from frames", func(t *testing.T) {
+		// Create a frame with time series data
+		frame := data.NewFrame("test")
+		timeField := data.NewField("time", nil, []time.Time{
+			time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
+			time.Date(2023, 1, 1, 12, 5, 0, 0, time.UTC), // 5 minute interval
+		})
+		valueField := data.NewField("value", nil, []float64{1.0, 2.0})
+		frame.Fields = append(frame.Fields, timeField, valueField)
+
+		frames := data.Frames{frame}
+
+		interval, err := executor.CalculateIntervalFromFrames(frames)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 5*time.Minute, interval)
+	})
+
+	t.Run("calculate interval with no frames", func(t *testing.T) {
+		frames := data.Frames{}
+
+		interval, err := executor.CalculateIntervalFromFrames(frames)
+
+		assert.Error(t, err)
+		assert.Equal(t, time.Duration(0), interval)
+		assert.Contains(t, err.Error(), "no frames provided")
+	})
+
+	t.Run("calculate interval with insufficient data", func(t *testing.T) {
+		// Create a frame with only one data point
+		frame := data.NewFrame("test")
+		timeField := data.NewField("time", nil, []time.Time{
+			time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
+		})
+		valueField := data.NewField("value", nil, []float64{1.0})
+		frame.Fields = append(frame.Fields, timeField, valueField)
+
+		frames := data.Frames{frame}
+
+		interval, err := executor.CalculateIntervalFromFrames(frames)
+
+		assert.Error(t, err)
+		assert.Equal(t, time.Duration(0), interval)
+		assert.Contains(t, err.Error(), "unable to calculate interval from frames")
+	})
+}
+
+func TestMetricHistoryExecutor_DynamicInterval(t *testing.T) {
+	mockBackend := &MockBackendAPI{}
+	executor := &MetricHistoryExecutor{
+		backendAPI: mockBackend,
+		metricBaseQuery: models.MetricBaseQuery{
+			Metrics: []models.Metric{{MetricId: "test-metric"}},
+		},
+	}
+
+	t.Run("does not support dynamic interval", func(t *testing.T) {
+		assert.False(t, executor.SupportsDynamicInterval())
+	})
+
+	t.Run("calculate interval returns error", func(t *testing.T) {
+		frames := data.Frames{data.NewFrame("test")}
+
+		interval, err := executor.CalculateIntervalFromFrames(frames)
+
+		assert.Error(t, err)
+		assert.Equal(t, time.Duration(0), interval)
+		assert.Contains(t, err.Error(), "dynamic interval not supported for MetricHistoryExecutor")
+	})
+}
+
+func TestMetricValueExecutor_DynamicInterval(t *testing.T) {
+	mockBackend := &MockBackendAPI{}
+	executor := &MetricValueExecutor{
+		backendAPI: mockBackend,
+		metricBaseQuery: models.MetricBaseQuery{
+			Metrics: []models.Metric{{MetricId: "test-metric"}},
+		},
+	}
+
+	t.Run("does not support dynamic interval", func(t *testing.T) {
+		assert.False(t, executor.SupportsDynamicInterval())
+	})
+
+	t.Run("calculate interval returns error", func(t *testing.T) {
+		frames := data.Frames{data.NewFrame("test")}
+
+		interval, err := executor.CalculateIntervalFromFrames(frames)
+
+		assert.Error(t, err)
+		assert.Equal(t, time.Duration(0), interval)
+		assert.Contains(t, err.Error(), "dynamic interval not supported for MetricValueExecutor")
+	})
+}
+
+func TestDynamicStreamConfig(t *testing.T) {
+	config := DefaultDynamicStreamConfig()
+
+	assert.Equal(t, 1*time.Hour, config.InitialTimeSpan)
+	assert.Equal(t, 1*time.Second, config.MinInterval)
+	assert.Equal(t, 1*time.Hour, config.MaxInterval)
+}
+
+func TestNewDynamicStreamProcessor(t *testing.T) {
+	mockExecutor := &MockDynamicIntervalExecutor{}
+	mockSender := &MockFrameSender{}
+	mockLogger := &MockStreamLogger{}
+	dynamicConfig := DefaultDynamicStreamConfig()
+
+	processor := NewDynamicStreamProcessor(dynamicConfig, mockExecutor, mockSender, mockLogger)
+
+	assert.NotNil(t, processor)
+	assert.NotNil(t, processor.dynamicConfig)
+	assert.Equal(t, dynamicConfig.InitialTimeSpan, processor.dynamicConfig.InitialTimeSpan)
+	assert.Equal(t, dynamicConfig.MinInterval, processor.dynamicConfig.MinInterval)
+	assert.Equal(t, dynamicConfig.MaxInterval, processor.dynamicConfig.MaxInterval)
+}
+
+func TestStreamProcessor_DynamicInterval(t *testing.T) {
+	t.Run("dynamic interval calculation and bounds checking", func(t *testing.T) {
+		mockExecutor := &MockDynamicIntervalExecutor{}
+		mockSender := &MockFrameSender{}
+		mockLogger := &MockStreamLogger{}
+
+		dynamicConfig := DynamicStreamConfig{
+			InitialTimeSpan: 1 * time.Hour,
+			MinInterval:     5 * time.Second,
+			MaxInterval:     10 * time.Minute,
+		}
+
+		processor := NewDynamicStreamProcessor(dynamicConfig, mockExecutor, mockSender, mockLogger)
+
+		// Create frame with 2-minute interval
+		frame := data.NewFrame("test")
+		timeField := data.NewField("time", nil, []time.Time{
+			time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
+			time.Date(2023, 1, 1, 12, 2, 0, 0, time.UTC), // 2 minute interval
+		})
+		valueField := data.NewField("value", nil, []float64{1.0, 2.0})
+		frame.Fields = append(frame.Fields, timeField, valueField)
+		expectedFrames := data.Frames{frame}
+
+		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("backend.TimeRange")).Return(expectedFrames, nil).Once()
+		mockExecutor.On("SupportsDynamicInterval").Return(true)
+		mockExecutor.On("CalculateIntervalFromFrames", expectedFrames).Return(2*time.Minute, nil)
+		mockSender.On("SendFrame", mock.Anything, data.IncludeAll).Return(nil).Once()
+		mockLogger.On("Info", mock.Anything, mock.Anything).Maybe()
+		mockLogger.On("Error", mock.Anything, mock.Anything).Maybe()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		err := processor.ProcessStream(ctx)
+
+		// Should return context.DeadlineExceeded due to timeout
+		assert.Error(t, err)
+		assert.Equal(t, context.DeadlineExceeded, err)
+
+		// Verify dynamic interval was calculated and set
+		assert.Equal(t, 2*time.Minute, processor.dynamicInterval)
+
+		mockExecutor.AssertExpectations(t)
+		mockSender.AssertExpectations(t)
+	})
+
+	t.Run("dynamic interval below minimum", func(t *testing.T) {
+		mockExecutor := &MockDynamicIntervalExecutor{}
+		mockSender := &MockFrameSender{}
+		mockLogger := &MockStreamLogger{}
+
+		dynamicConfig := DynamicStreamConfig{
+			InitialTimeSpan: 1 * time.Hour,
+			MinInterval:     5 * time.Second,
+			MaxInterval:     10 * time.Minute,
+		}
+
+		processor := NewDynamicStreamProcessor(dynamicConfig, mockExecutor, mockSender, mockLogger)
+
+		expectedFrames := data.Frames{data.NewFrame("test")}
+
+		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("backend.TimeRange")).Return(expectedFrames, nil).Once()
+		mockExecutor.On("SupportsDynamicInterval").Return(true)
+		mockExecutor.On("CalculateIntervalFromFrames", expectedFrames).Return(1*time.Second, nil) // Below minimum
+		mockSender.On("SendFrame", mock.Anything, data.IncludeAll).Return(nil).Once()
+		mockLogger.On("Info", mock.Anything, mock.Anything).Maybe()
+		mockLogger.On("Error", mock.Anything, mock.Anything).Maybe()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		err := processor.ProcessStream(ctx)
+
+		// Should return context.DeadlineExceeded due to timeout
+		assert.Error(t, err)
+		assert.Equal(t, context.DeadlineExceeded, err)
+
+		// Verify minimum interval was used
+		assert.Equal(t, 5*time.Second, processor.dynamicInterval)
+
+		mockExecutor.AssertExpectations(t)
+		mockSender.AssertExpectations(t)
+	})
+
+	t.Run("dynamic interval above maximum", func(t *testing.T) {
+		mockExecutor := &MockDynamicIntervalExecutor{}
+		mockSender := &MockFrameSender{}
+		mockLogger := &MockStreamLogger{}
+
+		dynamicConfig := DynamicStreamConfig{
+			InitialTimeSpan: 1 * time.Hour,
+			MinInterval:     5 * time.Second,
+			MaxInterval:     10 * time.Minute,
+		}
+
+		processor := NewDynamicStreamProcessor(dynamicConfig, mockExecutor, mockSender, mockLogger)
+
+		expectedFrames := data.Frames{data.NewFrame("test")}
+
+		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("backend.TimeRange")).Return(expectedFrames, nil).Once()
+		mockExecutor.On("SupportsDynamicInterval").Return(true)
+		mockExecutor.On("CalculateIntervalFromFrames", expectedFrames).Return(20*time.Minute, nil) // Above maximum
+		mockSender.On("SendFrame", mock.Anything, data.IncludeAll).Return(nil).Once()
+		mockLogger.On("Info", mock.Anything, mock.Anything).Maybe()
+		mockLogger.On("Error", mock.Anything, mock.Anything).Maybe()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		err := processor.ProcessStream(ctx)
+
+		// Should return context.DeadlineExceeded due to timeout
+		assert.Error(t, err)
+		assert.Equal(t, context.DeadlineExceeded, err)
+
+		// Verify maximum interval was used
+		assert.Equal(t, 10*time.Minute, processor.dynamicInterval)
+
+		mockExecutor.AssertExpectations(t)
+		mockSender.AssertExpectations(t)
 	})
 }
