@@ -291,7 +291,7 @@ func NewDynamicStreamProcessor(dynamicConfig DynamicStreamConfig, executor Query
 	}
 }
 
-// ProcessStream handles the streaming process
+// ProcessStream handles the streaming process (including initial data)
 func (p *StreamProcessor) ProcessStream(ctx context.Context) error {
 	// Send initial data
 	if err := p.sendInitialData(ctx); err != nil {
@@ -299,6 +299,12 @@ func (p *StreamProcessor) ProcessStream(ctx context.Context) error {
 	}
 
 	// Start streaming loop
+	return p.RunStreamingLoop(ctx)
+}
+
+// RunStreamingLoop runs the main streaming loop without sending initial data
+// This is used when initial data has already been sent via SubscribeStream
+func (p *StreamProcessor) RunStreamingLoop(ctx context.Context) error {
 	return p.runStreamingLoop(ctx)
 }
 

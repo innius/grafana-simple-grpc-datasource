@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
+	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/pkg/errors"
 )
 
@@ -92,12 +94,73 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 	return d.queryMux.QueryData(ctx, req)
 }
 
-func (d *Datasource) SubscribeStream(context.Context, *backend.SubscribeStreamRequest) (*backend.SubscribeStreamResponse, error) {
-	// validate the query
-	backend.Logger.Info("subscribe")
+func (d *Datasource) SubscribeStream(ctx context.Context, req *backend.SubscribeStreamRequest) (*backend.SubscribeStreamResponse, error) {
+	logger := &GrafanaLogger{}
+	logger.Info("SubscribeStream started", "path", req.Path, "data", string(req.Data))
+
+	// Parse and validate the query
+	parser := &StreamQueryParser{}
+	query, err := parser.ParseStreamQuery(req.Data)
+	if err != nil {
+		logger.Error("Failed to parse stream query in SubscribeStream", "error", err)
+		return &backend.SubscribeStreamResponse{
+			Status: backend.SubscribeStreamStatusNotFound,
+		}, err
+	}
+
+	if err := parser.ValidateQuery(query); err != nil {
+		logger.Error("Invalid stream query in SubscribeStream", "error", err)
+		return &backend.SubscribeStreamResponse{
+			Status: backend.SubscribeStreamStatusNotFound,
+		}, err
+	}
+
+	logger.Info("Validated stream query", "queryType", query.QueryType, "metrics", query.Metrics)
+
+	// Create query executor
+	factory := NewQueryExecutorFactory(d.backendAPI)
+	executor, err := factory.CreateExecutor(query)
+	if err != nil {
+		logger.Error("Failed to create query executor in SubscribeStream", "error", err)
+		return &backend.SubscribeStreamResponse{
+			Status: backend.SubscribeStreamStatusNotFound,
+		}, err
+	}
+
+	// Get initial data
+	initialFrames, err := d.getInitialStreamData(ctx, executor)
+	if err != nil {
+		logger.Error("Failed to get initial stream data", "error", err)
+		return &backend.SubscribeStreamResponse{
+			Status: backend.SubscribeStreamStatusNotFound,
+		}, err
+	}
+
+	logger.Info("Successfully retrieved initial data", "frameCount", len(initialFrames))
+
+	// Convert frames to initial data
+	var initialData *backend.InitialData
+	if len(initialFrames) > 0 {
+		// Use the first frame as initial data
+		var err error
+		initialData, err = backend.NewInitialFrame(initialFrames[0], data.IncludeAll)
+		if err != nil {
+			logger.Error("Failed to create initial frame", "error", err)
+			return &backend.SubscribeStreamResponse{
+				Status: backend.SubscribeStreamStatusNotFound,
+			}, err
+		}
+
+		// If there are multiple frames, we could potentially combine them
+		// For now, we'll just use the first one
+		if len(initialFrames) > 1 {
+			logger.Info("Multiple frames received, using first frame for initial data", "totalFrames", len(initialFrames))
+		}
+	}
+
 	return &backend.SubscribeStreamResponse{
-		// InitialData: backend.NewInitialFrame(f, data.IncludeAll),
-		Status: backend.SubscribeStreamStatusOK,
+		Status:      backend.SubscribeStreamStatusOK,
+		InitialData: initialData,
 	}, nil
 }
 
@@ -115,39 +178,54 @@ type Q struct {
 	models.MetricBaseQuery
 }
 
+// getInitialStreamData retrieves the initial dataset for streaming
+func (d *Datasource) getInitialStreamData(ctx context.Context, executor QueryExecutor) (data.Frames, error) {
+	now := time.Now()
+	initialTimeSpan := 1 * time.Hour // Default initial time span
+
+	timeRange := backend.TimeRange{
+		From: now.Add(-initialTimeSpan),
+		To:   now,
+	}
+
+	return executor.ExecuteQuery(ctx, timeRange)
+}
+
 func (d *Datasource) RunStream(ctx context.Context, req *backend.RunStreamRequest, sender *backend.StreamSender) error {
 	logger := &GrafanaLogger{}
 	logger.Info("RunStream started", "req.Data", string(req.Data))
 
-	// Parse and validate the query
+	// Parse and validate the query (this should have been done in SubscribeStream, but we validate again for safety)
 	parser := &StreamQueryParser{}
 	query, err := parser.ParseStreamQuery(req.Data)
 	if err != nil {
-		logger.Error("Failed to parse stream query", "error", err)
+		logger.Error("Failed to parse stream query in RunStream", "error", err)
 		return err
 	}
 
 	if err := parser.ValidateQuery(query); err != nil {
-		logger.Error("Invalid stream query", "error", err)
+		logger.Error("Invalid stream query in RunStream", "error", err)
 		return err
 	}
 
-	logger.Info("Parsed stream query", "queryType", query.QueryType, "metrics", query.Metrics)
+	logger.Info("Validated stream query for streaming", "queryType", query.QueryType, "metrics", query.Metrics)
 
 	// Create query executor
 	factory := NewQueryExecutorFactory(d.backendAPI)
 	executor, err := factory.CreateExecutor(query)
 	if err != nil {
-		logger.Error("Failed to create query executor", "error", err)
+		logger.Error("Failed to create query executor in RunStream", "error", err)
 		return err
 	}
 
 	// Create stream processor with default configuration
+	// Note: Initial data is already sent via SubscribeStream, so we skip that step
 	config := DefaultStreamConfig()
 	processor := NewStreamProcessor(config, executor, sender, logger)
 
-	// Process the stream
-	return processor.ProcessStream(ctx)
+	// Start the streaming loop directly (skip initial data since it was sent in SubscribeStream)
+	logger.Info("Starting streaming loop (initial data already sent via SubscribeStream)")
+	return processor.RunStreamingLoop(ctx)
 }
 
 // CheckHealth handles health checks sent from Grafana to the plugin.
