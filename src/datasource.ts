@@ -56,11 +56,27 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   getQueryDisplayText(query: MyQuery): string {
-    let displayText = '[' + query.dimensions?.map(this.formatDimension).join(',') + ']';
+    let displayText = `[${query.queryType || 'Unknown'}]`;
+    
+    if (query.dimensions && query.dimensions.length > 0) {
+      displayText += '[' + query.dimensions.map(this.formatDimension).join(',') + ']';
+    }
 
     if (query.metrics && query.metrics?.length > 0) {
       displayText += ' ' + query.metrics.map(this.formatMetric).join('&');
     }
+
+    // Add query options if available
+    if (query.queryOptions && Object.keys(query.queryOptions).length > 0) {
+      const optionsStr = Object.entries(query.queryOptions)
+        .filter(([_, optionValue]) => optionValue.value)
+        .map(([key, optionValue]) => `${key}=${optionValue.value}`)
+        .join(',');
+      if (optionsStr) {
+        displayText += ` {${optionsStr}}`;
+      }
+    }
+
     return displayText || query.refId;
   }
 
@@ -74,11 +90,31 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   /**
+   * Creates a hash-based path component for very long paths to avoid URL length issues
+   */
+  private createHashedPathComponent(input: string): string {
+    // Simple hash function for creating shorter unique identifiers
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
    * Creates a properly formatted path for streaming queries
-   * Format: /refId/metricId/dimensions
+   * Format: /refId/queryType/metricId/dimensions/queryOptions
+   * Uses hashing for very long paths to avoid URL length issues
    */
   private createStreamingPath(query: MyQuery): string {
     let path = `${this.sanitizePathComponent(query.refId)}`;
+
+    // Add query type
+    if (query.queryType) {
+      path += `/${this.sanitizePathComponent(query.queryType)}`;
+    }
 
     // Add first metric if available
     if (query.metrics && query.metrics.length > 0 && query.metrics[0].metricId) {
@@ -92,6 +128,44 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
         .map((dim) => `${this.sanitizePathComponent(dim.key || '')}/${this.sanitizePathComponent(dim.value || '')}`)
         .join('/');
       path += `/${dimensionsStr}`;
+    }
+
+    // Add query options if available
+    if (query.queryOptions && Object.keys(query.queryOptions).length > 0) {
+      const optionsStr = Object.entries(query.queryOptions)
+        .filter(([_, optionValue]) => optionValue.value) // Only include options with values
+        .map(([key, optionValue]) => `${this.sanitizePathComponent(key)}/${this.sanitizePathComponent(optionValue.value || '')}`)
+        .join('/');
+      if (optionsStr) {
+        path += `/${optionsStr}`;
+      }
+    }
+
+    // Add streaming configuration as part of the path for uniqueness
+    if (query.streamingConfig) {
+      const streamingStr = [
+        query.streamingConfig.maxBufferSize ? `buffer/${query.streamingConfig.maxBufferSize}` : '',
+        query.streamingConfig.lookBackPeriod ? `lookback/${query.streamingConfig.lookBackPeriod}` : ''
+      ].filter(Boolean).join('/');
+      
+      if (streamingStr) {
+        path += `/${streamingStr}`;
+      }
+    }
+
+    // If the path is too long (>200 characters), use a hash-based approach
+    if (path.length > 200) {
+      const fullQueryString = JSON.stringify({
+        refId: query.refId,
+        queryType: query.queryType,
+        metrics: query.metrics,
+        dimensions: query.dimensions,
+        queryOptions: query.queryOptions,
+        streamingConfig: query.streamingConfig
+      });
+      
+      const hashedPath = this.createHashedPathComponent(fullQueryString);
+      path = `${this.sanitizePathComponent(query.refId)}/hashed/${hashedPath}`;
     }
 
     return path;
@@ -134,6 +208,26 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       return lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes';
     }
     return false;
+  }
+
+  /**
+   * Helper method to get debug information about streaming path creation
+   * Useful for troubleshooting path generation
+   */
+  getStreamingPathDebugInfo(query: MyQuery): { path: string; components: any; isHashed: boolean } {
+    const components = {
+      refId: query.refId,
+      queryType: query.queryType,
+      firstMetric: query.metrics && query.metrics.length > 0 ? query.metrics[0].metricId : null,
+      dimensionsCount: query.dimensions ? query.dimensions.length : 0,
+      queryOptionsCount: query.queryOptions ? Object.keys(query.queryOptions).length : 0,
+      streamingConfig: query.streamingConfig
+    };
+
+    const path = this.createStreamingPath(query);
+    const isHashed = path.includes('/hashed/');
+
+    return { path, components, isHashed };
   }
 
   runGrafanaLiveQuery(target: MyQuery, req: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {

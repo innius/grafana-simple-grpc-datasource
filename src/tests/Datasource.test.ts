@@ -77,7 +77,7 @@ describe('Datasource', () => {
         };
         const displayText = ds.getQueryDisplayText(input);
         it('be formatted to a nice string', () => {
-            expect(displayText).toEqual('[dim1=1,dim1=2] id1&id2&$sensor');
+            expect(displayText).toEqual('[GetMetricAggregate][dim1=1,dim1=2] id1&id2&$sensor');
         });
     });
 });
