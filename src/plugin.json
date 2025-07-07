@@ -7,6 +7,7 @@
     "backend": true,
     "executable": "gpx_my-plugin",
     "alerting": true,
+    "streaming": true,
     "queryOptions": {
         "minInterval": true
     },

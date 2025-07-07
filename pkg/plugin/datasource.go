@@ -2,14 +2,18 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"time"
 
-	backendapi "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	backendapi "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend"
+
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
+	"github.com/grafana/grafana-plugin-sdk-go/data"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 
@@ -32,6 +36,7 @@ var (
 	_ backend.CallResourceHandler   = (*Datasource)(nil)
 	_ backend.CheckHealthHandler    = (*Datasource)(nil)
 	_ instancemgmt.InstanceDisposer = (*Datasource)(nil)
+	_ backend.StreamHandler         = (*Datasource)(nil)
 )
 
 // QueryHandlerFunc is the function signature used for mux.HandleFunc
@@ -88,6 +93,119 @@ func newDatasourceWithBackendAPI(backendAPI backendapi.Backend) (instancemgmt.In
 // contains Frames ([]*Frame).
 func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	return d.queryMux.QueryData(ctx, req)
+}
+
+func (d *Datasource) SubscribeStream(context.Context, *backend.SubscribeStreamRequest) (*backend.SubscribeStreamResponse, error) {
+	backend.Logger.Info("subscribe")
+	return &backend.SubscribeStreamResponse{
+		Status: backend.SubscribeStreamStatusOK,
+	}, nil
+}
+
+func (d *Datasource) PublishStream(context.Context, *backend.PublishStreamRequest) (*backend.PublishStreamResponse, error) {
+	return &backend.PublishStreamResponse{
+		Status: backend.PublishStreamStatusPermissionDenied,
+	}, nil
+}
+
+type Q struct {
+	QueryType     string `json:"queryType"`
+	Range         backend.TimeRange
+	IntervalMS    int64 `json:"intervalMs"`
+	MaxDataPoints int64 `json:"maxDataPoints"`
+	models.MetricBaseQuery
+}
+
+func (d *Datasource) RunStream(ctx context.Context, req *backend.RunStreamRequest, sender *backend.StreamSender) error {
+	// see:https://grafana.com/developers/plugin-tools/tutorials/build-a-streaming-data-source-plugin
+	backend.Logger.Info("subscribe")
+
+	backend.Logger.Info("RunStream", "req.Data", string(req.Data))
+	query := Q{}
+	if err := json.Unmarshal(req.Data, &query); err != nil {
+		backend.Logger.Error("Unmarshal error", "error", err)
+		return err
+	}
+	backend.Logger.Info("Q", "Q", query)
+
+	var queryFunc func(backend.TimeRange) (data.Frames, error)
+
+	switch query.QueryType {
+	case models.QueryMetricAggregate:
+		queryFunc = func(tr backend.TimeRange) (data.Frames, error) {
+			q := models.MetricAggregateQuery{
+				MetricBaseQuery: query.MetricBaseQuery,
+			}
+			q.TimeRange = tr
+			return d.backendAPI.HandleGetMetricAggregateQuery(ctx, &q)
+		}
+	case models.QueryMetricHistory:
+		queryFunc = func(tr backend.TimeRange) (data.Frames, error) {
+			q := models.MetricHistoryQuery{
+				MetricBaseQuery: query.MetricBaseQuery,
+			}
+			q.TimeRange = tr
+			return d.backendAPI.HandleGetMetricHistoryQuery(ctx, &q)
+		}
+	case models.QueryMetricValue:
+		queryFunc = func(tr backend.TimeRange) (data.Frames, error) {
+			q := models.MetricValueQuery{
+				MetricBaseQuery: query.MetricBaseQuery,
+			}
+			q.TimeRange = tr
+			return d.backendAPI.HandleGetMetricValueQuery(ctx, &q)
+		}
+	default:
+		return errors.New("unsupported query type")
+	}
+
+	now := time.Now()
+	tr := backend.TimeRange{
+		From: now.Add(-1 * time.Hour),
+		To:   now,
+	}
+
+	f, err := queryFunc(tr)
+	if err != nil {
+		backend.Logger.Error("Query failure", "error", err)
+	}
+	for _, fr := range f {
+		err := sender.SendFrame(fr, data.IncludeAll)
+		if err != nil {
+			backend.Logger.Error("Failed send frame", "error", err)
+		}
+	}
+
+	ticker := time.NewTicker(10 * time.Second)
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			backend.Logger.Error("context canceled")
+			return ctx.Err()
+		case tickTime := <-ticker.C:
+			newTr := backend.TimeRange{
+				From: tr.To,
+				To:   tickTime,
+			}
+			// On first tick, if tr.To is zero time, use original From as From
+			if tr.To.IsZero() {
+				newTr.From = tr.From
+			}
+			tr = newTr
+			f, err := queryFunc(tr)
+			if err != nil {
+				backend.Logger.Error("Query failure", "error", err)
+			}
+			for _, fr := range f {
+				err := sender.SendFrame(fr, data.IncludeAll)
+				if err != nil {
+					backend.Logger.Error("Failed send frame", "error", err)
+				}
+			}
+		}
+	}
 }
 
 // CheckHealth handles health checks sent from Grafana to the plugin.

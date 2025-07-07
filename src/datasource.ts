@@ -1,5 +1,12 @@
-import { DataSourceInstanceSettings, ScopedVars, MetricFindValue } from '@grafana/data';
-import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
+import {
+  DataSourceInstanceSettings,
+  ScopedVars,
+  MetricFindValue,
+  DataQueryRequest,
+  DataQueryResponse,
+  LiveChannelScope,
+} from '@grafana/data';
+import { DataSourceWithBackend, getTemplateSrv, getGrafanaLiveSrv } from '@grafana/runtime';
 import {
   Dimension,
   Dimensions,
@@ -21,6 +28,7 @@ import {
 } from './types';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
+import { Observable, merge } from 'rxjs';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -54,6 +62,29 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       displayText += ' ' + query.metrics.map(this.formatMetric).join('&');
     }
     return displayText || query.refId;
+  }
+
+  query(request: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
+    const observables = request.targets.map((query) => {
+      return getGrafanaLiveSrv().getDataStream({
+        buffer: {
+          maxLength: 3600,
+        },
+        addr: {
+          scope: LiveChannelScope.DataSource,
+          namespace: this.uid,
+          path: `my-ws/custom-${query.refId}`, // this will allow each new query to create a new connection
+          data: {
+            range: request.range,
+            intervalMs: request.intervalMs,
+            maxDataPoints: request.maxDataPoints,
+            ...query,
+          },
+        },
+      });
+    });
+
+    return merge(...observables);
   }
 
   /**

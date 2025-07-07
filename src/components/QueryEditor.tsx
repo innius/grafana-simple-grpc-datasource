@@ -1,6 +1,6 @@
 import defaults from 'lodash/defaults';
 import React, { ChangeEvent, useState, useEffect, } from 'react';
-import { Select, AsyncMultiSelect, InlineField, Input } from '@grafana/ui';
+import { Combobox, AsyncMultiSelect, InlineField, Input, Switch } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue, } from '@grafana/data';
 
 import { DataSource } from 'datasource';
@@ -89,6 +89,10 @@ const QueryEditor = (props: Props) => {
         updateAndRunQuery({ ...query, queryOptions: updatedQueryOptions });
     };
 
+    const onStreamingChange = (event: React.FormEvent<HTMLInputElement>) => {
+        const value = (event.target as HTMLInputElement).checked;
+        updateAndRunQuery({ ...query, isStreaming: value });
+    };
     const loadMetrics = (value: string): Promise<Array<SelectableValue<string>>> => {
         const { dimensions } = query;
         return datasource.listMetrics(dimensions || [], value);
@@ -107,12 +111,21 @@ const QueryEditor = (props: Props) => {
 
     const selectedMetrics = query.metrics?.map((x) => ({ label: x.metricId, value: x.metricId }));
     // AsyncSelect is not perfect yet, see https://github.com/JedWatson/react-select/issues/1879 for an alternative solution
-
     return (
         <>
-            <InlineField labelWidth={24} label="Query Type">
-                <Select options={queryTypeInfos} value={currentQueryType} onChange={x => onQueryTypeChange(x.value || QueryType.GetMetricAggregate)} width={32} />
-            </InlineField>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <InlineField labelWidth={24} label="Query Type">
+                    <Combobox
+                        options={queryTypeInfos}
+                        value={currentQueryType}
+                        onChange={x => onQueryTypeChange(x.value || QueryType.GetMetricAggregate)}
+                        width={32}
+                    />
+                </InlineField>
+                <InlineField label="Streaming" labelWidth={16} tooltip="Enable if the Grafana query should stream data">
+                    <Switch onChange={onStreamingChange} value={query.isStreaming} />
+                </InlineField>
+            </div>
             <DimensionSettings
                 initState={query.dimensions || []}
                 datasource={datasource}
@@ -125,8 +138,8 @@ const QueryEditor = (props: Props) => {
                     defaultOptions={true}
                     value={selectedMetrics}
                     loadOptions={loadMetrics}
-                    onChange={(evt) => onMetricChange(evt)}
-                    onCreateOption={(x) => onAddMetric(x)}
+                    onChange={(evt: Array<SelectableValue<string>>) => onMetricChange(evt)}
+                    onCreateOption={(x: string) => onAddMetric(x)}
                     allowCustomValue={true}
                     isSearchable={true}
                 />

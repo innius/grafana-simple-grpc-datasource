@@ -37,6 +37,9 @@ export interface MyQuery extends DataQuery {
   metricId?: string;
 
   queryOptions?: QueryOptions;
+
+  // the query is a streaming query
+  isStreaming?: boolean;
 }
 
 export interface NextQuery extends MyQuery {
