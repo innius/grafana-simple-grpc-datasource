@@ -2,9 +2,7 @@ package plugin
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,7 +11,6 @@ import (
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
-	"github.com/grafana/grafana-plugin-sdk-go/data"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 
@@ -117,95 +114,38 @@ type Q struct {
 }
 
 func (d *Datasource) RunStream(ctx context.Context, req *backend.RunStreamRequest, sender *backend.StreamSender) error {
-	// see:https://grafana.com/developers/plugin-tools/tutorials/build-a-streaming-data-source-plugin
-	backend.Logger.Info("subscribe")
+	logger := &GrafanaLogger{}
+	logger.Info("RunStream started", "req.Data", string(req.Data))
 
-	backend.Logger.Info("RunStream", "req.Data", string(req.Data))
-	query := Q{}
-	if err := json.Unmarshal(req.Data, &query); err != nil {
-		backend.Logger.Error("Unmarshal error", "error", err)
+	// Parse and validate the query
+	parser := &StreamQueryParser{}
+	query, err := parser.ParseStreamQuery(req.Data)
+	if err != nil {
+		logger.Error("Failed to parse stream query", "error", err)
 		return err
 	}
-	backend.Logger.Info("Q", "Q", query)
 
-	var queryFunc func(backend.TimeRange) (data.Frames, error)
-
-	switch query.QueryType {
-	case models.QueryMetricAggregate:
-		queryFunc = func(tr backend.TimeRange) (data.Frames, error) {
-			q := models.MetricAggregateQuery{
-				MetricBaseQuery: query.MetricBaseQuery,
-			}
-			q.TimeRange = tr
-			return d.backendAPI.HandleGetMetricAggregateQuery(ctx, &q)
-		}
-	case models.QueryMetricHistory:
-		queryFunc = func(tr backend.TimeRange) (data.Frames, error) {
-			q := models.MetricHistoryQuery{
-				MetricBaseQuery: query.MetricBaseQuery,
-			}
-			q.TimeRange = tr
-			return d.backendAPI.HandleGetMetricHistoryQuery(ctx, &q)
-		}
-	case models.QueryMetricValue:
-		queryFunc = func(tr backend.TimeRange) (data.Frames, error) {
-			q := models.MetricValueQuery{
-				MetricBaseQuery: query.MetricBaseQuery,
-			}
-			q.TimeRange = tr
-			return d.backendAPI.HandleGetMetricValueQuery(ctx, &q)
-		}
-	default:
-		return errors.New("unsupported query type")
+	if err := parser.ValidateQuery(query); err != nil {
+		logger.Error("Invalid stream query", "error", err)
+		return err
 	}
 
-	now := time.Now()
-	tr := backend.TimeRange{
-		From: now.Add(-1 * time.Hour),
-		To:   now,
-	}
+	logger.Info("Parsed stream query", "queryType", query.QueryType, "metrics", query.Metrics)
 
-	f, err := queryFunc(tr)
+	// Create query executor
+	factory := NewQueryExecutorFactory(d.backendAPI)
+	executor, err := factory.CreateExecutor(query)
 	if err != nil {
-		backend.Logger.Error("Query failure", "error", err)
-	}
-	for _, fr := range f {
-		err := sender.SendFrame(fr, data.IncludeAll)
-		if err != nil {
-			backend.Logger.Error("Failed send frame", "error", err)
-		}
+		logger.Error("Failed to create query executor", "error", err)
+		return err
 	}
 
-	ticker := time.NewTicker(10 * time.Second)
+	// Create stream processor with default configuration
+	config := DefaultStreamConfig()
+	processor := NewStreamProcessor(config, executor, sender, logger)
 
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			backend.Logger.Error("context canceled")
-			return ctx.Err()
-		case tickTime := <-ticker.C:
-			newTr := backend.TimeRange{
-				From: tr.To,
-				To:   tickTime,
-			}
-			// On first tick, if tr.To is zero time, use original From as From
-			if tr.To.IsZero() {
-				newTr.From = tr.From
-			}
-			tr = newTr
-			f, err := queryFunc(tr)
-			if err != nil {
-				backend.Logger.Error("Query failure", "error", err)
-			}
-			for _, fr := range f {
-				err := sender.SendFrame(fr, data.IncludeAll)
-				if err != nil {
-					backend.Logger.Error("Failed send frame", "error", err)
-				}
-			}
-		}
-	}
+	// Process the stream
+	return processor.ProcessStream(ctx)
 }
 
 // CheckHealth handles health checks sent from Grafana to the plugin.
