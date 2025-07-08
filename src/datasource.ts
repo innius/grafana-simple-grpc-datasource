@@ -190,7 +190,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
   runGrafanaLiveQuery(target: MyQuery, req: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
     const path = this.createStreamingPath(target);
-    const streamingConfig = target.streamingConfig || { maxBufferSize: 3600, lookBackPeriod: 300 };
+    const streamingConfig = target.streamingConfig || { maxBufferSize: 3600, lookBackPeriod: '1h' };
 
     return getGrafanaLiveSrv().getDataStream({
       buffer: {
@@ -204,7 +204,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
           range: req.range,
           intervalMs: req.intervalMs,
           maxDataPoints: req.maxDataPoints,
-          lookBackPeriod: streamingConfig.lookBackPeriod || 300,
+          lookBackPeriod: streamingConfig.lookBackPeriod,
           ...target,
         },
       },

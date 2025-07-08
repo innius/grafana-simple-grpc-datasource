@@ -30,7 +30,7 @@ func TestRunStreamParsing(t *testing.T) {
 		// Test parsing
 		parser := &StreamQueryParser{}
 		parsedQuery, err := parser.ParseStreamQuery(queryData)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, models.QueryMetricValue, parsedQuery.QueryType)
 		assert.Equal(t, int64(1000), parsedQuery.IntervalMS)
@@ -45,7 +45,7 @@ func TestRunStreamParsing(t *testing.T) {
 	t.Run("invalid JSON", func(t *testing.T) {
 		parser := &StreamQueryParser{}
 		_, err := parser.ParseStreamQuery([]byte("invalid json"))
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal stream query")
 	})
@@ -121,9 +121,9 @@ func TestQueryExecutorFactoryIntegration(t *testing.T) {
 // TestStreamConfigDefaults tests the default configuration
 func TestStreamConfigDefaults(t *testing.T) {
 	config := DefaultStreamConfig()
-	
+
 	assert.Equal(t, 10*time.Second, config.TickInterval)
-	assert.Equal(t, 1*time.Hour, config.InitialTimeSpan)
+	assert.Equal(t, 1*time.Hour, config.LookBackPeriod)
 }
 
 // TestModularityBenefits demonstrates the benefits of the refactored approach
@@ -145,12 +145,12 @@ func TestModularityBenefits(t *testing.T) {
 
 	t.Run("configuration is customizable", func(t *testing.T) {
 		customConfig := StreamConfig{
-			TickInterval:    5 * time.Second,
-			InitialTimeSpan: 30 * time.Minute,
+			TickInterval:   5 * time.Second,
+			LookBackPeriod: 30 * time.Minute,
 		}
-		
+
 		assert.Equal(t, 5*time.Second, customConfig.TickInterval)
-		assert.Equal(t, 30*time.Minute, customConfig.InitialTimeSpan)
+		assert.Equal(t, 30*time.Minute, customConfig.LookBackPeriod)
 	})
 
 	t.Run("executors implement common interface", func(t *testing.T) {

@@ -9,37 +9,41 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/pkg/errors"
 
+	"slices"
+
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 )
 
 // StreamConfig holds configuration for streaming operations
 type StreamConfig struct {
-	TickInterval    time.Duration
-	InitialTimeSpan time.Duration
+	TickInterval   time.Duration
+	LookBackPeriod time.Duration // Added to support streamingConfig.LookBackPeriod
 }
 
 // DefaultStreamConfig returns default streaming configuration
 func DefaultStreamConfig() StreamConfig {
 	return StreamConfig{
-		TickInterval:    10 * time.Second,
-		InitialTimeSpan: 1 * time.Hour,
+		//TODO: this has to come from the backend
+		TickInterval:   10 * time.Second, // Default TickInterval
+		LookBackPeriod: 1 * time.Hour,    // Default lookback period
 	}
 }
 
-// DynamicStreamConfig holds configuration for streaming operations with dynamic intervals
-type DynamicStreamConfig struct {
-	InitialTimeSpan time.Duration
-	MinInterval     time.Duration // Minimum allowed interval
-	MaxInterval     time.Duration // Maximum allowed interval
-}
+// NewStreamConfigFromQuery creates a StreamConfig from query streamingConfig
+func NewStreamConfigFromQuery(query *Q) StreamConfig {
+	config := DefaultStreamConfig()
 
-// DefaultDynamicStreamConfig returns default dynamic streaming configuration
-func DefaultDynamicStreamConfig() DynamicStreamConfig {
-	return DynamicStreamConfig{
-		InitialTimeSpan: 1 * time.Hour,
-		MinInterval:     1 * time.Second,
-		MaxInterval:     1 * time.Hour,
+	// Use LookBackPeriod from streamingConfig if available
+	if query.StreamingConfig.LookBackPeriod != nil {
+		config.LookBackPeriod = parseLookBackPeriod(query.StreamingConfig.LookBackPeriod, backend.Logger)
+		backend.Logger.Info("StreamConfig: Using LookBackPeriod from streamingConfig",
+			"lookBackPeriod", query.StreamingConfig.LookBackPeriod,
+			"duration", config.LookBackPeriod.String())
+	} else {
+		backend.Logger.Info("StreamConfig: Using default LookBackPeriod", "duration", config.LookBackPeriod.String())
 	}
+
+	return config
 }
 
 // QueryExecutor defines the interface for executing queries
@@ -47,15 +51,14 @@ type QueryExecutor interface {
 	ExecuteQuery(ctx context.Context, timeRange backend.TimeRange) (data.Frames, error)
 }
 
-// DynamicIntervalExecutor extends QueryExecutor with dynamic interval calculation
-type DynamicIntervalExecutor interface {
-	QueryExecutor
-	CalculateIntervalFromFrames(frames data.Frames) (time.Duration, error)
-	SupportsDynamicInterval() bool
+func NewStreamQueryParser(backendAPI BackendAPI) *StreamQueryParser {
+	return &StreamQueryParser{}
 }
 
 // StreamQueryParser handles parsing and validation of stream queries
-type StreamQueryParser struct{}
+type StreamQueryParser struct {
+	backendAPI BackendAPI
+}
 
 // ParseStreamQuery parses the raw query data into a structured query
 func (p *StreamQueryParser) ParseStreamQuery(rawData []byte) (*Q, error) {
@@ -78,12 +81,12 @@ func (p *StreamQueryParser) ValidateQuery(query *Q) error {
 		models.QueryMetricValue,
 	}
 
-	for _, supportedType := range supportedTypes {
-		if query.QueryType == supportedType {
-			return nil
-		}
+	if slices.Contains(supportedTypes, query.QueryType) {
+		return nil
 	}
 
+	//TODO: validate the query configuration from the backend API
+	// p.backendAPI.GetQueryStreamingConfiguration(ctx, &...)
 	return errors.Errorf("unsupported query type: %s", query.QueryType)
 }
 
@@ -143,54 +146,6 @@ func (e *MetricAggregateExecutor) ExecuteQuery(ctx context.Context, timeRange ba
 	return e.backendAPI.HandleGetMetricAggregateQuery(ctx, query)
 }
 
-// SupportsDynamicInterval returns true for MetricAggregateExecutor
-func (e *MetricAggregateExecutor) SupportsDynamicInterval() bool {
-	return true
-}
-
-// CalculateIntervalFromFrames calculates the interval between the last two datapoints
-func (e *MetricAggregateExecutor) CalculateIntervalFromFrames(frames data.Frames) (time.Duration, error) {
-	if len(frames) == 0 {
-		return 0, errors.New("no frames provided")
-	}
-
-	// Find the first frame with time data
-	for _, frame := range frames {
-		if frame.TimeSeriesSchema().Type == data.TimeSeriesTypeWide {
-			// Find the time field (usually the first field in time series)
-			var timeField *data.Field
-			for _, field := range frame.Fields {
-				if field.Type() == data.FieldTypeTime {
-					timeField = field
-					break
-				}
-			}
-
-			if timeField == nil || timeField.Len() < 2 {
-				continue
-			}
-
-			// Get the last two timestamps
-			lastIdx := timeField.Len() - 1
-			secondLastIdx := lastIdx - 1
-
-			lastTime, ok1 := timeField.At(lastIdx).(time.Time)
-			secondLastTime, ok2 := timeField.At(secondLastIdx).(time.Time)
-
-			if !ok1 || !ok2 {
-				continue
-			}
-
-			interval := lastTime.Sub(secondLastTime)
-			if interval > 0 {
-				return interval, nil
-			}
-		}
-	}
-
-	return 0, errors.New("unable to calculate interval from frames")
-}
-
 // MetricHistoryExecutor executes metric history queries
 type MetricHistoryExecutor struct {
 	backendAPI      BackendAPI
@@ -203,16 +158,6 @@ func (e *MetricHistoryExecutor) ExecuteQuery(ctx context.Context, timeRange back
 	}
 	query.TimeRange = timeRange
 	return e.backendAPI.HandleGetMetricHistoryQuery(ctx, query)
-}
-
-// SupportsDynamicInterval returns false for MetricHistoryExecutor
-func (e *MetricHistoryExecutor) SupportsDynamicInterval() bool {
-	return false
-}
-
-// CalculateIntervalFromFrames is not implemented for MetricHistoryExecutor
-func (e *MetricHistoryExecutor) CalculateIntervalFromFrames(frames data.Frames) (time.Duration, error) {
-	return 0, errors.New("dynamic interval not supported for MetricHistoryExecutor")
 }
 
 // MetricValueExecutor executes metric value queries
@@ -229,16 +174,6 @@ func (e *MetricValueExecutor) ExecuteQuery(ctx context.Context, timeRange backen
 	return e.backendAPI.HandleGetMetricValueQuery(ctx, query)
 }
 
-// SupportsDynamicInterval returns false for MetricValueExecutor
-func (e *MetricValueExecutor) SupportsDynamicInterval() bool {
-	return false
-}
-
-// CalculateIntervalFromFrames is not implemented for MetricValueExecutor
-func (e *MetricValueExecutor) CalculateIntervalFromFrames(frames data.Frames) (time.Duration, error) {
-	return 0, errors.New("dynamic interval not supported for MetricValueExecutor")
-}
-
 // FrameSender defines the interface for sending frames
 type FrameSender interface {
 	SendFrame(frame *data.Frame, include data.FrameInclude) error
@@ -246,28 +181,26 @@ type FrameSender interface {
 
 // StreamProcessor handles the streaming logic
 type StreamProcessor struct {
-	config          StreamConfig
-	dynamicConfig   *DynamicStreamConfig
-	executor        QueryExecutor
-	sender          FrameSender
-	logger          StreamLogger
-	dynamicInterval time.Duration // Calculated interval for dynamic executors
+	config   StreamConfig
+	executor QueryExecutor
+	sender   FrameSender
+	logger   StreamLogger
 }
 
 // StreamLogger defines the interface for logging stream operations
 type StreamLogger interface {
-	Info(msg string, keysAndValues ...interface{})
-	Error(msg string, keysAndValues ...interface{})
+	Info(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
 }
 
 // GrafanaLogger wraps the Grafana backend logger
 type GrafanaLogger struct{}
 
-func (l *GrafanaLogger) Info(msg string, keysAndValues ...interface{}) {
+func (l *GrafanaLogger) Info(msg string, keysAndValues ...any) {
 	backend.Logger.Info(msg, keysAndValues...)
 }
 
-func (l *GrafanaLogger) Error(msg string, keysAndValues ...interface{}) {
+func (l *GrafanaLogger) Error(msg string, keysAndValues ...any) {
 	backend.Logger.Error(msg, keysAndValues...)
 }
 
@@ -281,14 +214,10 @@ func NewStreamProcessor(config StreamConfig, executor QueryExecutor, sender Fram
 	}
 }
 
-// NewDynamicStreamProcessor creates a new stream processor with dynamic interval support
-func NewDynamicStreamProcessor(dynamicConfig DynamicStreamConfig, executor QueryExecutor, sender FrameSender, logger StreamLogger) *StreamProcessor {
-	return &StreamProcessor{
-		dynamicConfig: &dynamicConfig,
-		executor:      executor,
-		sender:        sender,
-		logger:        logger,
-	}
+// NewStreamProcessorFromQuery creates a stream processor using configuration from the query
+func NewStreamProcessorFromQuery(query *Q, executor QueryExecutor, sender FrameSender, logger StreamLogger) *StreamProcessor {
+	config := NewStreamConfigFromQuery(query)
+	return NewStreamProcessor(config, executor, sender, logger)
 }
 
 // ProcessStream handles the streaming process (including initial data)
@@ -311,16 +240,11 @@ func (p *StreamProcessor) RunStreamingLoop(ctx context.Context) error {
 // sendInitialData sends the initial data frame
 func (p *StreamProcessor) sendInitialData(ctx context.Context) error {
 	now := time.Now()
-	var initialTimeSpan time.Duration
-
-	if p.dynamicConfig != nil {
-		initialTimeSpan = p.dynamicConfig.InitialTimeSpan
-	} else {
-		initialTimeSpan = p.config.InitialTimeSpan
-	}
+	lookBackPeriod := p.config.LookBackPeriod
+	p.logger.Info("sendInitialData: Using LookBackPeriod from StreamConfig", "duration", lookBackPeriod.String())
 
 	timeRange := backend.TimeRange{
-		From: now.Add(-initialTimeSpan),
+		From: now.Add(-lookBackPeriod),
 		To:   now,
 	}
 
@@ -330,47 +254,13 @@ func (p *StreamProcessor) sendInitialData(ctx context.Context) error {
 		return err
 	}
 
-	// For dynamic interval executors, calculate the interval from initial data
-	if dynamicExecutor, ok := p.executor.(DynamicIntervalExecutor); ok && dynamicExecutor.SupportsDynamicInterval() {
-		if interval, err := dynamicExecutor.CalculateIntervalFromFrames(frames); err == nil {
-			// Apply bounds checking
-			if p.dynamicConfig != nil {
-				if interval < p.dynamicConfig.MinInterval {
-					interval = p.dynamicConfig.MinInterval
-					p.logger.Info("Calculated interval below minimum, using minimum", "calculated", interval, "minimum", p.dynamicConfig.MinInterval)
-				} else if interval > p.dynamicConfig.MaxInterval {
-					interval = p.dynamicConfig.MaxInterval
-					p.logger.Info("Calculated interval above maximum, using maximum", "calculated", interval, "maximum", p.dynamicConfig.MaxInterval)
-				}
-			}
-			p.dynamicInterval = interval
-			p.logger.Info("Dynamic interval calculated from initial data", "interval", interval)
-		} else {
-			p.logger.Error("Failed to calculate dynamic interval, using default", "error", err)
-			// Fall back to a default interval if calculation fails
-			if p.dynamicConfig != nil {
-				p.dynamicInterval = p.dynamicConfig.MinInterval
-			} else {
-				p.dynamicInterval = 10 * time.Second
-			}
-		}
-	}
-
 	return p.sendFrames(frames, data.IncludeAll)
 }
 
 // runStreamingLoop runs the main streaming loop
 func (p *StreamProcessor) runStreamingLoop(ctx context.Context) error {
-	var tickInterval time.Duration
-
-	// Determine which interval to use
-	if dynamicExecutor, ok := p.executor.(DynamicIntervalExecutor); ok && dynamicExecutor.SupportsDynamicInterval() && p.dynamicInterval > 0 {
-		tickInterval = p.dynamicInterval
-		p.logger.Info("Using dynamic interval for streaming", "interval", tickInterval.String())
-	} else {
-		tickInterval = p.config.TickInterval
-		p.logger.Info("Using fixed interval for streaming", "interval", tickInterval.String())
-	}
+	tickInterval := p.config.TickInterval
+	p.logger.Info("Using fixed interval for streaming", "interval", tickInterval.String())
 
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()

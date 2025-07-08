@@ -4,64 +4,64 @@ import StreamingConfigEditor from '../StreamingConfigEditor';
 import { StreamingConfig } from '../../types';
 
 describe('StreamingConfigEditor', () => {
-  const defaultConfig: StreamingConfig = {
-    maxBufferSize: 3600,
-    lookBackPeriod: 300,
-  };
+    const defaultConfig: StreamingConfig = {
+        maxBufferSize: 3600,
+        lookBackPeriod: "1m",
+    };
 
-  const mockOnChange = jest.fn();
+    const mockOnChange = jest.fn();
 
-  beforeEach(() => {
-    mockOnChange.mockClear();
-  });
-
-  it('renders with default values', () => {
-    render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
-    
-    expect(screen.getByDisplayValue('3600')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('300')).toBeInTheDocument();
-  });
-
-  it('calls onChange when max buffer size changes', () => {
-    render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
-    
-    const bufferSizeInput = screen.getByDisplayValue('3600');
-    fireEvent.change(bufferSizeInput, { target: { value: '5000' } });
-    
-    expect(mockOnChange).toHaveBeenCalledWith({
-      ...defaultConfig,
-      maxBufferSize: 5000,
+    beforeEach(() => {
+        mockOnChange.mockClear();
     });
-  });
 
-  it('calls onChange when look-back period changes', () => {
-    render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
-    
-    const lookBackInput = screen.getByDisplayValue('300');
-    fireEvent.change(lookBackInput, { target: { value: '600' } });
-    
-    expect(mockOnChange).toHaveBeenCalledWith({
-      ...defaultConfig,
-      lookBackPeriod: 600,
+    it('renders with default values', () => {
+        render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
+
+        expect(screen.getByDisplayValue('3600')).toBeInTheDocument();
+        expect(screen.getByDisplayValue('300')).toBeInTheDocument();
     });
-  });
 
-  it('disables inputs when disabled prop is true', () => {
-    render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} disabled={true} />);
-    
-    const bufferSizeInput = screen.getByDisplayValue('3600');
-    const lookBackInput = screen.getByDisplayValue('300');
-    
-    expect(bufferSizeInput).toBeDisabled();
-    expect(lookBackInput).toBeDisabled();
-  });
+    it('calls onChange when max buffer size changes', () => {
+        render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
 
-  it('does not call onChange for invalid values', () => {
-    render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
-    
-    const bufferSizeInput = screen.getByDisplayValue('3600');
-    fireEvent.change(bufferSizeInput, { target: { value: 'invalid' } });
-    
-    expect(mockOnChange).not.toHaveBeenCalled();
-  });
+        const bufferSizeInput = screen.getByDisplayValue('3600');
+        fireEvent.change(bufferSizeInput, { target: { value: '5000' } });
+
+        expect(mockOnChange).toHaveBeenCalledWith({
+            ...defaultConfig,
+            maxBufferSize: 5000,
+        });
+    });
+
+    it('calls onChange when look-back period changes', () => {
+        render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
+
+        const lookBackInput = screen.getByDisplayValue('300');
+        fireEvent.change(lookBackInput, { target: { value: '600' } });
+
+        expect(mockOnChange).toHaveBeenCalledWith({
+            ...defaultConfig,
+            lookBackPeriod: 600,
+        });
+    });
+
+    it('disables inputs when disabled prop is true', () => {
+        render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} disabled={true} />);
+
+        const bufferSizeInput = screen.getByDisplayValue('3600');
+        const lookBackInput = screen.getByDisplayValue('300');
+
+        expect(bufferSizeInput).toBeDisabled();
+        expect(lookBackInput).toBeDisabled();
+    });
+
+    it('does not call onChange for invalid values', () => {
+        render(<StreamingConfigEditor config={defaultConfig} onChange={mockOnChange} />);
+
+        const bufferSizeInput = screen.getByDisplayValue('3600');
+        fireEvent.change(bufferSizeInput, { target: { value: 'invalid' } });
+
+        expect(mockOnChange).not.toHaveBeenCalled();
+    });
 });

@@ -24,7 +24,7 @@ export interface StreamingConfig {
   // Maximum number of datapoints to keep in buffer
   maxBufferSize?: number;
   // Look-back period in seconds for initial dataset
-  lookBackPeriod?: number;
+  lookBackPeriod?: string;
 }
 
 export interface MyQuery extends DataQuery {
@@ -47,7 +47,7 @@ export interface MyQuery extends DataQuery {
 
   // the query is a streaming query - can be boolean or string (for variables)
   isStreaming?: boolean | string;
-  
+
   // streaming configuration
   streamingConfig?: StreamingConfig;
 }
@@ -118,8 +118,8 @@ export const defaultQuery: Partial<MyQuery> = {
   queryType: QueryType.GetMetricAggregate,
   queryOptions: {},
   streamingConfig: {
-    maxBufferSize: 3600,
-    lookBackPeriod: 300, // 5 minutes default
+    maxBufferSize: undefined,
+    lookBackPeriod: undefined, // 5 minutes default
   },
 };
 
@@ -137,7 +137,7 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
 
   // max. number of retries for all backend requests
   max_retries?: number;
-  
+
   // enable streaming queries at datasource level
   enableStreaming?: boolean;
 }

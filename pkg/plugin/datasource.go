@@ -99,7 +99,7 @@ func (d *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscribe
 	logger.Info("SubscribeStream started", "path", req.Path, "data", string(req.Data))
 
 	// Parse and validate the query
-	parser := &StreamQueryParser{}
+	parser := NewStreamQueryParser(d.backendAPI)
 	query, err := parser.ParseStreamQuery(req.Data)
 	if err != nil {
 		logger.Error("Failed to parse stream query in SubscribeStream", "error", err)
@@ -128,7 +128,7 @@ func (d *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscribe
 	}
 
 	// Get initial data
-	initialFrames, err := d.getInitialStreamData(ctx, executor)
+	initialFrames, err := d.getInitialStreamData(ctx, executor, query)
 	if err != nil {
 		logger.Error("Failed to get initial stream data", "error", err)
 		return &backend.SubscribeStreamResponse{
@@ -170,21 +170,42 @@ func (d *Datasource) PublishStream(context.Context, *backend.PublishStreamReques
 	}, nil
 }
 
+type streamingConfig struct {
+	LookBackPeriod *string `json:"lookBackPeriod,omitempty"`
+}
+
 type Q struct {
-	QueryType     string `json:"queryType"`
-	Range         backend.TimeRange
-	IntervalMS    int64 `json:"intervalMs"`
-	MaxDataPoints int64 `json:"maxDataPoints"`
+	QueryType string `json:"queryType"`
+	// Range           backend.TimeRange
+	IntervalMS      int64           `json:"intervalMs"`
+	MaxDataPoints   int64           `json:"maxDataPoints"`
+	StreamingConfig streamingConfig `json:"streamingConfig"`
 	models.MetricBaseQuery
 }
 
-// getInitialStreamData retrieves the initial dataset for streaming
-func (d *Datasource) getInitialStreamData(ctx context.Context, executor QueryExecutor) (data.Frames, error) {
-	now := time.Now()
-	initialTimeSpan := 1 * time.Hour // Default initial time span
+const defaultLookBack = time.Hour
 
+func parseLookBackPeriod(raw *string, logger StreamLogger) time.Duration {
+	if raw == nil {
+		logger.Info("Using default lookback period for initial data", "duration", defaultLookBack.String())
+		return defaultLookBack
+	}
+	if d, err := time.ParseDuration(*raw); err == nil {
+		logger.Info("Using LookBackPeriod from streamingConfig for initial data", "lookBackPeriod", raw, "duration", d.String())
+		return d
+	}
+	logger.Error("invalid lookback period specified -> using default lookback period", "lookBackPeriod", *raw)
+	return defaultLookBack
+}
+
+// getInitialStreamData retrieves the initial dataset for streaming
+func (d *Datasource) getInitialStreamData(ctx context.Context, executor QueryExecutor, query *Q) (data.Frames, error) {
+	logger := &GrafanaLogger{}
+	now := time.Now()
+
+	lookBackDuration := parseLookBackPeriod(query.StreamingConfig.LookBackPeriod, logger)
 	timeRange := backend.TimeRange{
-		From: now.Add(-initialTimeSpan),
+		From: now.Add(-lookBackDuration),
 		To:   now,
 	}
 
@@ -218,10 +239,9 @@ func (d *Datasource) RunStream(ctx context.Context, req *backend.RunStreamReques
 		return err
 	}
 
-	// Create stream processor with default configuration
+	// Create stream processor with configuration from query
 	// Note: Initial data is already sent via SubscribeStream, so we skip that step
-	config := DefaultStreamConfig()
-	processor := NewStreamProcessor(config, executor, sender, logger)
+	processor := NewStreamProcessorFromQuery(query, executor, sender, logger)
 
 	// Start the streaming loop directly (skip initial data since it was sent in SubscribeStream)
 	logger.Info("Starting streaming loop (initial data already sent via SubscribeStream)")
