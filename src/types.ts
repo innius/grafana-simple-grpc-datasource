@@ -125,6 +125,7 @@ export const defaultQuery: Partial<MyQuery> = {
 
 export const defaultDataSourceOptions: Partial<MyDataSourceOptions> = {
   max_retries: 5,
+  enableStreaming: false,
 };
 
 /**
@@ -136,6 +137,9 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
 
   // max. number of retries for all backend requests
   max_retries?: number;
+  
+  // enable streaming queries at datasource level
+  enableStreaming?: boolean;
 }
 
 /**

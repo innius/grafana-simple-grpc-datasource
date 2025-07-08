@@ -138,12 +138,14 @@ const QueryEditor = (props: Props) => {
                         width={32}
                     />
                 </InlineField>
-                <StreamingToggle
-                    value={query.isStreaming}
-                    onChange={onStreamingChange}
-                />
+                {datasource.enableStreaming && (
+                    <StreamingToggle
+                        value={query.isStreaming}
+                        onChange={onStreamingChange}
+                    />
+                )}
             </div>
-            {isStreamingEnabled() && (
+            {datasource.enableStreaming && isStreamingEnabled() && (
                 <StreamingConfigEditor
                     config={query.streamingConfig || defaultQuery.streamingConfig!}
                     onChange={onStreamingConfigChange}

@@ -31,8 +31,11 @@ import { DatasourceVariableSupport } from './variables';
 import { Observable, of, merge } from 'rxjs';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
+  enableStreaming: boolean;
+
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
+    this.enableStreaming = instanceSettings.jsonData.enableStreaming || false;
     this.variables = new DatasourceVariableSupport(this);
   }
 
@@ -57,7 +60,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
   getQueryDisplayText(query: MyQuery): string {
     let displayText = `[${query.queryType || 'Unknown'}]`;
-    
+
     if (query.dimensions && query.dimensions.length > 0) {
       displayText += '[' + query.dimensions.map(this.formatDimension).join(',') + ']';
     }
@@ -90,23 +93,8 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   /**
-   * Creates a hash-based path component for very long paths to avoid URL length issues
-   */
-  private createHashedPathComponent(input: string): string {
-    // Simple hash function for creating shorter unique identifiers
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36);
-  }
-
-  /**
    * Creates a properly formatted path for streaming queries
    * Format: /refId/queryType/metricId/dimensions/queryOptions
-   * Uses hashing for very long paths to avoid URL length issues
    */
   private createStreamingPath(query: MyQuery): string {
     let path = `${this.sanitizePathComponent(query.refId)}`;
@@ -134,7 +122,10 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     if (query.queryOptions && Object.keys(query.queryOptions).length > 0) {
       const optionsStr = Object.entries(query.queryOptions)
         .filter(([_, optionValue]) => optionValue.value) // Only include options with values
-        .map(([key, optionValue]) => `${this.sanitizePathComponent(key)}/${this.sanitizePathComponent(optionValue.value || '')}`)
+        .map(
+          ([key, optionValue]) =>
+            `${this.sanitizePathComponent(key)}/${this.sanitizePathComponent(optionValue.value || '')}`
+        )
         .join('/');
       if (optionsStr) {
         path += `/${optionsStr}`;
@@ -145,27 +136,14 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     if (query.streamingConfig) {
       const streamingStr = [
         query.streamingConfig.maxBufferSize ? `buffer/${query.streamingConfig.maxBufferSize}` : '',
-        query.streamingConfig.lookBackPeriod ? `lookback/${query.streamingConfig.lookBackPeriod}` : ''
-      ].filter(Boolean).join('/');
-      
+        query.streamingConfig.lookBackPeriod ? `lookback/${query.streamingConfig.lookBackPeriod}` : '',
+      ]
+        .filter(Boolean)
+        .join('/');
+
       if (streamingStr) {
         path += `/${streamingStr}`;
       }
-    }
-
-    // If the path is too long (>200 characters), use a hash-based approach
-    if (path.length > 200) {
-      const fullQueryString = JSON.stringify({
-        refId: query.refId,
-        queryType: query.queryType,
-        metrics: query.metrics,
-        dimensions: query.dimensions,
-        queryOptions: query.queryOptions,
-        streamingConfig: query.streamingConfig
-      });
-      
-      const hashedPath = this.createHashedPathComponent(fullQueryString);
-      path = `${this.sanitizePathComponent(query.refId)}/hashed/${hashedPath}`;
     }
 
     return path;
@@ -177,7 +155,7 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     for (let target of options.targets) {
       // Apply template variables first to resolve streaming state
       const resolvedTarget = this.applyTemplateVariables(target, options.scopedVars);
-      
+
       if (this.isStreamingEnabled(resolvedTarget)) {
         streams.push(this.runGrafanaLiveQuery(resolvedTarget, options));
       } else {
@@ -210,30 +188,10 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return false;
   }
 
-  /**
-   * Helper method to get debug information about streaming path creation
-   * Useful for troubleshooting path generation
-   */
-  getStreamingPathDebugInfo(query: MyQuery): { path: string; components: any; isHashed: boolean } {
-    const components = {
-      refId: query.refId,
-      queryType: query.queryType,
-      firstMetric: query.metrics && query.metrics.length > 0 ? query.metrics[0].metricId : null,
-      dimensionsCount: query.dimensions ? query.dimensions.length : 0,
-      queryOptionsCount: query.queryOptions ? Object.keys(query.queryOptions).length : 0,
-      streamingConfig: query.streamingConfig
-    };
-
-    const path = this.createStreamingPath(query);
-    const isHashed = path.includes('/hashed/');
-
-    return { path, components, isHashed };
-  }
-
   runGrafanaLiveQuery(target: MyQuery, req: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
     const path = this.createStreamingPath(target);
     const streamingConfig = target.streamingConfig || { maxBufferSize: 3600, lookBackPeriod: 300 };
-    
+
     return getGrafanaLiveSrv().getDataStream({
       buffer: {
         maxLength: streamingConfig.maxBufferSize || 3600,

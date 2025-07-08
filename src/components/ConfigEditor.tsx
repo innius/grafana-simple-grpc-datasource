@@ -1,5 +1,5 @@
 import React from 'react';
-import { InlineField, InlineLabel, Input, SecretInput, Slider } from '@grafana/ui';
+import { InlineField, InlineLabel, Input, SecretInput, Slider, InlineSwitch } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { defaultDataSourceOptions, MyDataSourceOptions, MySecureJsonData } from 'types';
 
@@ -18,12 +18,41 @@ const ConfigEditor = ({ options, onOptionsChange }: Props) => {
     return (
         <div className="gf-form-group">
             <ServerSettings options={opts} onOptionsChange={onOptionsChange} />
+            <StreamingSettings options={opts} onOptionsChange={onOptionsChange} />
             <SecureSettings options={opts} onOptionsChange={onOptionsChange} />
         </div>
     )
 }
 
 export default ConfigEditor;
+
+const StreamingSettings = ({ options, onOptionsChange }: Props) => {
+    const onStreamingToggle = (enableStreaming: boolean) => {
+        const jsonData = {
+            ...options.jsonData,
+            enableStreaming,
+        };
+        onOptionsChange({ ...options, jsonData });
+    };
+
+    return (
+        <div className="gf-form-group">
+            <h6>Streaming Configuration</h6>
+            <div className="gf-form">
+                <InlineField
+                    label="Enable Streaming Queries"
+                    labelWidth={30}
+                    tooltip="Enable streaming queries for this datasource. When enabled, query editors will show streaming configuration options."
+                >
+                    <InlineSwitch
+                        value={options.jsonData.enableStreaming || false}
+                        onChange={(event) => onStreamingToggle(event.currentTarget.checked)}
+                    />
+                </InlineField>
+            </div>
+        </div>
+    );
+};
 
 const SecureSettings = ({ options, onOptionsChange }: Props) => {
     const onAPIKeyChange = (apikey: string) => {
@@ -49,10 +78,10 @@ const SecureSettings = ({ options, onOptionsChange }: Props) => {
         })
     }
     return (
-        <>
-            <label>Authentication</label>
+        <div className="gf-form-group">
+            <h6>Authentication</h6>
             <div className="gf-form">
-                <InlineLabel width={20}
+                <InlineLabel width={30}
                     tooltip="The API key for backend API authentication">
                     API Key
                 </InlineLabel>
@@ -65,7 +94,7 @@ const SecureSettings = ({ options, onOptionsChange }: Props) => {
                     onChange={(event) => onAPIKeyChange(event.currentTarget.value.trim())}
                 />
             </div>
-        </>
+        </div>
     )
 }
 const ServerSettings = ({ options, onOptionsChange }: Props) => {
@@ -87,15 +116,16 @@ const ServerSettings = ({ options, onOptionsChange }: Props) => {
 
     return (
         <div className="gf-form-group">
+            <h6>Server Settings</h6>
             <div className="gf-form">
-                <InlineField label="Endpoint" labelWidth={20}
+                <InlineField label="Endpoint" labelWidth={30}
                     tooltip={"Specify a complete HTTP URL (for example grpc.example.com:443)"}>
                     <Input width={40} placeholder="endpoint of the grpc server" value={options.jsonData.endpoint}
                         onChange={x => onEndpointChange(x.currentTarget.value)} />
                 </InlineField>
             </div>
             <div className="gf-form">
-                <InlineLabel width={20}
+                <InlineLabel width={30}
                     tooltip="The number of times a backend invocation is retried if rate limit is reached">
                     Max. Retries
                 </InlineLabel>
