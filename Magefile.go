@@ -22,7 +22,7 @@ func Protoc() error {
 	//protoc --go_out=. --go_opt=paths=source_relative \
 	//	   --go-grpc_out=. --go-grpc_opt=paths=source_relative \
 	//	   pkg/proto/api.proto
-	return sh.RunV("protoc", "--go_out=.", "--go_opt=paths=source_relative", "--go-grpc_out=.", "--go-grpc_opt=paths=source_relative", "pkg/proto/v3/apiv3.proto")
+	return sh.RunV("protoc", "--go_out=.", "--go_opt=paths=source_relative", "--go-grpc_out=.", "--go-grpc_opt=paths=source_relative", "pkg/proto/v4/apiv4.proto")
 }
 
 // Default configures the default target.

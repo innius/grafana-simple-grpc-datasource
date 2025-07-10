@@ -5,19 +5,19 @@ import (
 	"testing"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )
 
 // Gets the options for the specified query type
-func (clientmock *clientMock) GetQueryOptions(
+func (m *mockBackendClient) GetQueryOptions(
 	ctx context.Context,
 	in *v3.GetOptionsRequest,
 	opts ...grpc.CallOption,
 ) (*v3.GetOptionsResponse, error) {
-	args := clientmock.Called(ctx, in, opts)
+	args := m.Called(ctx, in, opts)
 	if v, ok := args.Get(0).(*v3.GetOptionsResponse); ok {
 		return v, args.Error(1)
 	}
@@ -25,7 +25,7 @@ func (clientmock *clientMock) GetQueryOptions(
 }
 
 func TestGetQueryOptions(t *testing.T) {
-	m := &clientMock{}
+	m := &mockBackendClient{}
 	req := models.GetQueryOptionsRequest{
 		QueryType: "GetMetricAggregate",
 		SelectedOptions: map[string]string{

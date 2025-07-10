@@ -5,14 +5,14 @@ import (
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 	"github.com/samber/lo"
 )
 
-func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggregateRequest, error) {
+func convertToMetricAggregateRequest(query models.MetricAggregateQuery) *pb.GetMetricAggregateRequest {
 	var dimensions []*pb.Dimension
 	for _, d := range query.Dimensions {
 		dimensions = append(dimensions, &pb.Dimension{
@@ -34,14 +34,11 @@ func aggregateQueryToInput(query models.MetricAggregateQuery) (*pb.GetMetricAggr
 		EndDate:       timestamppb.New(query.TimeRange.To),
 		StartingToken: query.NextToken,
 		Options:       lo.MapValues(query.Options, func(value models.OptionValue, key string) string { return value.Value }),
-	}, nil
+	}
 }
 
 func GetMetricAggregate(ctx context.Context, client client.BackendAPIClient, query models.MetricAggregateQuery) (*framer.MetricAggregate, error) {
-	clientReq, err := aggregateQueryToInput(query)
-	if err != nil {
-		return nil, err
-	}
+	clientReq := convertToMetricAggregateRequest(query)
 
 	frames := map[string]*pb.Frame{}
 	for {

@@ -56,14 +56,14 @@ func DataResponseErrorRequestFailed(err error) backend.DataResponse {
 }
 
 // GetQueryHandlers creates the QueryTypeMux type for handling queries
-func (d *Datasource) registerQueryHandlers() {
+func (ds *Datasource) registerQueryHandlers() {
 	mux := datasource.NewQueryTypeMux()
 
-	mux.HandleFunc(models.QueryMetricValue, d.HandleGetMetricValueQuery)
-	mux.HandleFunc(models.QueryMetricHistory, d.HandleGetMetricHistoryQuery)
-	mux.HandleFunc(models.QueryMetricAggregate, d.HandleGetMetricAggregate)
+	mux.HandleFunc(models.QueryMetricValue, ds.HandleGetMetricValueQuery)
+	mux.HandleFunc(models.QueryMetricHistory, ds.HandleGetMetricHistoryQuery)
+	mux.HandleFunc(models.QueryMetricAggregate, ds.HandleGetMetricAggregate)
 
-	d.queryMux = mux
+	ds.queryMux = mux
 }
 
 func NewDatasource(_ context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
@@ -90,16 +90,16 @@ func newDatasourceWithBackendAPI(backendAPI backendapi.Backend) (instancemgmt.In
 // req contains the queries []DataQuery (where each query contains RefID as a unique identifer).
 // The QueryDataResponse contains a map of RefID to the response for each query, and each response
 // contains Frames ([]*Frame).
-func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	return d.queryMux.QueryData(ctx, req)
+func (ds *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+	return ds.queryMux.QueryData(ctx, req)
 }
 
-func (d *Datasource) SubscribeStream(ctx context.Context, req *backend.SubscribeStreamRequest) (*backend.SubscribeStreamResponse, error) {
+func (ds *Datasource) SubscribeStream(ctx context.Context, req *backend.SubscribeStreamRequest) (*backend.SubscribeStreamResponse, error) {
 	logger := &GrafanaLogger{}
 	logger.Info("SubscribeStream started", "path", req.Path, "data", string(req.Data))
 
 	// Parse and validate the query
-	parser := NewStreamQueryParser(d.backendAPI)
+	parser := NewStreamQueryParser(ds.backendAPI)
 	query, err := parser.ParseStreamQuery(req.Data)
 	if err != nil {
 		logger.Error("Failed to parse stream query in SubscribeStream", "error", err)
@@ -108,17 +108,23 @@ func (d *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscribe
 		}, err
 	}
 
-	if err := parser.ValidateQuery(query); err != nil {
+	// Validate query and get streaming configuration from backend
+	streamingConfig, err := parser.ValidateQuery(ctx, query)
+	if err != nil {
 		logger.Error("Invalid stream query in SubscribeStream", "error", err)
 		return &backend.SubscribeStreamResponse{
 			Status: backend.SubscribeStreamStatusNotFound,
 		}, err
 	}
 
-	logger.Info("Validated stream query", "queryType", query.QueryType, "metrics", query.Metrics)
+	logger.Info("Validated stream query with backend configuration",
+		"queryType", query.QueryType,
+		"metrics", query.Metrics,
+		"backendLookBackMs", streamingConfig.LookBackPeriodLimit,
+		"backendLoopIntervalMs", streamingConfig.LoopInterval)
 
 	// Create query executor
-	factory := NewQueryExecutorFactory(d.backendAPI)
+	factory := NewQueryExecutorFactory(ds.backendAPI)
 	executor, err := factory.CreateExecutor(query)
 	if err != nil {
 		logger.Error("Failed to create query executor in SubscribeStream", "error", err)
@@ -127,8 +133,8 @@ func (d *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscribe
 		}, err
 	}
 
-	// Get initial data
-	initialFrames, err := d.getInitialStreamData(ctx, executor, query)
+	// Get initial data using backend configuration
+	initialFrames, err := ds.getInitialStreamDataWithConfig(ctx, executor, query, streamingConfig)
 	if err != nil {
 		logger.Error("Failed to get initial stream data", "error", err)
 		return &backend.SubscribeStreamResponse{
@@ -164,7 +170,7 @@ func (d *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscribe
 	}, nil
 }
 
-func (d *Datasource) PublishStream(context.Context, *backend.PublishStreamRequest) (*backend.PublishStreamResponse, error) {
+func (ds *Datasource) PublishStream(context.Context, *backend.PublishStreamRequest) (*backend.PublishStreamResponse, error) {
 	return &backend.PublishStreamResponse{
 		Status: backend.PublishStreamStatusPermissionDenied,
 	}, nil
@@ -198,53 +204,67 @@ func parseLookBackPeriod(raw *string, logger StreamLogger) time.Duration {
 	return defaultLookBack
 }
 
-// getInitialStreamData retrieves the initial dataset for streaming
-func (d *Datasource) getInitialStreamData(ctx context.Context, executor QueryExecutor, query *Q) (data.Frames, error) {
+// getInitialStreamDataWithConfig retrieves the initial dataset using backend configuration
+func (ds *Datasource) getInitialStreamDataWithConfig(ctx context.Context, executor QueryExecutor, query *Q, backendConfig *models.StreamingQueryConfigurationResponse) (data.Frames, error) {
 	logger := &GrafanaLogger{}
 	now := time.Now()
 
-	lookBackDuration := parseLookBackPeriod(query.StreamingConfig.LookBackPeriod, logger)
+	// Create stream config to resolve lookback period with backend limits
+	streamConfig := NewStreamConfigFromBackend(backendConfig, query)
+
 	timeRange := backend.TimeRange{
-		From: now.Add(-lookBackDuration),
+		From: now.Add(-streamConfig.LookBackPeriod),
 		To:   now,
 	}
+
+	logger.Info("getInitialStreamDataWithConfig: Using resolved lookback period",
+		"duration", streamConfig.LookBackPeriod.String(),
+		"from", timeRange.From.Format(time.RFC3339),
+		"to", timeRange.To.Format(time.RFC3339))
 
 	return executor.ExecuteQuery(ctx, timeRange)
 }
 
-func (d *Datasource) RunStream(ctx context.Context, req *backend.RunStreamRequest, sender *backend.StreamSender) error {
+func (ds *Datasource) RunStream(ctx context.Context, req *backend.RunStreamRequest, sender *backend.StreamSender) error {
 	logger := &GrafanaLogger{}
 	logger.Info("RunStream started", "req.Data", string(req.Data))
 
 	// Parse and validate the query (this should have been done in SubscribeStream, but we validate again for safety)
-	parser := &StreamQueryParser{}
+	parser := NewStreamQueryParser(ds.backendAPI)
 	query, err := parser.ParseStreamQuery(req.Data)
 	if err != nil {
 		logger.Error("Failed to parse stream query in RunStream", "error", err)
 		return err
 	}
 
-	if err := parser.ValidateQuery(query); err != nil {
+	// Validate query and get streaming configuration from backend
+	streamingConfig, err := parser.ValidateQuery(ctx, query)
+	if err != nil {
 		logger.Error("Invalid stream query in RunStream", "error", err)
 		return err
 	}
 
-	logger.Info("Validated stream query for streaming", "queryType", query.QueryType, "metrics", query.Metrics)
+	logger.Info("Validated stream query for streaming with backend configuration",
+		"queryType", query.QueryType,
+		"metrics", query.Metrics,
+		"backendLookBackMs", streamingConfig.LookBackPeriodLimit,
+		"backendLoopIntervalMs", streamingConfig.LoopInterval)
 
 	// Create query executor
-	factory := NewQueryExecutorFactory(d.backendAPI)
+	factory := NewQueryExecutorFactory(ds.backendAPI)
 	executor, err := factory.CreateExecutor(query)
 	if err != nil {
 		logger.Error("Failed to create query executor in RunStream", "error", err)
 		return err
 	}
 
-	// Create stream processor with configuration from query
+	// Create stream processor with backend configuration
 	// Note: Initial data is already sent via SubscribeStream, so we skip that step
-	processor := NewStreamProcessorFromQuery(query, executor, sender, logger)
+	processor := NewStreamProcessorFromBackendConfig(streamingConfig, query, executor, sender, logger)
 
 	// Start the streaming loop directly (skip initial data since it was sent in SubscribeStream)
-	logger.Info("Starting streaming loop (initial data already sent via SubscribeStream)")
+	logger.Info("Starting streaming loop with backend configuration (initial data already sent via SubscribeStream)",
+		"tickInterval", processor.config.TickInterval.String())
 	return processor.RunStreamingLoop(ctx)
 }
 
@@ -252,8 +272,8 @@ func (d *Datasource) RunStream(ctx context.Context, req *backend.RunStreamReques
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
-func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	_, err := d.backendAPI.GetDimensionKeys(ctx, models.GetDimensionKeysRequest{})
+func (ds *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+	_, err := ds.backendAPI.GetDimensionKeys(ctx, models.GetDimensionKeysRequest{})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unauthenticated:
@@ -280,6 +300,6 @@ func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRe
 	}, nil
 }
 
-func (d *Datasource) Dispose() {
-	d.backendAPI.Dispose()
+func (ds *Datasource) Dispose() {
+	ds.backendAPI.Dispose()
 }

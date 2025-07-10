@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	v4 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
 type BackendAPIClient interface {
-	v3.GrafanaQueryAPIClient
+	v4.GrafanaQueryAPIClient
 	Dispose()
 }
 

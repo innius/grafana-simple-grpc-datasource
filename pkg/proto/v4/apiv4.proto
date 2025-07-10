@@ -1,0 +1,373 @@
+syntax = "proto3";
+
+package grafanav4;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "bitbucket.org/innius/grafana-simple-grpc-datasource/v4";
+
+// The GrafanaQueryAPI definition.
+service GrafanaQueryAPI {
+  // Returns a list of all available dimensions
+  rpc ListDimensionKeys(ListDimensionKeysRequest) returns (ListDimensionKeysResponse) {}
+
+  // Returns a list of all dimension values for a certain dimension
+  rpc ListDimensionValues(ListDimensionValuesRequest) returns (ListDimensionValuesResponse) {}
+
+  // Returns all metrics from the system
+  rpc ListMetrics(ListMetricsRequest) returns (ListMetricsResponse) {}
+
+  // Gets the options for the specified query type
+  rpc GetQueryOptions(GetOptionsRequest) returns (GetOptionsResponse) {}
+
+  // Gets the last known value for one or more metrics
+  rpc GetMetricValue(GetMetricValueRequest) returns (GetMetricValueResponse) {}
+
+  // Gets the history for one or more metrics
+  rpc GetMetricHistory(GetMetricHistoryRequest) returns (GetMetricHistoryResponse) {}
+
+  // Gets the history for one or more metrics
+  rpc GetMetricAggregate(GetMetricAggregateRequest) returns (GetMetricAggregateResponse) {}
+
+  rpc GetStreamingQueryConfiguration(GetStreamingQueryConfigurationRequest) returns (GetStreamingQueryConfigurationResponse) {}
+}
+
+message GetStreamingQueryConfigurationRequest {
+  oneof query {
+    GetMetricValueRequest getMetricValueRequest = 1;
+    GetMetricHistoryRequest getMetricHistoryRequest = 2;
+    GetMetricAggregateRequest getMetricAggregateRequest = 3;
+  }
+}
+
+message GetStreamingQueryConfigurationResponse {
+  // lookBackPeriodLimit specifies the maximum allowed time window (in milliseconds)
+  // for the streaming query to look back into past data.
+  int64 lookBackPeriodLimit = 1;
+  // loopInterval specifies the polling interval (in milliseconds) at which
+  // the streaming query retrieves new data from the backend.
+  // Warning: The loop interval must not exceed 15 seconds,
+  // as the Grafana server may close the stream due to inactivity.
+  int64 loopInterval = 2;
+}
+
+message ListMetricsRequest {
+  repeated Dimension dimensions = 1;
+  string filter = 2;
+}
+
+message ListMetricsResponse {
+  message Metric {
+    string name = 1;
+    string description = 2;
+  }
+  repeated Metric Metrics = 1;
+}
+
+message GetMetricValueRequest {
+  repeated Dimension dimensions = 1;
+
+  repeated string metrics = 2;
+
+  map<string, string> options = 3;
+
+  google.protobuf.Timestamp startDate = 4;
+  google.protobuf.Timestamp endDate = 5;
+}
+
+message GetMetricValueResponse {
+  message Frame {
+    string metric = 1;
+
+    google.protobuf.Timestamp timestamp = 2;
+
+    repeated SingleValueField fields = 3;
+
+    FrameMeta meta = 4;
+  }
+
+  repeated Frame frames = 1;
+}
+
+message GetOptionsRequest {
+  enum QueryType {
+    GetMetricHistory = 0;
+    GetMetricValue = 1;
+    GetMetricAggregate = 2;
+  }
+  // the query type for which options are requested
+  QueryType queryType = 1;
+
+  // the query options which are currently selected
+  map<string, string> selectedOptions = 2;
+}
+
+message EnumValue {
+  // the id of the enum value
+  string id = 1;
+  // the description of the option
+  string description = 2;
+  // the label of the option
+  string label = 3;
+  // the default enum value
+  bool default = 4;
+}
+
+message Option {
+  // the id of the option
+  string id = 1;
+  string description = 2;
+  enum Type {
+    Enum = 0; // enum is rendered as a Select control in the frontend
+    Boolean = 1;
+  }
+  Type type = 3;
+  repeated EnumValue enumValues = 4;
+  bool required = 5;
+  // the label of the option
+  string label = 6;
+}
+
+message GetOptionsResponse {
+  repeated Option options = 1;
+}
+
+message GetMetricAggregateRequest {
+  // The dimensions for the query
+  repeated Dimension dimensions = 1;
+
+  // the metrics for which the aggregates are retrieved
+  repeated string metrics = 2;
+
+  google.protobuf.Timestamp startDate = 4;
+  google.protobuf.Timestamp endDate = 5;
+  int64 maxItems = 6;
+  TimeOrdering timeOrdering = 7;
+  string startingToken = 8;
+  int64 intervalMs = 9;
+  map<string, string> options = 10;
+}
+
+message GetMetricAggregateResponse {
+  repeated Frame frames = 1;
+
+  string nextToken = 2;
+}
+
+message GetMetricHistoryRequest {
+  repeated Dimension dimensions = 3;
+  repeated string metrics = 4;
+  google.protobuf.Timestamp startDate = 5;
+  google.protobuf.Timestamp endDate = 6;
+  int64 maxItems = 7;
+  TimeOrdering timeOrdering = 8;
+  string startingToken = 9;
+  map<string, string> options = 10;
+}
+
+message GetMetricHistoryResponse {
+  repeated Frame frames = 1;
+
+  string nextToken = 2;
+}
+
+message Label {
+  string key = 1;
+  string value = 2;
+}
+
+message Field {
+  string name = 1;
+
+  repeated Label labels = 2;
+
+  config config = 3;
+
+  repeated double values = 4;
+  repeated string stringValues = 5;
+}
+
+message ValueMapping {
+  double from = 1;
+  double to = 2;
+  string value = 3;
+  string text = 4;
+  string color = 5;
+}
+
+message config {
+  string unit = 1;
+
+  repeated ValueMapping Mappings = 2;
+}
+
+message SingleValueField {
+  string name = 1;
+
+  repeated Label labels = 2;
+
+  config config = 3;
+
+  double value = 4;
+
+  string stringValue = 5;
+}
+
+// The data frame for each metric
+message Frame {
+  string metric = 1;
+
+  repeated google.protobuf.Timestamp timestamps = 2;
+
+  repeated Field fields = 3;
+
+  FrameMeta meta = 4;
+}
+
+// FrameMeta matches:
+// https://github.com/grafana/grafana/blob/master/packages/grafana-data/src/types/data.ts#L11
+// NOTE -- in javascript this can accept any `[key: string]: any;` however
+// this interface only exposes the values we want to be exposed
+message FrameMeta {
+  enum FrameType {
+    FrameTypeUnknown = 0;
+    FrameTypeTimeSeriesWide = 1;
+    FrameTypeTimeSeriesLong = 2;
+    FrameTypeTimeSeriesMany = 3;
+    FrameTypeDirectoryListing = 4;
+    FrameTypeTable = 5;
+  }
+  // Type asserts that the frame matches a known type structure
+  FrameType type = 1;
+
+  message Notice {
+    enum NoticeSeverity {
+      // NoticeSeverityInfo is informational severity.
+      NoticeSeverityInfo = 0;
+      // NoticeSeverityWarning is warning severity.
+      NoticeSeverityWarning = 1;
+      // NoticeSeverityError is error severity.
+      NoticeSeverityError = 3;
+    }
+    // Severity is the severity level of the notice: info, warning, or error.
+    NoticeSeverity Severity = 1;
+
+    // Text is freeform descriptive text for the notice.
+    string text = 2;
+
+    // Link is an optional link for display in the user interface and can be an
+    // absolute URL or a path relative to Grafana's root url.
+    string link = 3;
+
+    enum InspectType {
+      // InspectTypeNone is no suggestion for a tab of the panel editor in Grafana's user interface.
+      InspectTypeNone = 0;
+
+      // InspectTypeMeta suggests the "meta" tab of the panel editor in Grafana's user interface.
+      InspectTypeMeta = 1;
+
+      // InspectTypeError suggests the "error" tab of the panel editor in Grafana's user interface.
+      InspectTypeError = 2;
+
+      // InspectTypeData suggests the "data" tab of the panel editor in Grafana's user interface.
+      InspectTypeData = 3;
+
+      // InspectTypeStats suggests the "stats" tab of the panel editor in Grafana's user interface.
+      InspectTypeStats = 4;
+    }
+    // Inspect is an optional suggestion for which tab to display in the panel inspector
+    // in Grafana's User interface. Can be meta, error, data, or stats.
+    InspectType inspect = 4;
+  }
+  // Notices provide additional information about the data in the Frame that
+  // Grafana can display to the user in the user interface.
+  repeated Notice Notices = 6;
+
+  // VisType is used to indicate how the data should be visualized in explore.
+  enum VisType {
+    // VisTypeGraph indicates the response should be visualized using a graph.
+    VisTypeGraph = 0;
+
+    // VisTypeTable indicates the response should be visualized using a table.
+    VisTypeTable = 1;
+
+    // VisTypeLogs indicates the response should be visualized using a logs visualization.
+    VisTypeLogs = 2;
+
+    // VisTypeTrace indicates the response should be visualized using a trace view visualization.
+    VisTypeTrace = 3;
+
+    // VisTypeNodeGraph indicates the response should be visualized using a node graph visualization.
+    VisTypeNodeGraph = 4;
+  }
+
+  // PreferredVisualization is currently used to show results in Explore only in preferred visualisation option.
+  VisType PreferredVisualization = 8;
+
+  // ExecutedQueryString is the raw query sent to the underlying system. All macros and templating
+  // have been applied.  When metadata contains this value, it will be shown in the query inspector.
+  string executedQueryString = 9;
+}
+
+enum TimeOrdering {
+  ASCENDING = 0;
+  DESCENDING = 1;
+}
+
+message ListDimensionKeysRequest {
+  string filter = 1;
+  repeated Dimension selected_dimensions = 2;
+}
+
+message ListDimensionKeysResponse {
+  message Result {
+    string key = 1;
+    string description = 2;
+  }
+  repeated Result results = 1;
+}
+
+message ListDimensionValuesRequest {
+  string dimension_key = 1;
+  string filter = 2;
+  repeated Dimension selected_dimensions = 3;
+}
+
+message ListDimensionValuesResponse {
+  message Result {
+    string value = 1;
+    string description = 2;
+  }
+  repeated Result results = 1;
+}
+
+message TimeRange {
+  int64 fromEpochMS = 1;
+  int64 toEpochMS = 2;
+}
+
+message Dimension {
+  string key = 1;
+  string value = 2;
+}
+
+message QueryRequest {
+  string refId = 1;
+  int64 maxDataPoints = 2;
+  int64 intervalMS = 3;
+  TimeRange timeRange = 4;
+  // The offset for the result set
+  int64 startKey = 5;
+  repeated Dimension dimensions = 6;
+}
+
+// The response message containing the greetings
+message QueryResponse {
+  string refId = 1;
+  int64 nextKey = 2;
+  message Value {
+    int64 timestamp = 1;
+    float value = 2;
+  }
+  repeated Value values = 3;
+}

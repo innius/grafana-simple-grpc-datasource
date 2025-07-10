@@ -6,7 +6,7 @@ import (
 	"time"
 
 	v2 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v2"
-	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"

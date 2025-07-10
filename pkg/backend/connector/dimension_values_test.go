@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )
 
 // Returns a list of all dimension values for a certain dimension
-func (clientmock *clientMock) ListDimensionValues(ctx context.Context, in *v3.ListDimensionValuesRequest, opts ...grpc.CallOption) (*v3.ListDimensionValuesResponse, error) {
+func (m *mockBackendClient) ListDimensionValues(ctx context.Context, in *v3.ListDimensionValuesRequest, opts ...grpc.CallOption) (*v3.ListDimensionValuesResponse, error) {
 	return &v3.ListDimensionValuesResponse{
 		Results: []*v3.ListDimensionValuesResponse_Result{
 			{Value: "foo", Description: "bar"},
@@ -21,7 +21,7 @@ func (clientmock *clientMock) ListDimensionValues(ctx context.Context, in *v3.Li
 }
 
 func TestListDimensionValues(t *testing.T) {
-	m := &clientMock{}
+	m := &mockBackendClient{}
 	req := models.GetDimensionValuesRequest{
 		Filter:       "filter",
 		DimensionKey: "foo",

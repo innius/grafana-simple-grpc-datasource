@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 

@@ -1,7 +1,7 @@
 package connector
 
 import (
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"github.com/samber/lo"
 )
 

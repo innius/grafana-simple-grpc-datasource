@@ -27,6 +27,10 @@ func (s *mockCallResourceResponseSender) Send(response *backend.CallResourceResp
 type backendAPIStub struct {
 }
 
+func (stub *backendAPIStub) GetStreamingQueryConfiguration(ctx context.Context, query *models.StreamingQueryConfigurationRequest) (*models.StreamingQueryConfigurationResponse, error) {
+	panic("not implemented") // TODO: Implement
+}
+
 func (stub *backendAPIStub) HandleGetMetricValueQuery(ctx context.Context, query *models.MetricValueQuery) (data.Frames, error) {
 	panic("not implemented") // TODO: Implement
 }

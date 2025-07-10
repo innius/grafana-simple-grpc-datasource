@@ -71,7 +71,7 @@ func renderError(ctx context.Context, st *status.Status, w http.ResponseWriter) 
 	http.Error(w, st.Message(), code)
 }
 
-func (s *Datasource) handleGetQueryOptions(w http.ResponseWriter, r *http.Request) {
+func (ds *Datasource) handleGetQueryOptions(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "getQueryOptionDefinitions")
 
 	if r.Body == nil {
@@ -86,7 +86,7 @@ func (s *Datasource) handleGetQueryOptions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	res, err := s.backendAPI.GetQueryOptions(r.Context(), req)
+	res, err := ds.backendAPI.GetQueryOptions(r.Context(), req)
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
 		renderError(r.Context(), status.Convert(err), w)
@@ -108,7 +108,7 @@ func (s *Datasource) handleGetQueryOptions(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *Datasource) handleGetDimensionKeys(w http.ResponseWriter, r *http.Request) {
+func (ds *Datasource) handleGetDimensionKeys(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "handleGetDimensionKeys")
 
 	if r.Body == nil {
@@ -126,7 +126,7 @@ func (s *Datasource) handleGetDimensionKeys(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	res, err := s.backendAPI.GetDimensionKeys(r.Context(), req)
+	res, err := ds.backendAPI.GetDimensionKeys(r.Context(), req)
 
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
@@ -149,7 +149,7 @@ func (s *Datasource) handleGetDimensionKeys(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Datasource) handleGetDimensionValues(w http.ResponseWriter, r *http.Request) {
+func (ds *Datasource) handleGetDimensionValues(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "handleGetDimensionValues")
 
 	if r.Body == nil {
@@ -167,7 +167,7 @@ func (s *Datasource) handleGetDimensionValues(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	res, err := s.backendAPI.GetDimensionValues(r.Context(), req)
+	res, err := ds.backendAPI.GetDimensionValues(r.Context(), req)
 
 	if err != nil {
 		renderError(r.Context(), status.Convert(err), w)
@@ -190,7 +190,7 @@ func (s *Datasource) handleGetDimensionValues(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Datasource) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
+func (ds *Datasource) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "handleGetMetrics")
 
 	if r.Body == nil {
@@ -208,7 +208,7 @@ func (s *Datasource) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.backendAPI.GetMetrics(r.Context(), req)
+	res, err := ds.backendAPI.GetMetrics(r.Context(), req)
 	if err != nil {
 		logger.Error("backend returned an error", "error", err.Error())
 		renderError(r.Context(), status.Convert(err), w)
@@ -230,9 +230,54 @@ func (s *Datasource) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (a *Datasource) registerRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/options", a.handleGetQueryOptions)
-	mux.HandleFunc("/dimensions", a.handleGetDimensionKeys)
-	mux.HandleFunc("/dimensions/values", a.handleGetDimensionValues)
-	mux.HandleFunc("/metrics", a.handleGetMetrics)
+func (ds *Datasource) registerRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/options", ds.handleGetQueryOptions)
+	mux.HandleFunc("/dimensions", ds.handleGetDimensionKeys)
+	mux.HandleFunc("/dimensions/values", ds.handleGetDimensionValues)
+	mux.HandleFunc("/metrics", ds.handleGetMetrics)
+	mux.HandleFunc("/streaming-config", ds.handleGetStreamingConfiguration)
+}
+
+func (ds *Datasource) handleGetStreamingConfiguration(w http.ResponseWriter, r *http.Request) {
+	logger := log.DefaultLogger.With("method", "handleGetStreamingConfiguration")
+
+	if r.Body == nil {
+		http.Error(w, "request does not have a body", http.StatusBadRequest)
+		return
+	}
+
+	// Create a JSON decoder from the request body
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var requestBody struct {
+		Query any `json:"query"`
+	}
+
+	// Use the decoder to decode the JSON into the request struct
+	if err := decoder.Decode(&requestBody); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Create the streaming configuration request
+	req := &models.StreamingQueryConfigurationRequest{
+		Query: requestBody.Query,
+	}
+
+	res, err := ds.backendAPI.GetStreamingQueryConfiguration(r.Context(), req)
+	if err != nil {
+		logger.Error("backend returned an error", "error", err.Error())
+		renderError(r.Context(), status.Convert(err), w)
+		return
+	}
+
+	logger.Debug("returning streaming configuration", "config", res)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

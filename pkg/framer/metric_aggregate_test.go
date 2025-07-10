@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 )
 
 func TestMetricAggregate_Frames(t *testing.T) {

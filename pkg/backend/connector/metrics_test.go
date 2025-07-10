@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	v3 "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )
 
 // Returns all metrics from the system
-func (clientmock *clientMock) ListMetrics(ctx context.Context, in *v3.ListMetricsRequest, opts ...grpc.CallOption) (*v3.ListMetricsResponse, error) {
-	args := clientmock.Called(ctx, in, opts)
+func (m *mockBackendClient) ListMetrics(ctx context.Context, in *v3.ListMetricsRequest, opts ...grpc.CallOption) (*v3.ListMetricsResponse, error) {
+	args := m.Called(ctx, in, opts)
 	if v, ok := args.Get(0).(*v3.ListMetricsResponse); ok {
 		return v, args.Error(1)
 	}
@@ -21,7 +21,7 @@ func (clientmock *clientMock) ListMetrics(ctx context.Context, in *v3.ListMetric
 }
 
 func TestListMetrics(t *testing.T) {
-	m := &clientMock{}
+	m := &mockBackendClient{}
 	req := models.GetMetricsRequest{
 		Filter: "filter",
 		Dimensions: []models.Dimension{

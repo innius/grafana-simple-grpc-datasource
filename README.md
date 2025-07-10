@@ -106,6 +106,25 @@ This API provides the following operations:
 
 A sample implementation can be found [here](https://bitbucket.org/innius/sample-grpc-server/src/master/).
 
+### The V4 API ([GrafanaQueryAPIV4][4])
+
+The V4 API extends the V3 API with streaming configuration capabilities. It adds one new operation:
+
+| name                              | description                                                         | 
+|-----------------------------------|---------------------------------------------------------------------|
+| GetStreamingQueryConfiguration    | Returns streaming configuration for a query (polling interval, max lookback period) |
+
+This allows backend systems to control streaming behavior based on their capabilities and constraints:
+
+- **Polling Interval**: How frequently the datasource should poll for new data during streaming
+- **Maximum Look-back Period**: The maximum allowed initial historical data period
+
+The V4 API is fully backward compatible - existing V1/V2/V3 backends continue to work with default streaming configuration.
+
+For detailed information about V4 streaming configuration, see:
+- [V4_STREAMING_CONFIG.md](./V4_STREAMING_CONFIG.md) - Technical documentation
+- [V4_MIGRATION_GUIDE.md](./V4_MIGRATION_GUIDE.md) - Implementation guide for backend developers
+
 #### Example Use Cases: 
 - different time series for the same metric with different labels. For example: the temperature measure is a room. The room has four zones: north, south, east and west. The V1 API does not support this unless there are four different metrics defined for each temperature / zone combination. 
 The Advanced API does support this scenario by returning multiple time series for the same metric `temperature`, each annotated with different label `zone`. 
@@ -170,11 +189,11 @@ A sample implementation of the V3 backend can be found [here](https://bitbucket.
 * supports notifications 
 * supports pagination
 * supports retries for grpc calls if backend server is at maximum capacity
-* allow backend systems to define custom query options. 
+* allow backend systems to define custom query options
+* supports streaming queries with backend-controlled configuration (V4 API)
 
 ## Roadmap
-- support annotations
-- support streaming queries 
+- support annotations 
 
 [1]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v1/api.proto
 [2]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v2/apiv2.proto

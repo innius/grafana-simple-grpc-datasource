@@ -34,3 +34,5 @@ services:
     ports:
       - "50051:50051"
     hostname: sample-grpc-server
+    profiles:
+      - demo

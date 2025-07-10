@@ -23,17 +23,17 @@ func processQueries(ctx context.Context, req *backend.QueryDataRequest, handler 
 	}
 }
 
-func (s *Datasource) HandleGetMetricValueQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	return processQueries(ctx, req, s.handleGetMetricValueQuery), nil
+func (ds *Datasource) HandleGetMetricValueQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+	return processQueries(ctx, req, ds.handleGetMetricValueQuery), nil
 }
 
-func (s *Datasource) handleGetMetricValueQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (ds *Datasource) handleGetMetricValueQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricValueQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.backendAPI.HandleGetMetricValueQuery(ctx, query)
+	frames, err := ds.backendAPI.HandleGetMetricValueQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}
@@ -44,17 +44,17 @@ func (s *Datasource) handleGetMetricValueQuery(ctx context.Context, req backend.
 	}
 }
 
-func (s *Datasource) HandleGetMetricHistoryQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	return processQueries(ctx, req, s.handleGetMetricHistoryQuery), nil
+func (ds *Datasource) HandleGetMetricHistoryQuery(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+	return processQueries(ctx, req, ds.handleGetMetricHistoryQuery), nil
 }
 
-func (s *Datasource) handleGetMetricHistoryQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (ds *Datasource) handleGetMetricHistoryQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricHistoryQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.backendAPI.HandleGetMetricHistoryQuery(ctx, query)
+	frames, err := ds.backendAPI.HandleGetMetricHistoryQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}
@@ -65,17 +65,17 @@ func (s *Datasource) handleGetMetricHistoryQuery(ctx context.Context, req backen
 	}
 }
 
-func (s *Datasource) HandleGetMetricAggregate(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	return processQueries(ctx, req, s.handleGetMetricAggregateQuery), nil
+func (ds *Datasource) HandleGetMetricAggregate(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+	return processQueries(ctx, req, ds.handleGetMetricAggregateQuery), nil
 }
 
-func (s *Datasource) handleGetMetricAggregateQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
+func (ds *Datasource) handleGetMetricAggregateQuery(ctx context.Context, req backend.QueryDataRequest, q backend.DataQuery) backend.DataResponse {
 	query, err := models.UnmarshalToMetricAggregateQuery(&q)
 	if err != nil {
 		return DataResponseErrorUnmarshal(err)
 	}
 
-	frames, err := s.backendAPI.HandleGetMetricAggregateQuery(ctx, query)
+	frames, err := ds.backendAPI.HandleGetMetricAggregateQuery(ctx, query)
 	if err != nil {
 		return DataResponseErrorRequestFailed(err)
 	}

@@ -21,6 +21,9 @@ type Backend interface {
 	GetMetrics(ctx context.Context, query models.GetMetricsRequest) (*models.GetMetricsResponse, error)
 	GetQueryOptions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error)
 
+	// V4 API: Get streaming configuration from backend
+	GetStreamingQueryConfiguration(ctx context.Context, query *models.StreamingQueryConfigurationRequest) (*models.StreamingQueryConfigurationResponse, error)
+
 	Dispose()
 }
 
@@ -97,6 +100,14 @@ func (ds *backendImpl) GetMetrics(ctx context.Context, query models.GetMetricsRe
 
 func (backendimpl *backendImpl) GetQueryOptions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
 	return connector.GetQueryOptionDefinitions(ctx, backendimpl.client, input)
+}
+
+func (ds *backendImpl) GetStreamingQueryConfiguration(ctx context.Context, query *models.StreamingQueryConfigurationRequest) (*models.StreamingQueryConfigurationResponse, error) {
+	res, err := connector.GetStreamingQueryConfiguration(ctx, ds.client, *query)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (ds *backendImpl) Dispose() {

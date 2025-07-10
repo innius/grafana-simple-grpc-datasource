@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -38,7 +39,7 @@ func TestRunStreamParsing(t *testing.T) {
 		assert.Equal(t, "test-metric", parsedQuery.Metrics[0].MetricId)
 
 		// Test validation
-		err = parser.ValidateQuery(parsedQuery)
+		_, err = parser.ValidateQuery(context.TODO(), parsedQuery)
 		assert.NoError(t, err)
 	})
 
@@ -59,7 +60,7 @@ func TestRunStreamParsing(t *testing.T) {
 		parsedQuery, err := parser.ParseStreamQuery(queryData)
 		require.NoError(t, err)
 
-		err = parser.ValidateQuery(parsedQuery)
+		_, err = parser.ValidateQuery(context.TODO(), parsedQuery)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported query type")
 	})

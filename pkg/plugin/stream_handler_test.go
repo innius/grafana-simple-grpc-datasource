@@ -22,6 +22,11 @@ type MockBackendAPI struct {
 	mock.Mock
 }
 
+func (m *MockBackendAPI) GetStreamingQueryConfiguration(ctx context.Context, query *models.StreamingQueryConfigurationRequest) (*models.StreamingQueryConfigurationResponse, error) {
+	args := m.Called(ctx, query)
+	return args.Get(0).(*models.StreamingQueryConfigurationResponse), args.Error(1)
+}
+
 func (m *MockBackendAPI) HandleGetMetricAggregateQuery(ctx context.Context, query *models.MetricAggregateQuery) (data.Frames, error) {
 	args := m.Called(ctx, query)
 	return args.Get(0).(data.Frames), args.Error(1)
@@ -165,14 +170,14 @@ func TestStreamQueryParser_ValidateQuery(t *testing.T) {
 
 		for _, queryType := range validTypes {
 			query := &Q{QueryType: queryType}
-			err := parser.ValidateQuery(query)
+			_, err := parser.ValidateQuery(context.TODO(), query)
 			assert.NoError(t, err, "Query type %s should be valid", queryType)
 		}
 	})
 
 	t.Run("empty query type", func(t *testing.T) {
 		query := &Q{QueryType: ""}
-		err := parser.ValidateQuery(query)
+		_, err := parser.ValidateQuery(context.TODO(), query)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "query type is required")
@@ -180,7 +185,7 @@ func TestStreamQueryParser_ValidateQuery(t *testing.T) {
 
 	t.Run("unsupported query type", func(t *testing.T) {
 		query := &Q{QueryType: "unsupported"}
-		err := parser.ValidateQuery(query)
+		_, err := parser.ValidateQuery(context.TODO(), query)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported query type: unsupported")

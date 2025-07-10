@@ -9,10 +9,10 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/framer"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
-	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v3"
+	pb "bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/proto/v4"
 )
 
-func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRequest {
+func convertToMetricHistoryRequest(query models.MetricHistoryQuery) *pb.GetMetricHistoryRequest {
 	var dimensions []*pb.Dimension
 	for _, d := range query.Dimensions {
 		dimensions = append(dimensions, &pb.Dimension{
@@ -35,7 +35,7 @@ func historyQueryToInput(query models.MetricHistoryQuery) *pb.GetMetricHistoryRe
 }
 
 func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query models.MetricHistoryQuery) (*framer.MetricHistory, error) {
-	clientReq := historyQueryToInput(query)
+	clientReq := convertToMetricHistoryRequest(query)
 
 	frames := map[string]*pb.Frame{}
 	for {
