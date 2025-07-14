@@ -4,218 +4,241 @@
 [![Marketplace](https://img.shields.io/badge/dynamic/json?logo=grafana&color=F47A20&label=marketplace&prefix=v&query=version&url=https%3A%2F%2Fgrafana.com%2Fapi%2Fplugins%2Finnius-grpc-datasource)](https://grafana.com/grafana/plugins/innius-grpc-datasource)
 [![Downloads](https://img.shields.io/badge/dynamic/json?logo=grafana&color=F47A20&label=downloads&query=downloads&url=https%3A%2F%2Fgrafana.com%2Fapi%2Fplugins%2Finnius-grpc-datasource)](https://grafana.com/grafana/plugins/innius-grpc-datasource)
 
-## What is this plugin?
+A powerful Grafana datasource plugin that connects to gRPC backends using a
+standardized API specification. This plugin decouples frontend visualization
+from backend data implementation, providing flexibility and maintainability for
+time-series data visualization.
 
-This back-end Grafana datasource plugin provides a user-friendly grafana
-experience with only a handful simple and generic parameters to configure. It
-comes with a dedicated API specification that requires implementation in the
-data provider's back-end. Implementing this API helps to decouple the front-end
-visualisation solution from the back-end data-layer implementation, leaving
-developers with the necessary freedom to update and improve the back-end without
-breaking the end-user experience.
+## Architecture Overview
 
-The protobuf API specification can be found in the pkg/proto directory. On
-configuring the datasource plugin, the end-user provides an endpoint URL and
-optionally an API key too. The datasource will attempt to establish a gRPC
-connection and emit calls to the given endpoint according to the API
-specification.
+```mermaid
+graph LR
+    subgraph "Grafana Frontend"
+        A[Dashboard] --> B[Query Editor]
+        B --> C[Visualization Panels]
+    end
+    
+    subgraph "Grafana Server"
+        D[Query Handler]
+        E[Streaming Engine]
+        F[gRPC Client]
+    end
+    
+    subgraph "gRPC Backend"
+        G[V1 Simple API]
+        H[V3 Advanced API]
+        I[V4 Streaming API]
+        J[Data Source]
+    end
+    
+    %% Standard Query Flow
+    B -->|HTTP Request| D
+    D --> F
+    F -->|gRPC + TLS| G
+    F -->|gRPC + TLS| H
+    F -->|gRPC + TLS| I
+    G --> J
+    H --> J
+    I --> J
+    
+    %% Streaming Flow (V4)
+    E -->|GetStreamingConfig| I
+    E -->|Poll for Data| I
+    I -->|New Datapoints| E
+    E -->|WebSocket Stream| C
+    
+    %% Styling
+    classDef frontend fill:#ff6b35,stroke:#d63031,color:#fff
+    classDef server fill:#74b9ff,stroke:#0984e3,color:#fff
+    classDef backend fill:#00b894,stroke:#00a085,color:#fff
+    classDef streaming fill:#fdcb6e,stroke:#e17055,color:#000
+    
+    class A,B,C frontend
+    class D,F server
+    class E streaming
+    class G,H,I,J backend
+```
 
-For more information on gRPC or protobuf, see the
-[gRPC docs](https://grpc.io/docs/).
+**Key Architecture Points:**
+- **Server Plugin Polling**: The streaming engine polls the gRPC backend at configurable intervals (not push-based)
+- **WebSocket Streaming**: Real-time data is streamed from server plugin to frontend
+- **API Version Support**: Automatic detection of V1/V3/V4 capabilities via gRPC reflection
+- **Secure Communication**: All gRPC calls use TLS encryption with optional API key authentication
 
-#### Why gRPC?
+The architecture demonstrates how the Grafana server plugin acts as an intermediary, polling the gRPC backend at configurable intervals and streaming the results to the frontend via WebSocket connections.
 
-gRPC is a fast & efficient framework for inter-service communication and
-provides a fool-proof and streamlined workflow for API implementation through
-protobuf.
+## Key Features
 
-gRPC also supports all essential streaming capabilities, which can be
-implemented in future releases.
+- **Multiple API versions** - Support for Simple (V1), Advanced (V3), and
+  Streaming (V4) APIs
+- **Multi-metric queries** - Select multiple metrics in a single query
+- **Flexible dimensions** - Dynamic dimension selection with key-value pairs
+- **Grafana integration** - Full support for variables, templating, and labels
+- **Streaming support** - Real-time data with configurable polling intervals
+  (V4)
+- **Custom query options** - Backend-defined query parameters
+- **Enhanced metadata** - Support for units, value mappings, and notifications
+- **Secure connections** - TLS encryption with optional API key authentication
 
-#### Security
+## Why gRPC?
 
-The datasource plugin establishes a secure gRPC connection through TLS.
-Additionally, the datasource supports API-key authorization. The API-key will be
-included in each API call as part of the call metadata.
+- **Performance** - Fast and efficient inter-service communication
+- **Type safety** - Strongly-typed API contracts through Protocol Buffers
+- **Language agnostic** - Implement backends in any supported language
+- **Streaming ready** - Built-in support for real-time data streaming
+- **Standardized** - Fool-proof API implementation workflow
+
+## Security
+
+- **TLS encryption** - All connections use secure gRPC over TLS
+- **API key authentication** - Optional API key included in call metadata
+- **Reflection support** - Automatic API version detection
+
+## Quick Start
+
+1. **Start a sample gRPC server locally:**
+   ```bash
+   docker run -p 50051:50051 innius/sample-grpc-server
+   ```
+
+2. **Install the datasource plugin** from the Grafana marketplace
+
+3. **Configure the datasource:**
+   - Set endpoint to `localhost:50051`
+   - Optionally add API key for authentication
+
+4. **Create dashboards** and start querying your data
 
 ## Usage
 
 ![screenshot](https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/src/img/screenshots/image-1.png)
 
-#### Metric
+### Core Concepts
 
-The variable that is updated with new values as the stream of timeseries
-datapoints is appended.
+**Metric** The variable that is updated with new values as the stream of
+timeseries datapoints is appended.
 
-#### Dimension
-
-A dimension is an optional, identifying property of the measure. Each dimension
+**Dimension** An optional, identifying property of the measure. Each dimension
 is modeled as a key-value pair. A measure can have zero or many dimensions that
 collectively uniquely identify it.
 
-#### Query Type
+**Query Types**
 
-| type                 | description                       |
+| Type                 | Description                       |
 | -------------------- | --------------------------------- |
-| Get Metric History   | gets historical timeseries values |
-| Get Metric Aggregate | gets aggregated timeseries        |
-| Get Metric Value     | gets the last known value         |
+| Get Metric History   | Gets historical timeseries values |
+| Get Metric Aggregate | Gets aggregated timeseries        |
+| Get Metric Value     | Gets the last known value         |
 
-## Getting started
+## API Specifications
 
-1. start a sample grpc server locally:
+This datasource plugin expects a backend to implement one of the supported API
+versions. The protobuf API specifications can be found in the `pkg/proto`
+directory.
 
-```
-docker run -p 50051:50051 innius/sample-grpc-server
-```
+### Simple API (V1) - [GrafanaQueryAPI][1]
 
-2. install the innius-simple-grpc-datasource
+The foundational API providing basic operations for single-metric queries.
 
-3. enable the datasource
-   - configure the endpoint `localhost:50051`
+**Operations:**
 
-4. configure dashboards
-
-## Implement your own backend API
-
-This datasource plugin expects a backend to implement the [Simple][1] or the
-[Advanced][2] interface.
-
-### The Simple API ([GrafanaQueryAPI][1])
-
-This API provides the following operations:
-
-| name                | description                                                         |
+| Operation           | Description                                                         |
 | ------------------- | ------------------------------------------------------------------- |
 | ListDimensionKeys   | Returns a list of all available dimension keys                      |
 | ListDimensionValues | Returns a list of all available dimension values of a dimension key |
-| ListMetrics         | Returns a list of all metrics for a combination of dimensions.      |
-| GetMetricValue      | Returns the last known value of a metric.                           |
+| ListMetrics         | Returns a list of all metrics for a combination of dimensions       |
+| GetMetricValue      | Returns the last known value of a metric                            |
 | GetMetricHistory    | Returns historical values of a metric                               |
 | GetMetricAggregate  | Returns aggregated metric values                                    |
 
-A sample implementation can be found
-[here](https://bitbucket.org/innius/sample-grpc-server/src/master/).
+**Limitations:**
 
-This API has some limitations:
+- Only supports one metric per query
+- No support for variables with multiple options
+- No enhanced metadata for metrics (units, etc.)
+- No flexible query options
 
-- it only supports one metric per query
-- it does not support variables with multiple options
-- it does not support enhanced metadata for metrics (like unit, etc.)
-- it does not support flexible query options
+### Advanced API (V3) - [GrafanaQueryAPIV3][3]
 
-### The Advanced API ([GrafanaQueryAPIV3][3])
+Enhanced API with multi-metric support and advanced features.
 
-This API provides almost the same operations as the Simple API but with one
-major difference: it supports multiple metrics for the same query. As a result
-this API integrates seamlessly with grafana templating capabilities. In
-addition, it supports enhanced metric metadata, like unit of measure. Another
-difference is that it supports grafana labels.
+**Operations:**
 
-The advanced API supports dynamic query options which are defined by the backend
-system. This makes it possible to tailor the behavior of grafana queries for
-specific backends. An example of a custom option is the Aggregate of the
-_GetMetricAggregate_ query. The v1 version of the API has a fixed number of
-Aggregates, defined by the plugin. It is not possible for a backend system to
-add a different option. With the V3 API, however, this is supported. Currently
-an option can be either an Enumeration or a Boolean type.
-
-This API provides the following operations:
-
-| name                | description                                                         |
+| Operation           | Description                                                         |
 | ------------------- | ------------------------------------------------------------------- |
 | ListDimensionKeys   | Returns a list of all available dimension keys                      |
 | ListDimensionValues | Returns a list of all available dimension values of a dimension key |
-| ListMetrics         | Returns a list of all metrics for a combination of dimensions.      |
-| GetMetricValue      | Returns the last known value for one or more metrics.               |
+| ListMetrics         | Returns a list of all metrics for a combination of dimensions       |
+| GetMetricValue      | Returns the last known value for one or more metrics                |
 | GetMetricHistory    | Returns historical values for one or more metrics                   |
 | GetMetricAggregate  | Returns aggregated values for one or more metrics                   |
 | GetQueryOptions     | Returns the options for a selected query type                       |
 
-A sample implementation can be found
-[here](https://bitbucket.org/innius/sample-grpc-server/src/master/).
+**Key Features:**
 
-### The V4 API ([GrafanaQueryAPIV4][4])
+- Multiple metrics per query
+- Seamless Grafana templating integration
+- Enhanced metric metadata (units, value mappings)
+- Grafana labels support
+- Dynamic query options defined by backend
+- Custom enumeration and boolean options
 
-The V4 API extends the V3 API with streaming configuration capabilities. It adds
-one new operation:
+**Requirements:**
 
-| name                           | description                                                                         |
+- Backend must support [gRPC Reflection][4] for API detection
+- Fallback to Simple API if reflection not supported
+
+### Streaming API (V4) - [GrafanaQueryAPIV4][5]
+
+Extension of V3 API with streaming configuration capabilities.
+
+**Additional Operation:**
+
+| Operation                      | Description                                                                         |
 | ------------------------------ | ----------------------------------------------------------------------------------- |
 | GetStreamingQueryConfiguration | Returns streaming configuration for a query (polling interval, max lookback period) |
 
-This allows backend systems to control streaming behavior based on their
-capabilities and constraints:
+**Streaming Features:**
 
-- **Polling Interval**: How frequently the datasource should poll for new data
-  during streaming
-- **Maximum Look-back Period**: The maximum allowed initial historical data
-  period
+- **Polling Interval**: Backend-controlled frequency for data polling during
+  streaming
+- **Maximum Look-back Period**: Configurable initial historical data period
+- **Full Backward Compatibility**: Existing V1/V2/V3 backends continue to work
 
-The V4 API is fully backward compatible - existing V1/V2/V3 backends continue to
-work with default streaming configuration.
+**Use Cases:**
 
-For detailed information about V4 streaming configuration, see:
+- High-frequency data sources requiring faster polling
+- Resource-constrained backends needing longer intervals
+- Different data types with varying look-back requirements
+- Dynamic optimization based on query complexity
 
-- [STREAMING_CONFIG.md](./STREAMING_CONFIG.md) - Technical documentation
-- [V4_MIGRATION_GUIDE.md](./V4_MIGRATION_GUIDE.md) - Implementation guide for
-  backend developers
+## V3 vs V4 API Comparison
 
-## Differences Between V3 and V4 API
+The V4 API is a minimal extension of V3, focusing specifically on streaming
+configuration.
 
-The V4 API is a minimal extension of the V3 API, focusing specifically on streaming configuration capabilities. Here are the key differences:
+### Key Differences
 
-### New Features in V4
-
-| Feature | V3 API | V4 API |
-|---------|--------|--------|
-| **Streaming Configuration** | ❌ Fixed defaults | ✅ Backend-controlled configuration |
-| **Dynamic Polling Intervals** | ❌ Static intervals | ✅ Query-specific intervals via `LoopInterval` |
-| **Configurable Look-back Period** | ❌ Fixed look-back | ✅ Query-specific look-back via `LookBackPeriod` |
-| **Backward Compatibility** | N/A | ✅ Full V3 compatibility maintained |
-
-### API Operations Comparison
-
-#### V3 API Operations
-- ListDimensionKeys
-- ListDimensionValues  
-- ListMetrics
-- GetMetricValue
-- GetMetricHistory
-- GetMetricAggregate
-- GetQueryOptions
-
-#### V4 API Operations
-- **All V3 operations** (unchanged)
-- **GetStreamingQueryConfiguration** *(new)*
-
-### Implementation Requirements
-
-#### V3 Backend Requirements
-- Implement all 7 V3 operations
-- Support gRPC Reflection for API detection
-- Handle multiple metrics per query
-- Support custom query options
-
-#### V4 Backend Requirements  
-- **All V3 requirements** (unchanged)
-- Implement `GetStreamingQueryConfiguration` method
-- Return appropriate streaming configuration based on query type
-- Handle streaming configuration requests for all query types
+| Feature                     | V3 API              | V4 API                      |
+| --------------------------- | ------------------- | --------------------------- |
+| **Streaming Configuration** | ❌ Fixed defaults   | ✅ Backend-controlled       |
+| **Dynamic Polling**         | ❌ Static intervals | ✅ Query-specific intervals |
+| **Configurable Look-back**  | ❌ Fixed period     | ✅ Query-specific periods   |
+| **Backward Compatibility**  | N/A                 | ✅ Full V3 compatibility    |
 
 ### Migration Path
 
-#### For Backend Developers
-1. **No Breaking Changes**: Existing V3 backends continue to work
-2. **Optional Enhancement**: Add V4 streaming configuration support
-3. **Simple Implementation**: Only one new method to implement
+**For Backend Developers:**
+
+1. **No Breaking Changes** - Existing V3 backends continue working
+2. **Optional Enhancement** - Add V4 streaming support when needed
+3. **Simple Implementation** - Only one new method required
 
 ```go
 func (s *YourServer) GetStreamingQueryConfiguration(
     ctx context.Context,
     req *v4.GetStreamingQueryConfigurationRequest,
 ) (*v4.GetStreamingQueryConfigurationResponse, error) {
-    // Return streaming configuration based on query type
     return &v4.GetStreamingQueryConfigurationResponse{
         LookBackPeriod: durMillis(time.Hour),    // 1 hour lookback
         LoopInterval:   durMillis(time.Second),  // 1 second polling
@@ -223,116 +246,38 @@ func (s *YourServer) GetStreamingQueryConfiguration(
 }
 ```
 
-#### For Frontend Users
-- **No Changes Required**: Datasource automatically detects V4 capabilities
-- **Enhanced Experience**: Better streaming performance when V4 backend is available
-- **Fallback Support**: Graceful degradation to V3 behavior when V4 is not available
+**For Frontend Users:**
 
-### Use Cases for V4
+- No configuration changes required
+- Automatic API version detection via gRPC reflection
+- Enhanced streaming performance when V4 backend available
 
-The V4 API is particularly beneficial for:
+### Implementation Examples
 
-- **High-frequency data sources** that need faster polling intervals
-- **Resource-constrained backends** that need longer polling intervals  
-- **Different data types** requiring different look-back periods
-- **Dynamic optimization** based on query complexity or data volume
+**Multi-metric scenarios:**
 
-### Detection and Fallback
+- Different time series for the same metric with different labels (e.g.,
+  temperature metric with zones: north, south, east, west)
+- Different time series for different metrics (e.g., multiple temperature
+  sensors in a room)
 
-The datasource uses gRPC reflection to automatically detect API version support:
+**Important Notes:**
 
-1. **V4 Detection**: Checks for `GetStreamingQueryConfiguration` method
-2. **Graceful Fallback**: Uses V3 behavior if V4 is not available
-3. **No Configuration**: Users don't need to specify API version
+- Advanced API (V3/V4) requires [gRPC Reflection][4] support for automatic API
+  detection
+- Plugin falls back to Simple API if reflection is not supported
+- gRPC is language-agnostic - implement backends in any
+  [supported language](https://grpc.io/docs/languages/)
 
-#### Example Use Cases:
+**Sample implementations:**
 
-- different time series for the same metric with different labels. For example:
-  the temperature measure is a room. The room has four zones: north, south, east
-  and west. The V1 API does not support this unless there are four different
-  metrics defined for each temperature / zone combination. The Advanced API does
-  support this scenario by returning multiple time series for the same metric
-  `temperature`, each annotated with different label `zone`.
-- different time series for different metrics. For example: a room has multiple
-  temperature sensors. The V1 API supports this by defining multiple queries for
-  each metric. The Advanced API can do this with a single query.
-
-Important Note: in order to use the Advanced API the backend server needs to
-support [gRPC Reflection][3]. The plugin uses this to determine if a backend
-supports the V2 or V3 protocol. If not supported it falls back on the Simple API
-implementation.
-
-Please note gRPC is programming language agnostic which makes it possible to
-implement a backend in the language of your choice. Checkout the gRPC
-[documentation](https://grpc.io/docs/languages/) of your language.
-
-#### Changes between ([GrafanaQueryAPIV2][2]) and ([GravanaQueryAPIV3][3])
-
-The most important difference is that the Aggregate types of the V2 API are not
-available by the V3 API unless they are defined in the backend.
-
-The backend code has to implement something like this:
-
-```
-const (
-    // this id is important because it matches the current v2 aggregate type option 
-	AggregationTypeOptionID = iota
-    // these enum values are important because they match the values of the V2 options 
-	AggregationTypeAverage = 0
-	AggregationTypeMax     = 1
-	AggregationTypeMin     = 2
-	AggregationTypeCount   = 3
-)
-
-
-func (backend *BackendServerV3) GetQueryOptions(ctx context.Context, in *v3.GetOptionsRequest) (*v3.GetOptionsResponse, error) {
-	var Options []*v3.Option
-	switch in.GetQueryType() {
-	case v3.GetOptionsRequest_GetMetricAggregate:
-		Options = append(Options, []*v3.Option{
-			{
-				Id:          strconv.Itoa(AggregationTypeOptionID),
-				Label:       "Aggregate",
-				Description: "Aggregate the query results",
-				Type:        v3.Option_Enum,
-				EnumValues: []*v3.EnumValue{
-					{Label: "Average", Description: "Calculate the average of the values", Id: strconv.Itoa(AggregationTypeAverage)},
-					{Label: "Min", Description: "Calculate the minimum of the values", Id: strconv.Itoa(AggregationTypeMin)},
-					{Label: "Max", Description: "Calculate the maximum of the values", Id: strconv.Itoa(AggregationTypeMax)},
-					{Label: "Count", Description: "Calculate the sum of the values", Id: strconv.Itoa(AggregationTypeCount)},
-				},
-			},
-		}...)
-	case v3.GetOptionsRequest_GetMetricValue:
-        return &v3.GetOptionsResponse{}, nil
-	case v3.GetOptionsRequest_GetMetricHistory:
-        return &v3.GetOptionsResponse{}, nil
-	}
-	return &v3.GetOptionsResponse{Options: Options}, nil
-}
-```
-
-A sample implementation of the V3 backend can be found
-[here](https://bitbucket.org/innius/sample-grpc-server/src/4dc9fd798eee92eb67c44085532e89518551a74d/server/v3/server.go#lines-44)
-
-## Features
-
-- select multiple metrics in one query
-- flexible dimension selection
-- integrated with Grafana variables and templating
-- allow backend systems to provided additional metadata, like value mappings,
-  unit of measure, etc.
-- supports notifications
-- supports pagination
-- supports retries for grpc calls if backend server is at maximum capacity
-- allow backend systems to define custom query options
-- supports streaming queries with backend-controlled configuration (V4 API)
+- [General Sample Server](https://bitbucket.org/innius/sample-grpc-server/src/master/)
 
 ## Roadmap
 
 - support annotations
 
 [1]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v1/api.proto
-[2]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v2/apiv2.proto
 [3]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v3/apiv3.proto
 [4]: https://github.com/grpc/grpc/blob/master/doc/server-reflection.md
+[5]: https://raw.githubusercontent.com/innius/grafana-simple-grpc-datasource/master/pkg/proto/v4/apiv4.proto
