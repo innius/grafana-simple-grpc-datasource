@@ -79,8 +79,6 @@ func (m *MockFrameSender) SendFrame(frame *data.Frame, include data.FrameInclude
 
 type MockStreamLogger struct {
 	mock.Mock
-	InfoLogs  []LogEntry
-	ErrorLogs []LogEntry
 }
 
 type LogEntry struct {
@@ -88,13 +86,15 @@ type LogEntry struct {
 	KeysAndValues []interface{}
 }
 
+func (m *MockStreamLogger) Debug(msg string, keysAndValues ...interface{}) {
+	m.Called(msg, keysAndValues)
+}
+
 func (m *MockStreamLogger) Info(msg string, keysAndValues ...interface{}) {
-	m.InfoLogs = append(m.InfoLogs, LogEntry{Message: msg, KeysAndValues: keysAndValues})
 	m.Called(msg, keysAndValues)
 }
 
 func (m *MockStreamLogger) Error(msg string, keysAndValues ...interface{}) {
-	m.ErrorLogs = append(m.ErrorLogs, LogEntry{Message: msg, KeysAndValues: keysAndValues})
 	m.Called(msg, keysAndValues)
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/pkg/errors"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
@@ -15,7 +14,6 @@ import (
 // GetStreamingQueryConfiguration retrieves streaming configuration from the backend
 func GetStreamingQueryConfiguration(ctx context.Context, client client.BackendAPIClient, query models.StreamingQueryConfigurationRequest) (*models.StreamingQueryConfigurationResponse, error) {
 	req := &v4.GetStreamingQueryConfigurationRequest{}
-	backend.Logger.Warn("floep", "query", query)
 	// Convert the query to the appropriate v4 request type
 	switch q := query.Query.(type) {
 	case models.MetricValueQuery:

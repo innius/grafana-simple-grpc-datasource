@@ -235,49 +235,4 @@ func (ds *Datasource) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/dimensions", ds.handleGetDimensionKeys)
 	mux.HandleFunc("/dimensions/values", ds.handleGetDimensionValues)
 	mux.HandleFunc("/metrics", ds.handleGetMetrics)
-	mux.HandleFunc("/streaming-config", ds.handleGetStreamingConfiguration)
-}
-
-func (ds *Datasource) handleGetStreamingConfiguration(w http.ResponseWriter, r *http.Request) {
-	logger := log.DefaultLogger.With("method", "handleGetStreamingConfiguration")
-
-	if r.Body == nil {
-		http.Error(w, "request does not have a body", http.StatusBadRequest)
-		return
-	}
-
-	// Create a JSON decoder from the request body
-	decoder := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	var requestBody struct {
-		Query any `json:"query"`
-	}
-
-	// Use the decoder to decode the JSON into the request struct
-	if err := decoder.Decode(&requestBody); err != nil {
-		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
-		return
-	}
-
-	// Create the streaming configuration request
-	req := &models.StreamingQueryConfigurationRequest{
-		Query: requestBody.Query,
-	}
-
-	res, err := ds.backendAPI.GetStreamingQueryConfiguration(r.Context(), req)
-	if err != nil {
-		logger.Error("backend returned an error", "error", err.Error())
-		renderError(r.Context(), status.Convert(err), w)
-		return
-	}
-
-	logger.Debug("returning streaming configuration", "config", res)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }

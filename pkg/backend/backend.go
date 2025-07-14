@@ -98,8 +98,8 @@ func (ds *backendImpl) GetMetrics(ctx context.Context, query models.GetMetricsRe
 	return res, nil
 }
 
-func (backendimpl *backendImpl) GetQueryOptions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
-	return connector.GetQueryOptionDefinitions(ctx, backendimpl.client, input)
+func (ds *backendImpl) GetQueryOptions(ctx context.Context, input models.GetQueryOptionsRequest) (*models.GetQueryOptionsResponse, error) {
+	return connector.GetQueryOptionDefinitions(ctx, ds.client, input)
 }
 
 func (ds *backendImpl) GetStreamingQueryConfiguration(ctx context.Context, query *models.StreamingQueryConfigurationRequest) (*models.StreamingQueryConfigurationResponse, error) {
