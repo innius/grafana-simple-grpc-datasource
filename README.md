@@ -157,9 +157,93 @@ work with default streaming configuration.
 
 For detailed information about V4 streaming configuration, see:
 
-- [V4_STREAMING_CONFIG.md](./V4_STREAMING_CONFIG.md) - Technical documentation
+- [STREAMING_CONFIG.md](./STREAMING_CONFIG.md) - Technical documentation
 - [V4_MIGRATION_GUIDE.md](./V4_MIGRATION_GUIDE.md) - Implementation guide for
   backend developers
+
+## Differences Between V3 and V4 API
+
+The V4 API is a minimal extension of the V3 API, focusing specifically on streaming configuration capabilities. Here are the key differences:
+
+### New Features in V4
+
+| Feature | V3 API | V4 API |
+|---------|--------|--------|
+| **Streaming Configuration** | ❌ Fixed defaults | ✅ Backend-controlled configuration |
+| **Dynamic Polling Intervals** | ❌ Static intervals | ✅ Query-specific intervals via `LoopInterval` |
+| **Configurable Look-back Period** | ❌ Fixed look-back | ✅ Query-specific look-back via `LookBackPeriod` |
+| **Backward Compatibility** | N/A | ✅ Full V3 compatibility maintained |
+
+### API Operations Comparison
+
+#### V3 API Operations
+- ListDimensionKeys
+- ListDimensionValues  
+- ListMetrics
+- GetMetricValue
+- GetMetricHistory
+- GetMetricAggregate
+- GetQueryOptions
+
+#### V4 API Operations
+- **All V3 operations** (unchanged)
+- **GetStreamingQueryConfiguration** *(new)*
+
+### Implementation Requirements
+
+#### V3 Backend Requirements
+- Implement all 7 V3 operations
+- Support gRPC Reflection for API detection
+- Handle multiple metrics per query
+- Support custom query options
+
+#### V4 Backend Requirements  
+- **All V3 requirements** (unchanged)
+- Implement `GetStreamingQueryConfiguration` method
+- Return appropriate streaming configuration based on query type
+- Handle streaming configuration requests for all query types
+
+### Migration Path
+
+#### For Backend Developers
+1. **No Breaking Changes**: Existing V3 backends continue to work
+2. **Optional Enhancement**: Add V4 streaming configuration support
+3. **Simple Implementation**: Only one new method to implement
+
+```go
+func (s *YourServer) GetStreamingQueryConfiguration(
+    ctx context.Context,
+    req *v4.GetStreamingQueryConfigurationRequest,
+) (*v4.GetStreamingQueryConfigurationResponse, error) {
+    // Return streaming configuration based on query type
+    return &v4.GetStreamingQueryConfigurationResponse{
+        LookBackPeriod: durMillis(time.Hour),    // 1 hour lookback
+        LoopInterval:   durMillis(time.Second),  // 1 second polling
+    }, nil
+}
+```
+
+#### For Frontend Users
+- **No Changes Required**: Datasource automatically detects V4 capabilities
+- **Enhanced Experience**: Better streaming performance when V4 backend is available
+- **Fallback Support**: Graceful degradation to V3 behavior when V4 is not available
+
+### Use Cases for V4
+
+The V4 API is particularly beneficial for:
+
+- **High-frequency data sources** that need faster polling intervals
+- **Resource-constrained backends** that need longer polling intervals  
+- **Different data types** requiring different look-back periods
+- **Dynamic optimization** based on query complexity or data volume
+
+### Detection and Fallback
+
+The datasource uses gRPC reflection to automatically detect API version support:
+
+1. **V4 Detection**: Checks for `GetStreamingQueryConfiguration` method
+2. **Graceful Fallback**: Uses V3 behavior if V4 is not available
+3. **No Configuration**: Users don't need to specify API version
 
 #### Example Use Cases:
 
