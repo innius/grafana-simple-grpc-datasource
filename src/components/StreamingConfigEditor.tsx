@@ -11,7 +11,9 @@ interface StreamingConfigEditorProps {
 const StreamingConfigEditor: React.FC<StreamingConfigEditorProps> = ({ config, onChange, disabled = false }) => {
     const onMaxBufferSizeChange = (event: ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(event.target.value, 10);
-        onChange({ ...config, maxBufferSize: value });
+        if (!isNaN(value)) {
+            onChange({ ...config, maxBufferSize: value });
+        }
     };
 
     const onLookBackPeriodChange = (event: ChangeEvent<HTMLInputElement>) => {
