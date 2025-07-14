@@ -273,20 +273,20 @@ type StreamLogger interface {
 	Error(msg string, keysAndValues ...any)
 }
 
-// GrafanaLogger wraps the Grafana backend logger
-type GrafanaLogger struct{}
-
-func (l *GrafanaLogger) Info(msg string, keysAndValues ...any) {
-	backend.Logger.Info(msg, keysAndValues...)
-}
-
-func (l *GrafanaLogger) Debug(msg string, keysAndValues ...any) {
-	backend.Logger.Debug(msg, keysAndValues...)
-}
-
-func (l *GrafanaLogger) Error(msg string, keysAndValues ...any) {
-	backend.Logger.Error(msg, keysAndValues...)
-}
+// // GrafanaLogger wraps the Grafana backend logger
+// type GrafanaLogger struct{}
+//
+// func (l *GrafanaLogger) Info(msg string, keysAndValues ...any) {
+// 	backend.Logger.Info(msg, keysAndValues...)
+// }
+//
+// func (l *GrafanaLogger) Debug(msg string, keysAndValues ...any) {
+// 	backend.Logger.Debug(msg, keysAndValues...)
+// }
+//
+// func (l *GrafanaLogger) Error(msg string, keysAndValues ...any) {
+// 	backend.Logger.Error(msg, keysAndValues...)
+// }
 
 // NewStreamProcessor creates a new stream processor with fixed interval
 func NewStreamProcessor(config StreamConfig, executor QueryExecutor, sender FrameSender, logger StreamLogger) *StreamProcessor {

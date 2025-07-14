@@ -95,7 +95,7 @@ func (ds *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReque
 }
 
 func (ds *Datasource) SubscribeStream(ctx context.Context, req *backend.SubscribeStreamRequest) (*backend.SubscribeStreamResponse, error) {
-	logger := &GrafanaLogger{}
+	logger := backend.Logger
 	logger.Info("SubscribeStream started", "path", req.Path, "data", string(req.Data))
 
 	// Parse and validate the query
@@ -206,7 +206,7 @@ func parseLookBackPeriod(raw *string, logger StreamLogger) time.Duration {
 
 // getInitialStreamDataWithConfig retrieves the initial dataset using backend configuration
 func (ds *Datasource) getInitialStreamDataWithConfig(ctx context.Context, executor QueryExecutor, query *Q, backendConfig *models.StreamingQueryConfigurationResponse) (data.Frames, error) {
-	logger := &GrafanaLogger{}
+	logger := backend.Logger
 	now := time.Now()
 
 	// Create stream config to resolve lookback period with backend limits
@@ -226,7 +226,7 @@ func (ds *Datasource) getInitialStreamDataWithConfig(ctx context.Context, execut
 }
 
 func (ds *Datasource) RunStream(ctx context.Context, req *backend.RunStreamRequest, sender *backend.StreamSender) error {
-	logger := &GrafanaLogger{}
+	logger := backend.Logger
 	logger.Info("RunStream started", "req.Data", string(req.Data))
 
 	// Parse and validate the query (this should have been done in SubscribeStream, but we validate again for safety)

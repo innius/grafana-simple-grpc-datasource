@@ -415,22 +415,6 @@ func TestDefaultStreamConfig(t *testing.T) {
 	assert.Equal(t, 1*time.Hour, config.LookBackPeriod)
 }
 
-// Test GrafanaLogger (basic functionality)
-
-func TestGrafanaLogger(t *testing.T) {
-	logger := &GrafanaLogger{}
-
-	// These tests just ensure the methods don't panic
-	// since we can't easily test the actual Grafana backend logger
-	assert.NotPanics(t, func() {
-		logger.Info("test message", "key", "value")
-	})
-
-	assert.NotPanics(t, func() {
-		logger.Error("test error", "error", "test")
-	})
-}
-
 func TestNewStreamConfigFromQuery_LookBackPeriod(t *testing.T) {
 	toPtr := func(s string) *string {
 		return &s
