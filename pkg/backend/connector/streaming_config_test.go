@@ -94,17 +94,6 @@ func TestGetStreamingQueryConfiguration(t *testing.T) {
 			expectErr:     true,
 			expectErrText: "failed to get streaming query configuration",
 		},
-		{
-			name: "Nil response returns default config",
-			query: models.StreamingQueryConfigurationRequest{
-				Query: models.MetricValueQuery{},
-			},
-			mockResp: nil,
-			expectResp: &models.StreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: time.Hour,
-				LoopInterval:        10 * time.Second,
-			},
-		},
 	}
 
 	for _, tt := range tests {

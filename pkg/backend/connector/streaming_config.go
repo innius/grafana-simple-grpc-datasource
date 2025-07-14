@@ -37,11 +37,8 @@ func GetStreamingQueryConfiguration(ctx context.Context, client client.BackendAP
 		return nil, errors.Wrap(err, "failed to get streaming query configuration")
 	}
 	if resp == nil {
-		// Fallback to default configuration if v4 is not supported
-		return &models.StreamingQueryConfigurationResponse{
-			LookBackPeriodLimit: time.Hour,
-			LoopInterval:        10 * time.Second,
-		}, nil
+		// Return nil when V4 is not supported - let stream_handler apply defaults
+		return nil, nil
 	}
 
 	// Convert response
