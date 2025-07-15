@@ -14,11 +14,13 @@ import (
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
 )
 
-// StreamConfig holds configuration for streaming operations
+// StreamConfig holds the resolved configuration for streaming operations.
+// This is the final configuration that should be used throughout the streaming logic,
+// combining backend limits with client preferences.
 type StreamConfig struct {
-	TickInterval      time.Duration
-	LookBackPeriod    time.Duration
-	MaxLookBackPeriod time.Duration // Maximum allowed by backend
+	TickInterval      time.Duration // Resolved polling interval for streaming
+	LookBackPeriod    time.Duration // Resolved lookback period for initial data
+	MaxLookBackPeriod time.Duration // Maximum allowed by backend (for reference)
 }
 
 // DefaultStreamConfig returns default streaming configuration
@@ -30,7 +32,12 @@ func DefaultStreamConfig() StreamConfig {
 	}
 }
 
-// NewStreamConfigFromBackend creates a StreamConfig from backend configuration and query preferences
+// NewStreamConfigFromBackend creates a resolved StreamConfig from backend configuration and query preferences.
+// This is the primary method for creating streaming configuration that should be used throughout
+// the streaming logic. It combines:
+// - Backend limits (from models.StreamingQueryConfigurationResponse)
+// - Client preferences (from query.StreamingConfig)
+// - Sensible defaults
 func NewStreamConfigFromBackend(backendConfig *models.StreamingQueryConfigurationResponse, query *Q) StreamConfig {
 	config := DefaultStreamConfig()
 
@@ -140,6 +147,9 @@ func queryModelForType(queryType string, baseQuery models.MetricBaseQuery) inter
 	}
 }
 
+// ValidateQuery validates the query and returns the backend's streaming configuration limits.
+// This returns the raw backend configuration (*models.StreamingQueryConfigurationResponse)
+// which should be used with NewStreamConfigFromBackend() to create a resolved StreamConfig.
 func (p *StreamQueryParser) ValidateQuery(ctx context.Context, query *Q) (*models.StreamingQueryConfigurationResponse, error) {
 	if query.QueryType == "" {
 		return nil, errors.New("query type is required")
@@ -273,7 +283,7 @@ type StreamLogger interface {
 	Error(msg string, keysAndValues ...any)
 }
 
-// NewStreamProcessor creates a new stream processor with fixed interval
+// NewStreamProcessor creates a new stream processor with resolved configuration
 func NewStreamProcessor(config StreamConfig, executor QueryExecutor, sender FrameSender, logger StreamLogger) *StreamProcessor {
 	return &StreamProcessor{
 		config:   config,
@@ -281,18 +291,6 @@ func NewStreamProcessor(config StreamConfig, executor QueryExecutor, sender Fram
 		sender:   sender,
 		logger:   logger,
 	}
-}
-
-// NewStreamProcessorFromQuery creates a stream processor using configuration from the query (legacy)
-func NewStreamProcessorFromQuery(query *Q, executor QueryExecutor, sender FrameSender, logger StreamLogger) *StreamProcessor {
-	config := NewStreamConfigFromQuery(query)
-	return NewStreamProcessor(config, executor, sender, logger)
-}
-
-// NewStreamProcessorFromBackendConfig creates a stream processor using backend configuration
-func NewStreamProcessorFromBackendConfig(backendConfig *models.StreamingQueryConfigurationResponse, query *Q, executor QueryExecutor, sender FrameSender, logger StreamLogger) *StreamProcessor {
-	config := NewStreamConfigFromBackend(backendConfig, query)
-	return NewStreamProcessor(config, executor, sender, logger)
 }
 
 // ProcessStream handles the streaming process (including initial data)

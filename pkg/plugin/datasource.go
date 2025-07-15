@@ -108,8 +108,8 @@ func (ds *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscrib
 		}, err
 	}
 
-	// Validate query and get streaming configuration from backend
-	streamingConfig, err := parser.ValidateQuery(ctx, query)
+	// Validate query and get backend configuration
+	backendConfig, err := parser.ValidateQuery(ctx, query)
 	if err != nil {
 		logger.Error("Invalid stream query in SubscribeStream", "error", err)
 		return &backend.SubscribeStreamResponse{
@@ -117,11 +117,15 @@ func (ds *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscrib
 		}, err
 	}
 
-	logger.Info("Validated stream query with backend configuration",
+	// Create resolved stream configuration from backend limits and query preferences
+	streamConfig := NewStreamConfigFromBackend(backendConfig, query)
+
+	logger.Info("Resolved stream configuration",
 		"queryType", query.QueryType,
 		"metrics", query.Metrics,
-		"backendLookBackMs", streamingConfig.LookBackPeriodLimit,
-		"backendLoopIntervalMs", streamingConfig.LoopInterval)
+		"tickInterval", streamConfig.TickInterval.String(),
+		"lookBackPeriod", streamConfig.LookBackPeriod.String(),
+		"maxLookBackPeriod", streamConfig.MaxLookBackPeriod.String())
 
 	// Create query executor
 	factory := NewQueryExecutorFactory(ds.backendAPI)
@@ -133,8 +137,8 @@ func (ds *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscrib
 		}, err
 	}
 
-	// Get initial data using backend configuration
-	initialFrames, err := ds.getInitialStreamDataWithConfig(ctx, executor, query, streamingConfig)
+	// Get initial data using resolved stream configuration
+	initialFrames, err := ds.getInitialStreamData(ctx, executor, streamConfig)
 	if err != nil {
 		logger.Error("Failed to get initial stream data", "error", err)
 		return &backend.SubscribeStreamResponse{
@@ -204,20 +208,17 @@ func parseLookBackPeriod(raw *string, logger StreamLogger) time.Duration {
 	return defaultLookBack
 }
 
-// getInitialStreamDataWithConfig retrieves the initial dataset using backend configuration
-func (ds *Datasource) getInitialStreamDataWithConfig(ctx context.Context, executor QueryExecutor, query *Q, backendConfig *models.StreamingQueryConfigurationResponse) (data.Frames, error) {
+// getInitialStreamData retrieves the initial dataset using resolved stream configuration
+func (ds *Datasource) getInitialStreamData(ctx context.Context, executor QueryExecutor, streamConfig StreamConfig) (data.Frames, error) {
 	logger := backend.Logger
 	now := time.Now()
-
-	// Create stream config to resolve lookback period with backend limits
-	streamConfig := NewStreamConfigFromBackend(backendConfig, query)
 
 	timeRange := backend.TimeRange{
 		From: now.Add(-streamConfig.LookBackPeriod),
 		To:   now,
 	}
 
-	logger.Info("getInitialStreamDataWithConfig: Using resolved lookback period",
+	logger.Info("getInitialStreamData: Using resolved lookback period",
 		"duration", streamConfig.LookBackPeriod.String(),
 		"from", timeRange.From.Format(time.RFC3339),
 		"to", timeRange.To.Format(time.RFC3339))
@@ -237,18 +238,22 @@ func (ds *Datasource) RunStream(ctx context.Context, req *backend.RunStreamReque
 		return err
 	}
 
-	// Validate query and get streaming configuration from backend
-	streamingConfig, err := parser.ValidateQuery(ctx, query)
+	// Validate query and get backend configuration
+	backendConfig, err := parser.ValidateQuery(ctx, query)
 	if err != nil {
 		logger.Error("Invalid stream query in RunStream", "error", err)
 		return err
 	}
 
-	logger.Info("Validated stream query for streaming with backend configuration",
+	// Create resolved stream configuration from backend limits and query preferences
+	streamConfig := NewStreamConfigFromBackend(backendConfig, query)
+
+	logger.Info("Resolved stream configuration for streaming",
 		"queryType", query.QueryType,
 		"metrics", query.Metrics,
-		"backendLookBackMs", streamingConfig.LookBackPeriodLimit,
-		"backendLoopIntervalMs", streamingConfig.LoopInterval)
+		"tickInterval", streamConfig.TickInterval.String(),
+		"lookBackPeriod", streamConfig.LookBackPeriod.String(),
+		"maxLookBackPeriod", streamConfig.MaxLookBackPeriod.String())
 
 	// Create query executor
 	factory := NewQueryExecutorFactory(ds.backendAPI)
@@ -258,13 +263,13 @@ func (ds *Datasource) RunStream(ctx context.Context, req *backend.RunStreamReque
 		return err
 	}
 
-	// Create stream processor with backend configuration
+	// Create stream processor with resolved configuration
 	// Note: Initial data is already sent via SubscribeStream, so we skip that step
-	processor := NewStreamProcessorFromBackendConfig(streamingConfig, query, executor, sender, logger)
+	processor := NewStreamProcessor(streamConfig, executor, sender, logger)
 
 	// Start the streaming loop directly (skip initial data since it was sent in SubscribeStream)
-	logger.Info("Starting streaming loop with backend configuration (initial data already sent via SubscribeStream)",
-		"tickInterval", processor.config.TickInterval.String())
+	logger.Info("Starting streaming loop with resolved configuration (initial data already sent via SubscribeStream)",
+		"tickInterval", streamConfig.TickInterval.String())
 	return processor.RunStreamingLoop(ctx)
 }
 
