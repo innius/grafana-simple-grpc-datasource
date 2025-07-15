@@ -238,6 +238,7 @@ func (ds *Datasource) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/metrics", ds.handleGetMetrics)
 	mux.HandleFunc("/streaming/verify", ds.handleVerifyStreamingSupport)
 }
+
 func (ds *Datasource) handleVerifyStreamingSupport(w http.ResponseWriter, r *http.Request) {
 	logger := log.DefaultLogger.With("method", "handleVerifyStreamingSupport")
 

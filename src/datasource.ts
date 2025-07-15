@@ -221,7 +221,11 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
             streams.push(this.runGrafanaLiveQuery(updatedTarget, options));
           } else {
             // If streaming is not supported, throw an error to show in Grafana UI
-            throw new Error(`Streaming not supported for query ${resolvedTarget.refId}: ${config.errorMessage || 'No reason provided'}`);
+            throw new Error(
+              `Streaming not supported for query ${resolvedTarget.refId}: ${
+                config.errorMessage || 'No reason provided'
+              }`
+            );
           }
         });
         streamingVerifications.push(verificationPromise);
@@ -232,6 +236,8 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
 
     // Return an observable that waits for all streaming verifications to complete
     return new Observable<DataQueryResponse>((subscriber) => {
+      let subscription: any = null;
+
       Promise.all(streamingVerifications)
         .then(() => {
           const observables: Array<Observable<DataQueryResponse>> = [];
@@ -258,20 +264,22 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
           }
 
           // Merge all observables and forward their events
-          const subscription = merge(...observables).subscribe({
+          subscription = merge(...observables).subscribe({
             next: (response) => subscriber.next(response),
             error: (error) => subscriber.error(error),
             complete: () => subscriber.complete(),
           });
-
-          // Return cleanup function
-          return () => {
-            subscription.unsubscribe();
-          };
         })
         .catch((error) => {
           subscriber.error(error);
         });
+
+      // Return cleanup function that will be called when the outer Observable is unsubscribed
+      return () => {
+        if (subscription) {
+          subscription.unsubscribe();
+        }
+      };
     });
   }
 
@@ -454,8 +462,8 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   async verifyStreamingSupport(query: MyQuery): Promise<StreamingConfig> {
     const response = await this.postResource<StreamingConfig>('streaming/verify', { ...query });
     return {
-      maxBufferSize: response.maxBufferSize || 3600,
-      lookBackPeriod: response.lookBackPeriod || '1h',
+      // maxBufferSize: response.maxBufferSize || 3600,
+      // lookBackPeriod: response.lookBackPeriod || '1h',
       streamingSupported: response.streamingSupported !== undefined ? response.streamingSupported : true,
       errorMessage: response.errorMessage,
     };
