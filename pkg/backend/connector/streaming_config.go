@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/backend/client"
 	"bitbucket.org/innius/grafana-simple-grpc-datasource/pkg/models"
@@ -34,16 +36,38 @@ func GetStreamingQueryConfiguration(ctx context.Context, client client.BackendAP
 
 	resp, err := client.GetStreamingQueryConfiguration(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get streaming query configuration")
+		st := status.Convert(err)
+		if st.Code() == codes.InvalidArgument {
+			return &models.StreamingQueryConfigurationResponse{
+				LookBackPeriodLimit: 0,
+				LoopInterval:        0,
+				StreamingSupported:  false,
+				ErrorMessage:        st.Message(),
+			}, nil
+		}
+		// If there's an error (e.g., method not implemented), return streaming not supported
+		return &models.StreamingQueryConfigurationResponse{
+			LookBackPeriodLimit: 0,
+			LoopInterval:        0,
+			StreamingSupported:  false,
+			ErrorMessage:        err.Error(),
+		}, nil
 	}
 	if resp == nil {
-		// Return nil when V4 is not supported - let stream_handler apply defaults
-		return nil, nil
+		// Return streaming not supported when V4 is not available
+		return &models.StreamingQueryConfigurationResponse{
+			LookBackPeriodLimit: 0,
+			LoopInterval:        0,
+			StreamingSupported:  false,
+			ErrorMessage:        "V4 API not supported by backend",
+		}, nil
 	}
 
 	// Convert response
 	return &models.StreamingQueryConfigurationResponse{
 		LookBackPeriodLimit: time.Duration(resp.LookBackPeriodLimit) * time.Millisecond,
 		LoopInterval:        time.Duration(resp.LoopInterval) * time.Millisecond,
+		StreamingSupported:  resp.StreamingSupported,
+		ErrorMessage:        resp.ErrorMessage,
 	}, nil
 }

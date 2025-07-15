@@ -25,10 +25,11 @@ import {
   DimensionKeyDefinition,
   DimensionValueDefinition,
   MetricDefinition,
+  StreamingConfig,
 } from './types';
 import { convertMetrics, convertQuery } from './convert';
 import { DatasourceVariableSupport } from './variables';
-import { Observable, of, merge } from 'rxjs';
+import { Observable, merge } from 'rxjs';
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
   enableStreaming: boolean;
@@ -199,28 +200,79 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   query(options: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
     const streams: Array<Observable<DataQueryResponse>> = [];
     const backendQueries: MyQuery[] = [];
+    const streamingVerifications: Promise<void>[] = [];
+
     for (let target of options.targets) {
       // Apply template variables first to resolve streaming state
       const resolvedTarget = this.applyTemplateVariables(target, options.scopedVars);
 
       if (this.isStreamingEnabled(resolvedTarget)) {
-        streams.push(this.runGrafanaLiveQuery(resolvedTarget, options));
+        // Create a verification promise for this query
+        const verificationPromise = this.verifyStreamingSupport(resolvedTarget).then((config) => {
+          if (config.streamingSupported) {
+            // Update the streaming config with the verified configuration
+            const updatedTarget = {
+              ...resolvedTarget,
+              streamingConfig: {
+                ...resolvedTarget.streamingConfig,
+                ...config,
+              },
+            };
+            streams.push(this.runGrafanaLiveQuery(updatedTarget, options));
+          } else {
+            // If streaming is not supported, throw an error to show in Grafana UI
+            throw new Error(`Streaming not supported for query ${resolvedTarget.refId}: ${config.errorMessage || 'No reason provided'}`);
+          }
+        });
+        streamingVerifications.push(verificationPromise);
       } else {
         backendQueries.push(resolvedTarget);
       }
     }
 
-    if (backendQueries.length) {
-      const backendOpts = {
-        ...options,
-        targets: backendQueries,
-      };
-      streams.push(super.query(backendOpts));
-    }
-    if (streams.length === 0) {
-      return of({ data: [] });
-    }
-    return merge(...streams);
+    // Return an observable that waits for all streaming verifications to complete
+    return new Observable<DataQueryResponse>((subscriber) => {
+      Promise.all(streamingVerifications)
+        .then(() => {
+          const observables: Array<Observable<DataQueryResponse>> = [];
+
+          // Add all verified streaming queries
+          if (streams.length) {
+            observables.push(merge(...streams));
+          }
+
+          // Add all non-streaming queries
+          if (backendQueries.length) {
+            const backendOpts = {
+              ...options,
+              targets: backendQueries,
+            };
+            observables.push(super.query(backendOpts));
+          }
+
+          // If no queries at all, return empty result
+          if (observables.length === 0) {
+            subscriber.next({ data: [] });
+            subscriber.complete();
+            return;
+          }
+
+          // Merge all observables and forward their events
+          const subscription = merge(...observables).subscribe({
+            next: (response) => subscriber.next(response),
+            error: (error) => subscriber.error(error),
+            complete: () => subscriber.complete(),
+          });
+
+          // Return cleanup function
+          return () => {
+            subscription.unsubscribe();
+          };
+        })
+        .catch((error) => {
+          subscriber.error(error);
+        });
+    });
   }
 
   /**
@@ -238,6 +290,13 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   runGrafanaLiveQuery(target: MyQuery, req: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {
     const path = this.createStreamingPath(target);
     const streamingConfig = target.streamingConfig || { maxBufferSize: 3600, lookBackPeriod: '1h' };
+
+    // Check if streaming is explicitly not supported
+    if (streamingConfig.streamingSupported === false) {
+      return new Observable<DataQueryResponse>((subscriber) => {
+        subscriber.error(new Error(`Streaming not supported: ${streamingConfig.errorMessage || 'No reason provided'}`));
+      });
+    }
 
     return getGrafanaLiveSrv().getDataStream({
       buffer: {
@@ -385,6 +444,21 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       query_type: qt,
     };
     return this.postResource<QueryOptionDefinitions>('options', query);
+  }
+
+  /**
+   * Verifies if streaming is supported for a given query
+   * Returns the streaming configuration with streamingSupported flag
+   * Throws errors that should be visible to Grafana users
+   */
+  async verifyStreamingSupport(query: MyQuery): Promise<StreamingConfig> {
+    const response = await this.postResource<StreamingConfig>('streaming/verify', { ...query });
+    return {
+      maxBufferSize: response.maxBufferSize || 3600,
+      lookBackPeriod: response.lookBackPeriod || '1h',
+      streamingSupported: response.streamingSupported !== undefined ? response.streamingSupported : true,
+      errorMessage: response.errorMessage,
+    };
   }
 }
 

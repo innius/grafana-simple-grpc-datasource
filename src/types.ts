@@ -25,6 +25,10 @@ export interface StreamingConfig {
   maxBufferSize?: number;
   // Look-back period in seconds for initial dataset
   lookBackPeriod?: string;
+  // Whether streaming is supported for this query
+  streamingSupported?: boolean;
+  // Error message if streaming is not supported
+  errorMessage?: string;
 }
 
 export interface MyQuery extends DataQuery {

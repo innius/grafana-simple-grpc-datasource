@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
@@ -235,4 +236,48 @@ func (ds *Datasource) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/dimensions", ds.handleGetDimensionKeys)
 	mux.HandleFunc("/dimensions/values", ds.handleGetDimensionValues)
 	mux.HandleFunc("/metrics", ds.handleGetMetrics)
+	mux.HandleFunc("/streaming/verify", ds.handleVerifyStreamingSupport)
+}
+func (ds *Datasource) handleVerifyStreamingSupport(w http.ResponseWriter, r *http.Request) {
+	logger := log.DefaultLogger.With("method", "handleVerifyStreamingSupport")
+
+	if r.Body == nil {
+		http.Error(w, "request does not have a body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Read the raw request body
+	rawData, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	logger.Info("raw data received", "raw_data", string(rawData))
+
+	// Parse the query using the same logic as streaming
+	parser := NewStreamQueryParser(ds.backendAPI)
+	query, err := parser.ParseStreamQuery(rawData)
+	if err != nil {
+		logger.Error("Failed to parse query", "error", err.Error())
+		http.Error(w, "Failed to parse query", http.StatusBadRequest)
+		return
+	}
+
+	// Validate query and get streaming configuration
+	res, err := parser.ValidateQuery(r.Context(), query)
+	if err != nil {
+		logger.Error("backend returned an error", "error", err.Error())
+		renderError(r.Context(), status.Convert(err), w)
+		return
+	}
+
+	logger.Debug("returning streaming configuration", "config", res)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

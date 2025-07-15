@@ -49,6 +49,10 @@ message GetStreamingQueryConfigurationResponse {
   // Warning: The loop interval must not exceed 15 seconds,
   // as the Grafana server may close the stream due to inactivity.
   int64 loopInterval = 2;
+  // streamingSupported indicates whether streaming is supported for this query
+  bool streamingSupported = 3;
+  // errorMessage provides a reason if streaming is not supported
+  string errorMessage = 4;
 }
 
 message ListMetricsRequest {

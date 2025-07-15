@@ -14,6 +14,10 @@ type StreamingQueryConfigurationResponse struct {
 	LookBackPeriodLimit time.Duration `json:"lookBackPeriod"`
 	// LoopInterval in milliseconds - polling interval for RunStream
 	LoopInterval time.Duration `json:"loopInterval"`
+	// StreamingSupported indicates whether streaming is supported for this query
+	StreamingSupported bool `json:"streamingSupported"`
+	// ErrorMessage provides a reason if streaming is not supported
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 // // StreamingConfiguration holds the resolved streaming configuration
