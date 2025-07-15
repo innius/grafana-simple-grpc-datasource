@@ -83,6 +83,9 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
     return displayText || query.refId;
   }
 
+  // Maximum allowed channel length for streaming paths
+  private static readonly MAX_CHANNEL_LENGTH = 100;
+
   /**
    * Sanitizes a string to be used in streaming path by removing/replacing invalid characters
    * Only allows letters, numbers and forward slashes
@@ -93,60 +96,104 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   }
 
   /**
-   * Creates a properly formatted path for streaming queries
-   * Format: /refId/queryType/metricId/dimensions/queryOptions
+   * Creates a deterministic hash of the input string
+   * Uses djb2 hash algorithm for good distribution and collision resistance
    */
-  private createStreamingPath(query: MyQuery): string {
-    let path = `${this.sanitizePathComponent(query.refId)}`;
+  private createHash(input: string): string {
+    let hash = 5381;
+    for (let i = 0; i < input.length; i++) {
+      hash = (hash << 5) + hash + input.charCodeAt(i);
+    }
+    // Convert to positive number and use base36 for compact representation
+    return Math.abs(hash >>> 0).toString(36);
+  }
+
+  /**
+   * Creates a compact string representation of all query components
+   */
+  private serializeQueryComponents(query: MyQuery): string {
+    const parts: string[] = [];
 
     // Add query type
     if (query.queryType) {
-      path += `/${this.sanitizePathComponent(query.queryType)}`;
+      parts.push(`qt:${query.queryType}`);
     }
 
     // Add first metric if available
     if (query.metrics && query.metrics.length > 0 && query.metrics[0].metricId) {
-      const metricId = this.sanitizePathComponent(query.metrics[0].metricId);
-      path += `/${metricId}`;
+      parts.push(`m:${query.metrics[0].metricId}`);
     }
 
     // Add dimensions if available
     if (query.dimensions && query.dimensions.length > 0) {
-      const dimensionsStr = query.dimensions
-        .map((dim) => `${this.sanitizePathComponent(dim.key || '')}/${this.sanitizePathComponent(dim.value || '')}`)
-        .join('/');
-      path += `/${dimensionsStr}`;
+      const dims = query.dimensions.map((dim) => `${dim.key || ''}=${dim.value || ''}`).join(',');
+      parts.push(`d:${dims}`);
     }
 
     // Add query options if available
     if (query.queryOptions && Object.keys(query.queryOptions).length > 0) {
-      const optionsStr = Object.entries(query.queryOptions)
-        .filter(([_, optionValue]) => optionValue.value) // Only include options with values
-        .map(
-          ([key, optionValue]) =>
-            `${this.sanitizePathComponent(key)}/${this.sanitizePathComponent(optionValue.value || '')}`
-        )
-        .join('/');
-      if (optionsStr) {
-        path += `/${optionsStr}`;
+      const opts = Object.entries(query.queryOptions)
+        .filter(([_, optionValue]) => optionValue.value)
+        .map(([key, optionValue]) => `${key}=${optionValue.value || ''}`)
+        .join(',');
+      if (opts) {
+        parts.push(`o:${opts}`);
       }
     }
 
-    // Add streaming configuration as part of the path for uniqueness
+    // Add streaming configuration
     if (query.streamingConfig) {
-      const streamingStr = [
-        query.streamingConfig.maxBufferSize ? `buffer/${query.streamingConfig.maxBufferSize}` : '',
-        query.streamingConfig.lookBackPeriod ? `lookback/${query.streamingConfig.lookBackPeriod}` : '',
-      ]
-        .filter(Boolean)
-        .join('/');
-
-      if (streamingStr) {
-        path += `/${streamingStr}`;
+      const streamingParts: string[] = [];
+      if (query.streamingConfig.maxBufferSize) {
+        streamingParts.push(`b${query.streamingConfig.maxBufferSize}`);
+      }
+      if (query.streamingConfig.lookBackPeriod) {
+        streamingParts.push(`l${query.streamingConfig.lookBackPeriod}`);
+      }
+      if (streamingParts.length > 0) {
+        parts.push(`s:${streamingParts.join(',')}`);
       }
     }
 
-    return path;
+    return parts.join('|');
+  }
+
+  /**
+   * Creates a properly formatted path for streaming queries with length constraints
+   * Uses hashing to ensure paths stay under the 100-character limit while maintaining uniqueness
+   * Format: refId/hash or hash (if refId is too long)
+   */
+  private createStreamingPath(query: MyQuery): string {
+    const refId = this.sanitizePathComponent(query.refId || 'default');
+    const queryComponents = this.serializeQueryComponents(query);
+
+    // If no additional components, try to use just refId
+    if (!queryComponents) {
+      return refId.length <= DataSource.MAX_CHANNEL_LENGTH ? refId : this.createHash(refId);
+    }
+
+    // Create hash of all query components for uniqueness
+    const queryHash = this.createHash(queryComponents);
+
+    // Try to include refId if there's space
+    const pathWithRefId = `${refId}/${queryHash}`;
+
+    if (pathWithRefId.length <= DataSource.MAX_CHANNEL_LENGTH) {
+      return pathWithRefId;
+    }
+
+    // If refId + hash is too long, try with truncated refId
+    const maxRefIdLength = DataSource.MAX_CHANNEL_LENGTH - queryHash.length - 1; // -1 for slash
+    if (maxRefIdLength > 0) {
+      const truncatedRefId = refId.substring(0, maxRefIdLength);
+      return `${truncatedRefId}/${queryHash}`;
+    }
+
+    // If even truncated refId doesn't fit, hash everything together
+    const fullHash = this.createHash(`${refId}|${queryComponents}`);
+    return fullHash.length <= DataSource.MAX_CHANNEL_LENGTH
+      ? fullHash
+      : fullHash.substring(0, DataSource.MAX_CHANNEL_LENGTH);
   }
 
   query(options: DataQueryRequest<MyQuery>): Observable<DataQueryResponse> {

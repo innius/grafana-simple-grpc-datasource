@@ -129,7 +129,7 @@ var supportedQueryTypes = []string{
 
 func defaultStreamingConfig() *models.StreamingQueryConfigurationResponse {
 	return &models.StreamingQueryConfigurationResponse{
-		LookBackPeriodLimit: time.Hour,
+		LookBackPeriodLimit: 6 * time.Hour,
 		LoopInterval:        10 * time.Second,
 	}
 }
