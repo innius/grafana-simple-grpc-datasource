@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -102,7 +101,7 @@ type MockQueryExecutor struct {
 	mock.Mock
 }
 
-func (m *MockQueryExecutor) ExecuteQuery(ctx context.Context, timeRange backend.TimeRange) (data.Frames, error) {
+func (m *MockQueryExecutor) ExecuteQuery(ctx context.Context, timeRange models.TimeRange) (data.Frames, error) {
 	args := m.Called(ctx, timeRange)
 	return args.Get(0).(data.Frames), args.Error(1)
 }
@@ -129,7 +128,7 @@ func TestStreamQueryParser_ParseStreamQuery(t *testing.T) {
 	t.Run("valid query", func(t *testing.T) {
 		queryData := Q{
 			QueryType: models.QueryMetricValue,
-			// Range:      backend.TimeRange{From: time.Now(), To: time.Now()},
+			// Range:      models.TimeRange{From: time.Now(), To: time.Now()},
 			IntervalMS: 1000,
 			MetricBaseQuery: models.MetricBaseQuery{
 				Metrics: []models.Metric{{MetricId: "test-metric"}},
@@ -248,7 +247,7 @@ func TestMetricAggregateExecutor_ExecuteQuery(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	timeRange := backend.TimeRange{From: time.Now(), To: time.Now()}
+	timeRange := models.TimeRange{From: time.Now(), To: time.Now()}
 	expectedFrames := data.Frames{data.NewFrame("test")}
 
 	mockBackend.On("HandleGetMetricAggregateQuery", ctx, mock.AnythingOfType("*models.MetricAggregateQuery")).Return(expectedFrames, nil)
@@ -270,7 +269,7 @@ func TestMetricHistoryExecutor_ExecuteQuery(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	timeRange := backend.TimeRange{From: time.Now(), To: time.Now()}
+	timeRange := models.TimeRange{From: time.Now(), To: time.Now()}
 	expectedFrames := data.Frames{data.NewFrame("test")}
 
 	mockBackend.On("HandleGetMetricHistoryQuery", ctx, mock.AnythingOfType("*models.MetricHistoryQuery")).Return(expectedFrames, nil)
@@ -292,7 +291,7 @@ func TestMetricValueExecutor_ExecuteQuery(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	timeRange := backend.TimeRange{From: time.Now(), To: time.Now()}
+	timeRange := models.TimeRange{From: time.Now(), To: time.Now()}
 	expectedFrames := data.Frames{data.NewFrame("test")}
 
 	mockBackend.On("HandleGetMetricValueQuery", ctx, mock.AnythingOfType("*models.MetricValueQuery")).Return(expectedFrames, nil)
@@ -320,7 +319,7 @@ func TestStreamProcessor_ProcessStream(t *testing.T) {
 		processor := NewStreamProcessor(config, mockExecutor, mockSender, mockLogger)
 
 		expectedFrames := data.Frames{data.NewFrame("test")}
-		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("backend.TimeRange")).Return(expectedFrames, nil).Once()
+		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("models.TimeRange")).Return(expectedFrames, nil).Once()
 		mockSender.On("SendFrame", mock.Anything, data.IncludeAll).Return(nil).Once()
 		mockLogger.On("Info", "sendInitialData: Using LookBackPeriod from StreamConfig", mock.Anything).Once()
 		mockLogger.On("Info", mock.Anything, mock.Anything).Maybe()
@@ -351,7 +350,7 @@ func TestStreamProcessor_ProcessStream(t *testing.T) {
 		processor := NewStreamProcessor(config, mockExecutor, mockSender, mockLogger)
 
 		expectedError := errors.New("query failed")
-		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("backend.TimeRange")).Return(data.Frames{}, expectedError)
+		mockExecutor.On("ExecuteQuery", mock.Anything, mock.AnythingOfType("models.TimeRange")).Return(data.Frames{}, expectedError)
 		mockLogger.On("Info", "sendInitialData: Using LookBackPeriod from StreamConfig", mock.Anything).Once()
 		mockLogger.On("Error", "Initial query failure", mock.Anything).Once()
 
@@ -433,7 +432,7 @@ func TestNewStreamConfigFromQuery_LookBackPeriod(t *testing.T) {
 		{
 			name:                   "With zero LookBackPeriod (use default)",
 			lookBackPeriod:         nil,
-			expectedLookBackPeriod: 1 * time.Hour, // Default
+			expectedLookBackPeriod: 24 * time.Hour, // Default ServerLookBackPeriod when no backend config
 		},
 		{
 			name:                   "With large LookBackPeriod",

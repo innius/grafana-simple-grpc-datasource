@@ -125,7 +125,7 @@ func (ds *Datasource) SubscribeStream(ctx context.Context, req *backend.Subscrib
 		"metrics", query.Metrics,
 		"tickInterval", streamConfig.TickInterval.String(),
 		"lookBackPeriod", streamConfig.LookBackPeriod.String(),
-		"maxLookBackPeriod", streamConfig.MaxLookBackPeriod.String())
+		"serverLookBackPeriod", streamConfig.ServerLookBackPeriod.String())
 
 	// Create query executor
 	factory := NewQueryExecutorFactory(ds.backendAPI)
@@ -185,8 +185,7 @@ type streamingConfig struct {
 }
 
 type Q struct {
-	QueryType string `json:"queryType"`
-	// Range           backend.TimeRange
+	QueryType       string          `json:"queryType"`
 	IntervalMS      int64           `json:"intervalMs"`
 	MaxDataPoints   int64           `json:"maxDataPoints"`
 	StreamingConfig streamingConfig `json:"streamingConfig"`
@@ -213,7 +212,7 @@ func (ds *Datasource) getInitialStreamData(ctx context.Context, executor QueryEx
 	logger := backend.Logger
 	now := time.Now()
 
-	timeRange := backend.TimeRange{
+	timeRange := models.TimeRange{
 		From: now.Add(-streamConfig.LookBackPeriod),
 		To:   now,
 	}
@@ -253,7 +252,7 @@ func (ds *Datasource) RunStream(ctx context.Context, req *backend.RunStreamReque
 		"metrics", query.Metrics,
 		"tickInterval", streamConfig.TickInterval.String(),
 		"lookBackPeriod", streamConfig.LookBackPeriod.String(),
-		"maxLookBackPeriod", streamConfig.MaxLookBackPeriod.String())
+		"serverLookBackPeriod", streamConfig.ServerLookBackPeriod.String())
 
 	// Create query executor
 	factory := NewQueryExecutorFactory(ds.backendAPI)

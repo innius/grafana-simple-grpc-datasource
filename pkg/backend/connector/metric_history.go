@@ -44,14 +44,19 @@ func GetMetricHistory(ctx context.Context, client client.BackendAPIClient, query
 		if err != nil {
 			return nil, err
 		}
+		if resp == nil {
+			break
+		}
 
 		appendMatchingFrames(frames, resp.Frames)
 
-		if resp != nil && resp.NextToken != "" {
-			clientReq.StartingToken = resp.NextToken
-			continue
+		if resp.NextToken == "" {
+			break
 		}
-		break
+		// Make a shallow copy to avoid mutating the original clientReq
+		reqCopy := clientReq
+		reqCopy.StartingToken = resp.NextToken
+		clientReq = reqCopy
 	}
 
 	return &framer.MetricHistory{

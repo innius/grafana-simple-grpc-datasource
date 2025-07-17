@@ -41,9 +41,11 @@ message GetStreamingQueryConfigurationRequest {
 }
 
 message GetStreamingQueryConfigurationResponse {
-  // lookBackPeriodLimit specifies the maximum allowed time window (in milliseconds)
-  // for the streaming query to look back into past data.
-  int64 lookBackPeriodLimit = 1;
+  // lookBackPeriod specifies the server-recommended time window (in milliseconds)
+  // for the streaming query to look back into past data. This serves as both:
+  // - The default value when the client doesn't specify a lookback period
+  // - The maximum allowed value that client requests cannot exceed
+  int64 lookBackPeriod = 1;
   // loopInterval specifies the polling interval (in milliseconds) at which
   // the streaming query retrieves new data from the backend.
   // Warning: The loop interval must not exceed 15 seconds,

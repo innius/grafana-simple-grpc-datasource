@@ -29,7 +29,6 @@ func TestAppendMatchingFrames(t *testing.T) {
 	t.Run("append the second frame", func(t *testing.T) {
 		appendMatchingFrames(frames, res)
 		exp := &pb.Frame{
-			Metric: "temperature",
 			Timestamps: []*timestamppb.Timestamp{
 				res[0].Timestamps[0], res[0].Timestamps[0],
 			},

@@ -15,12 +15,6 @@ func UnmarshalToMetricValueQuery(dq *backend.DataQuery) (*MetricValueQuery, erro
 	if err := json.Unmarshal(dq.JSON, query); err != nil {
 		return nil, err
 	}
-
-	// add on the DataQuery params
-	query.TimeRange = dq.TimeRange
-	query.Interval = dq.Interval
-	query.MaxDataPoints = dq.MaxDataPoints
-	query.QueryType = dq.QueryType
-
+	applyDataQueryBaseFields(dq, &query.MetricBaseQuery)
 	return query, nil
 }

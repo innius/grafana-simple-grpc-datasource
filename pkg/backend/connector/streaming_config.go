@@ -39,35 +39,35 @@ func GetStreamingQueryConfiguration(ctx context.Context, client client.BackendAP
 		st := status.Convert(err)
 		if st.Code() == codes.InvalidArgument {
 			return &models.StreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: 0,
-				LoopInterval:        0,
-				StreamingSupported:  false,
-				ErrorMessage:        st.Message(),
+				LookBackPeriod:     0,
+				LoopInterval:       0,
+				StreamingSupported: false,
+				ErrorMessage:       st.Message(),
 			}, nil
 		}
 		// If there's an error (e.g., method not implemented), return streaming not supported
 		return &models.StreamingQueryConfigurationResponse{
-			LookBackPeriodLimit: 0,
-			LoopInterval:        0,
-			StreamingSupported:  false,
-			ErrorMessage:        err.Error(),
+			LookBackPeriod:     0,
+			LoopInterval:       0,
+			StreamingSupported: false,
+			ErrorMessage:       err.Error(),
 		}, nil
 	}
 	if resp == nil {
 		// Return streaming not supported when V4 is not available
 		return &models.StreamingQueryConfigurationResponse{
-			LookBackPeriodLimit: 0,
-			LoopInterval:        0,
-			StreamingSupported:  false,
-			ErrorMessage:        "V4 API not supported by backend",
+			LookBackPeriod:     0,
+			LoopInterval:       0,
+			StreamingSupported: false,
+			ErrorMessage:       "V4 API not supported by backend",
 		}, nil
 	}
 
 	// Convert response
 	return &models.StreamingQueryConfigurationResponse{
-		LookBackPeriodLimit: time.Duration(resp.LookBackPeriodLimit) * time.Millisecond,
-		LoopInterval:        time.Duration(resp.LoopInterval) * time.Millisecond,
-		StreamingSupported:  resp.StreamingSupported,
-		ErrorMessage:        resp.ErrorMessage,
+		LookBackPeriod:     time.Duration(resp.LookBackPeriod) * time.Millisecond,
+		LoopInterval:       time.Duration(resp.LoopInterval) * time.Millisecond,
+		StreamingSupported: resp.StreamingSupported,
+		ErrorMessage:       resp.ErrorMessage,
 	}, nil
 }

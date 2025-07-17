@@ -35,8 +35,8 @@ func TestSubscribeStreamIntegration(t *testing.T) {
 	mockAPI.On("HandleGetMetricHistoryQuery", mock.Anything, mock.Anything).Return(data.Frames{testFrame}, nil)
 	mockAPI.On("GetStreamingQueryConfiguration", mock.Anything, mock.Anything).
 		Return(&models.StreamingQueryConfigurationResponse{
-			LookBackPeriodLimit: time.Hour,
-			LoopInterval:        time.Minute,
+			LookBackPeriod: time.Hour,
+			LoopInterval:   time.Minute,
 		}, nil)
 	// Create datasource with mock API
 	datasource := &Datasource{

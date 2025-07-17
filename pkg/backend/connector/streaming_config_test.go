@@ -41,12 +41,12 @@ func TestGetStreamingQueryConfiguration(t *testing.T) {
 				Query: models.MetricValueQuery{},
 			},
 			mockResp: &v4.GetStreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: 123,
-				LoopInterval:        456,
+				LookBackPeriod: 123,
+				LoopInterval:   456,
 			},
 			expectResp: &models.StreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: 123 * time.Millisecond,
-				LoopInterval:        456 * time.Millisecond,
+				LookBackPeriod: 123 * time.Millisecond,
+				LoopInterval:   456 * time.Millisecond,
 			},
 		},
 		{
@@ -55,12 +55,12 @@ func TestGetStreamingQueryConfiguration(t *testing.T) {
 				Query: models.MetricHistoryQuery{},
 			},
 			mockResp: &v4.GetStreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: 789,
-				LoopInterval:        1011,
+				LookBackPeriod: 789,
+				LoopInterval:   1011,
 			},
 			expectResp: &models.StreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: 789 * time.Millisecond,
-				LoopInterval:        1011 * time.Millisecond,
+				LookBackPeriod: 789 * time.Millisecond,
+				LoopInterval:   1011 * time.Millisecond,
 			},
 		},
 		{
@@ -69,12 +69,12 @@ func TestGetStreamingQueryConfiguration(t *testing.T) {
 				Query: models.MetricAggregateQuery{},
 			},
 			mockResp: &v4.GetStreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: 222,
-				LoopInterval:        333,
+				LookBackPeriod: 222,
+				LoopInterval:   333,
 			},
 			expectResp: &models.StreamingQueryConfigurationResponse{
-				LookBackPeriodLimit: 222 * time.Millisecond,
-				LoopInterval:        333 * time.Millisecond,
+				LookBackPeriod: 222 * time.Millisecond,
+				LoopInterval:   333 * time.Millisecond,
 			},
 		},
 		{
@@ -86,13 +86,17 @@ func TestGetStreamingQueryConfiguration(t *testing.T) {
 			expectErrText: "unsupported query type for streaming configuration",
 		},
 		{
-			name: "Backend client error is wrapped",
+			name: "Backend client error returns streaming not supported",
 			query: models.StreamingQueryConfigurationRequest{
 				Query: models.MetricValueQuery{},
 			},
-			mockErr:       errors.New("backend error"),
-			expectErr:     true,
-			expectErrText: "failed to get streaming query configuration",
+			mockErr: errors.New("backend error"),
+			expectResp: &models.StreamingQueryConfigurationResponse{
+				LookBackPeriod:     0,
+				LoopInterval:       0,
+				StreamingSupported: false,
+				ErrorMessage:       "backend error",
+			},
 		},
 	}
 

@@ -16,28 +16,28 @@ import (
 
 // StreamConfig holds the resolved configuration for streaming operations.
 // This is the final configuration that should be used throughout the streaming logic,
-// combining backend limits with client preferences.
+// combining backend configuration with client preferences.
 type StreamConfig struct {
-	TickInterval      time.Duration // Resolved polling interval for streaming
-	LookBackPeriod    time.Duration // Resolved lookback period for initial data
-	MaxLookBackPeriod time.Duration // Maximum allowed by backend (for reference)
+	TickInterval         time.Duration // Resolved polling interval for streaming
+	LookBackPeriod       time.Duration // Resolved lookback period for initial data
+	ServerLookBackPeriod time.Duration // Server-recommended lookback period (for reference)
 }
 
 // DefaultStreamConfig returns default streaming configuration
 func DefaultStreamConfig() StreamConfig {
 	return StreamConfig{
-		TickInterval:      10 * time.Second, // Default TickInterval
-		LookBackPeriod:    1 * time.Hour,    // Default lookback period
-		MaxLookBackPeriod: 24 * time.Hour,   // Default maximum
+		TickInterval:         10 * time.Second, // Default TickInterval
+		LookBackPeriod:       1 * time.Hour,    // Default lookback period
+		ServerLookBackPeriod: 24 * time.Hour,   // Default server recommendation
 	}
 }
 
 // NewStreamConfigFromBackend creates a resolved StreamConfig from backend configuration and query preferences.
 // This is the primary method for creating streaming configuration that should be used throughout
-// the streaming logic. It combines:
-// - Backend limits (from models.StreamingQueryConfigurationResponse)
-// - Client preferences (from query.StreamingConfig)
-// - Sensible defaults
+// the streaming logic. It implements the new semantics where:
+// - Server's LookBackPeriod becomes the default when user doesn't provide one
+// - User-provided value cannot exceed the server's value
+// - Backend logic provides fallback defaults when backend doesn't support V4 API
 func NewStreamConfigFromBackend(backendConfig *models.StreamingQueryConfigurationResponse, query *Q) StreamConfig {
 	config := DefaultStreamConfig()
 
@@ -50,11 +50,11 @@ func NewStreamConfigFromBackend(backendConfig *models.StreamingQueryConfiguratio
 				"duration", config.TickInterval.String())
 		}
 
-		if backendConfig.LookBackPeriodLimit > 0 {
-			config.MaxLookBackPeriod = backendConfig.LookBackPeriodLimit
-			backend.Logger.Info("StreamConfig: Backend MaxLookBackPeriod",
-				"maxLookBackMs", backendConfig.LookBackPeriodLimit,
-				"duration", config.MaxLookBackPeriod.String())
+		if backendConfig.LookBackPeriod > 0 {
+			config.ServerLookBackPeriod = backendConfig.LookBackPeriod
+			backend.Logger.Info("StreamConfig: Backend LookBackPeriod",
+				"lookBackMs", backendConfig.LookBackPeriod,
+				"duration", config.ServerLookBackPeriod.String())
 		}
 	}
 
@@ -62,12 +62,12 @@ func NewStreamConfigFromBackend(backendConfig *models.StreamingQueryConfiguratio
 	if query.StreamingConfig.LookBackPeriod != nil {
 		clientLookBack := parseLookBackPeriod(query.StreamingConfig.LookBackPeriod, backend.Logger)
 
-		// Respect backend maximum if set
-		if config.MaxLookBackPeriod > 0 && clientLookBack > config.MaxLookBackPeriod {
-			config.LookBackPeriod = config.MaxLookBackPeriod
-			backend.Logger.Info("StreamConfig: Client LookBackPeriod exceeds backend maximum, using maximum",
+		// Respect server maximum if set
+		if config.ServerLookBackPeriod > 0 && clientLookBack > config.ServerLookBackPeriod {
+			config.LookBackPeriod = config.ServerLookBackPeriod
+			backend.Logger.Info("StreamConfig: Client LookBackPeriod exceeds server value, using server value",
 				"clientRequested", clientLookBack.String(),
-				"backendMaximum", config.MaxLookBackPeriod.String(),
+				"serverValue", config.ServerLookBackPeriod.String(),
 				"using", config.LookBackPeriod.String())
 		} else {
 			config.LookBackPeriod = clientLookBack
@@ -76,15 +76,15 @@ func NewStreamConfigFromBackend(backendConfig *models.StreamingQueryConfiguratio
 				"duration", config.LookBackPeriod.String())
 		}
 	} else {
-		// Use default, but respect backend maximum
-		if config.MaxLookBackPeriod > 0 && config.LookBackPeriod > config.MaxLookBackPeriod {
-			config.LookBackPeriod = config.MaxLookBackPeriod
-			backend.Logger.Info("StreamConfig: Default LookBackPeriod exceeds backend maximum, using maximum",
-				"default", 1*time.Hour,
-				"backendMaximum", config.MaxLookBackPeriod.String(),
-				"using", config.LookBackPeriod.String())
+		// Use server's recommended value as default, or fallback to default
+		if config.ServerLookBackPeriod > 0 {
+			config.LookBackPeriod = config.ServerLookBackPeriod
+			backend.Logger.Info("StreamConfig: Using server LookBackPeriod as default",
+				"duration", config.LookBackPeriod.String())
 		} else {
-			backend.Logger.Info("StreamConfig: Using default LookBackPeriod", "duration", config.LookBackPeriod.String())
+			// Keep the default value
+			backend.Logger.Info("StreamConfig: Using fallback default LookBackPeriod",
+				"duration", config.LookBackPeriod.String())
 		}
 	}
 
@@ -98,7 +98,7 @@ func NewStreamConfigFromQuery(query *Q) StreamConfig {
 
 // QueryExecutor defines the interface for executing queries
 type QueryExecutor interface {
-	ExecuteQuery(ctx context.Context, timeRange backend.TimeRange) (data.Frames, error)
+	ExecuteQuery(ctx context.Context, timeRange models.TimeRange) (data.Frames, error)
 }
 
 func NewStreamQueryParser(backendAPI BackendAPI) *StreamQueryParser {
@@ -129,8 +129,8 @@ var supportedQueryTypes = []string{
 
 func defaultStreamingConfig() *models.StreamingQueryConfigurationResponse {
 	return &models.StreamingQueryConfigurationResponse{
-		LookBackPeriodLimit: 6 * time.Hour,
-		LoopInterval:        10 * time.Second,
+		LookBackPeriod: 6 * time.Hour,
+		LoopInterval:   10 * time.Second,
 	}
 }
 
@@ -151,6 +151,7 @@ func queryModelForType(queryType string, baseQuery models.MetricBaseQuery) inter
 // This returns the raw backend configuration (*models.StreamingQueryConfigurationResponse)
 // which should be used with NewStreamConfigFromBackend() to create a resolved StreamConfig.
 func (p *StreamQueryParser) ValidateQuery(ctx context.Context, query *Q) (*models.StreamingQueryConfigurationResponse, error) {
+	backend.Logger.Info("ValidateQuery", "query", query)
 	if query.QueryType == "" {
 		return nil, errors.New("query type is required")
 	}
@@ -164,6 +165,7 @@ func (p *StreamQueryParser) ValidateQuery(ctx context.Context, query *Q) (*model
 		configReq := &models.StreamingQueryConfigurationRequest{
 			Query: queryModel,
 		}
+		backend.Logger.Info("ValidateQuery", "query_model", queryModel)
 
 		cfg, err := p.backendAPI.GetStreamingQueryConfiguration(ctx, configReq)
 		if err != nil {
@@ -227,7 +229,7 @@ type MetricAggregateExecutor struct {
 	metricBaseQuery models.MetricBaseQuery
 }
 
-func (e *MetricAggregateExecutor) ExecuteQuery(ctx context.Context, timeRange backend.TimeRange) (data.Frames, error) {
+func (e *MetricAggregateExecutor) ExecuteQuery(ctx context.Context, timeRange models.TimeRange) (data.Frames, error) {
 	query := &models.MetricAggregateQuery{
 		MetricBaseQuery: e.metricBaseQuery,
 	}
@@ -241,7 +243,7 @@ type MetricHistoryExecutor struct {
 	metricBaseQuery models.MetricBaseQuery
 }
 
-func (e *MetricHistoryExecutor) ExecuteQuery(ctx context.Context, timeRange backend.TimeRange) (data.Frames, error) {
+func (e *MetricHistoryExecutor) ExecuteQuery(ctx context.Context, timeRange models.TimeRange) (data.Frames, error) {
 	query := &models.MetricHistoryQuery{
 		MetricBaseQuery: e.metricBaseQuery,
 	}
@@ -255,7 +257,7 @@ type MetricValueExecutor struct {
 	metricBaseQuery models.MetricBaseQuery
 }
 
-func (e *MetricValueExecutor) ExecuteQuery(ctx context.Context, timeRange backend.TimeRange) (data.Frames, error) {
+func (e *MetricValueExecutor) ExecuteQuery(ctx context.Context, timeRange models.TimeRange) (data.Frames, error) {
 	query := &models.MetricValueQuery{
 		MetricBaseQuery: e.metricBaseQuery,
 	}
@@ -316,7 +318,7 @@ func (p *StreamProcessor) sendInitialData(ctx context.Context) error {
 	lookBackPeriod := p.config.LookBackPeriod
 	p.logger.Info("sendInitialData: Using LookBackPeriod from StreamConfig", "duration", lookBackPeriod.String())
 
-	timeRange := backend.TimeRange{
+	timeRange := models.TimeRange{
 		From: now.Add(-lookBackPeriod),
 		To:   now,
 	}
@@ -362,7 +364,7 @@ func (p *StreamProcessor) handleTick(ctx context.Context, fromTime, toTime time.
 
 // processStreamTick processes a single stream tick
 func (p *StreamProcessor) processStreamTick(ctx context.Context, fromTime, toTime time.Time) (time.Time, error) {
-	timeRange := backend.TimeRange{
+	timeRange := models.TimeRange{
 		From: fromTime,
 		To:   toTime,
 	}
