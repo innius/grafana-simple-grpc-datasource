@@ -66,7 +66,20 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
       if (!q.dimensionKey) {
         return [];
       }
-      const values = await this.listDimensionsValues(q.dimensionKey, q.dimensionValueFilter || '', []);
+      // Forward the configured selection dimensions (e.g. device_id=$device,
+      // vrf=$vrf) so dimension-value variables can be scoped to the currently
+      // selected device/VRF. Values are interpolated against the current
+      // template variable state and empty selections are dropped.
+      const templateSrv = getTemplateSrv();
+      const selectedDimensions = (q.dimensions || [])
+        .filter((dim) => dim.key && dim.value)
+        .map((dim) => ({ ...dim, value: templateSrv.replace(dim.value, {}) }))
+        .filter((dim) => dim.value !== '');
+      const values = await this.listDimensionsValues(
+        q.dimensionKey,
+        templateSrv.replace(q.dimensionValueFilter || '', {}),
+        selectedDimensions
+      );
       return values.map((x) => ({ text: x.value || '' }));
     }
 
